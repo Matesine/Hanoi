@@ -160,6 +160,42 @@
                 </div>
             </div>
 
+            <!-- 2-Digit Combinations (Top) -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mt-8">
+                <div class="bg-cyan-50 px-6 py-4 border-b border-cyan-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div class="flex items-center space-x-2 w-full sm:w-auto">
+                        <i data-lucide="layers" class="w-5 h-5 text-cyan-600"></i>
+                        <h3 class="font-bold text-cyan-800">ชุดจับคู่ 2 ตัวบน (<span id="top2-combo-count-title">...</span> ชุด)</h3>
+                    </div>
+                    <!-- ส่วน Dropdown สำหรับเลือก Top 6 หรือ Top 7 -->
+                    <div class="flex items-center space-x-2 w-full sm:w-auto justify-start sm:justify-end">
+                        <span class="text-sm font-semibold text-cyan-800">เลือกจำนวน:</span>
+                        <select id="top2-select" onchange="window.updateTop2Combos()" class="bg-white border border-cyan-200 text-cyan-700 text-sm rounded-md focus:ring-cyan-500 focus:border-cyan-500 block p-1.5 font-bold outline-none shadow-sm cursor-pointer">
+                            <option value="6">Top 6</option>
+                            <option value="7">Top 7</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="mb-4 text-sm text-slate-600 flex flex-wrap gap-4 md:gap-8 bg-slate-50 p-3 rounded-md border border-slate-100">
+                        <div><span class="font-bold text-slate-700">หลักสิบบน <span class="top2-n-label text-cyan-600">6</span> ลำดับแรก:</span> <span id="top2-10" class="text-cyan-600 font-mono font-bold text-base ml-1"></span></div>
+                        <div><span class="font-bold text-slate-700">หลักหน่วยบน <span class="top2-n-label text-cyan-600">6</span> ลำดับแรก:</span> <span id="top2-1" class="text-cyan-600 font-mono font-bold text-base ml-1"></span></div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="text-sm font-medium text-slate-500">ผลการจับคู่ทั้งหมด <span id="top2-combo-count">...</span> ชุด</div>
+                        <button id="btn-copy-top2-combo" onclick="copyTop2Combos()" class="text-xs bg-cyan-100 hover:bg-cyan-200 text-cyan-700 px-3 py-1.5 rounded-md flex items-center transition font-bold">
+                            <i data-lucide="copy" class="w-3.5 h-3.5 mr-1"></i> คัดลอกทั้งหมด
+                        </button>
+                        <input type="hidden" id="combo-top2-hidden-text">
+                    </div>
+                    
+                    <div id="combo-top2-grid" class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-9 lg:grid-cols-12 gap-2 max-h-[300px] overflow-y-auto p-3 bg-slate-50 border border-slate-200 rounded-lg shadow-inner">
+                        <!-- ตัวเลข ชุดจะถูกแทรกด้วย JS -->
+                    </div>
+                </div>
+            </div>
+
             <!-- 2-Digit Combinations (Bottom) -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mt-8">
                 <div class="bg-rose-50 px-6 py-4 border-b border-rose-100 flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -452,6 +488,45 @@
             document.getElementById('combo-hidden-text').value = combinations.join(', ');
         };
 
+        // --- ฟังก์ชันอัปเดต 2 ตัวบน ---
+        window.updateTop2Combos = function() {
+            const stats = calculateStats();
+            
+            // อ่านค่าตัวเลข (N) จาก Dropdown
+            const selectEl = document.getElementById('top2-select');
+            const n = parseInt(selectEl ? selectEl.value : 6); 
+
+            // อัปเดตข้อความบน UI ให้ตรงกับตัวเลือก N
+            document.querySelectorAll('.top2-n-label').forEach(el => el.innerText = n);
+
+            const topTens = getTopN(stats.top10, n);
+            const topUnits = getTopN(stats.top1, n);
+
+            document.getElementById('top2-10').innerText = topTens.join(', ');
+            document.getElementById('top2-1').innerText = topUnits.join(', ');
+
+            let combinationsTop2 = [];
+            for(let t of topTens) {
+                for(let u of topUnits) {
+                    combinationsTop2.push(`${t}${u}`);
+                }
+            }
+
+            // อัปเดตจำนวนชุดบนหน้าจอ
+            document.getElementById('top2-combo-count-title').innerText = combinationsTop2.length;
+            document.getElementById('top2-combo-count').innerText = combinationsTop2.length;
+
+            const comboTop2Grid = document.getElementById('combo-top2-grid');
+            comboTop2Grid.innerHTML = combinationsTop2.map(c => `
+                <div class="bg-white border border-slate-200 text-center py-1.5 rounded text-slate-700 font-mono font-bold text-sm shadow-sm hover:border-cyan-400 hover:text-cyan-600 transition-colors">
+                    ${c}
+                </div>
+            `).join('');
+
+            // นำตัวเลข ชุดมารวมกัน คั่นด้วยลูกน้ำ (,) สำหรับให้กดปุ่ม Copy
+            document.getElementById('combo-top2-hidden-text').value = combinationsTop2.join(', ');
+        };
+
         // --- ฟังก์ชันอัปเดต 2 ตัวล่าง ---
         window.updateBot2Combos = function() {
             const stats = calculateStats();
@@ -571,6 +646,7 @@
 
             // --- เรียกใช้งานฟังก์ชันอัปเดตชุดจับคู่ตัวเลข ---
             window.updateTop3Combos();
+            window.updateTop2Combos();
             window.updateBot2Combos();
 
             // Trigger animation for progress bars
@@ -676,6 +752,32 @@
                 btn.innerHTML = originalText;
                 btn.classList.remove('bg-emerald-100', 'text-emerald-700');
                 btn.classList.add('bg-indigo-100', 'text-indigo-700');
+                if(window.lucide) lucide.createIcons();
+            }, 2000);
+        };
+
+        window.copyTop2Combos = function() {
+            const text = document.getElementById('combo-top2-hidden-text').value;
+            const tempInput = document.createElement("textarea");
+            tempInput.style.position = "absolute";
+            tempInput.style.left = "-9999px";
+            tempInput.value = text;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempInput);
+
+            const btn = document.getElementById('btn-copy-top2-combo');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5 mr-1"></i> คัดลอกสำเร็จ!';
+            btn.classList.add('bg-emerald-100', 'text-emerald-700');
+            btn.classList.remove('bg-cyan-100', 'text-cyan-700');
+            if(window.lucide) lucide.createIcons();
+            
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.classList.remove('bg-emerald-100', 'text-emerald-700');
+                btn.classList.add('bg-cyan-100', 'text-cyan-700');
                 if(window.lucide) lucide.createIcons();
             }, 2000);
         };
