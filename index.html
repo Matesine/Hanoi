@@ -270,6 +270,11 @@
             { id: '712690837', name: 'ฮานอยปกติ' },
             { id: '2092880425', name: 'ฮานอยพัฒนา' },
             { id: '583541557', name: 'ฮานอย VIP' },
+            { 
+                id: '1920209502', 
+                name: 'ไทยเย็น', 
+                customUrl: 'https://docs.google.com/spreadsheets/d/13ZNRVPDceqWFYe-4e4YF0qv5wy_rOPeiwbwPS11qsW4/export?format=csv&gid=1920209502' 
+            },
         ];
         
         const PERIODS = [30, 60, 90];
@@ -311,21 +316,23 @@
             renderUI();
 
             try {
-                // เปลี่ยนมาใช้รหัสจากลิงก์ "เผยแพร่ทางเว็บ" เพื่อแก้ปัญหา Failed to fetch (CORS) แบบเด็ดขาด
-                const pubId = '2PACX-1vRlfpkEQlIBtbTCeGL7V9nvjBTXZy8yp5BbmpjhPyN_X73kAbK2gKLK4IcHXhl49buYsbQK_B6nPUjt';
-                const sheetId = state.activeSheet.id;
+                let url;
                 
-                // ตรวจสอบ GID ว่าเป็นตัวเลขหรือไม่ (ป้องกัน Error ถ้ายูสเซอร์ยังไม่แก้โค้ด)
-                if (!/^\d+$/.test(sheetId)) {
-                    state.error = `กำลังแสดง "ข้อมูลจำลอง" สำหรับแท็บ ${state.activeSheet.name} (เนื่องจากยังไม่ได้ใส่รหัส GID ที่ถูกต้องในโค้ด)`;
-                    state.data = generateMockData(state.period);
-                    state.loading = false;
-                    renderUI();
-                    return; 
+                // ตรวจสอบว่ามี customUrl หรือไม่ (สำหรับไทยเย็น หรือชีตอื่นที่แยกไฟล์)
+                if (state.activeSheet.customUrl) {
+                    url = `${state.activeSheet.customUrl}&_cb=${new Date().getTime()}`;
+                } else {
+                    // ใช้ชุดข้อมูลฮานอยเดิม (เผยแพร่ทางเว็บ)
+                    const pubId = '2PACX-1vRlfpkEQlIBtbTCeGL7V9nvjBTXZy8yp5BbmpjhPyN_X73kAbK2gKLK4IcHXhl49buYsbQK_B6nPUjt';
+                    const sheetId = state.activeSheet.id;
+                    
+                    if (!/^\d+$/.test(sheetId)) {
+                        throw new Error(`รหัส GID (${sheetId}) ไม่ถูกต้อง`);
+                    }
+                    
+                    url = `https://docs.google.com/spreadsheets/d/e/${pubId}/pub?gid=${sheetId}&single=true&output=csv&_cb=${new Date().getTime()}`;
                 }
 
-                // ดึงข้อมูลในรูปแบบ CSV ป้องกันเบราว์เซอร์บล็อก
-                const url = `https://docs.google.com/spreadsheets/d/e/${pubId}/pub?gid=${sheetId}&single=true&output=csv&_cb=${new Date().getTime()}`;
                 const response = await fetch(url);
                 
                 if (!response.ok) throw new Error('ไม่สามารถดึงข้อมูลได้ (โปรดตรวจสอบว่าเปิดแชร์และเผยแพร่ทางเว็บแล้ว)');
