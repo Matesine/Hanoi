@@ -271,11 +271,6 @@
             { id: '2092880425', name: 'ฮานอยพัฒนา' },
             { id: '583541557', name: 'ฮานอย VIP' },
             { 
-                id: '1920209502', 
-                name: 'ไทยเย็น', 
-                customUrl: 'https://docs.google.com/spreadsheets/d/13ZNRVPDceqWFYe-4e4YF0qv5wy_rOPeiwbwPS11qsW4/export?format=csv&gid=1920209502' 
-            },
-            { 
                 id: '222119155', 
                 name: 'นิคเคอิเช้า', 
                 customUrl: 'https://docs.google.com/spreadsheets/d/13ZNRVPDceqWFYe-4e4YF0qv5wy_rOPeiwbwPS11qsW4/export?format=csv&gid=222119155' 
@@ -338,7 +333,7 @@
             try {
                 let url;
                 
-                // ตรวจสอบว่ามี customUrl หรือไม่ (สำหรับไทยเย็น หรือชีตอื่นที่แยกไฟล์)
+                // ตรวจสอบว่ามี customUrl หรือไม่ (สำหรับชีตที่แยกไฟล์)
                 if (state.activeSheet.customUrl) {
                     url = `${state.activeSheet.customUrl}&_cb=${new Date().getTime()}`;
                 } else {
