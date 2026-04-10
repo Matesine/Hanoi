@@ -455,12 +455,20 @@
             return { numbers: indices, maxCount: max };
         }
 
-        // --- ฟังก์ชันดึง Top N ของข้อมูล ---
+        // --- ฟังก์ชันดึง Top N ของข้อมูล (รวมตัวเลขที่จำนวนครั้งเท่ากับ cutoff) ---
         function getTopN(dataArr, n) {
-            return dataArr
+            const sorted = dataArr
                 .map((count, num) => ({ num, count }))
-                .sort((a, b) => b.count - a.count)
-                .slice(0, n)
+                .sort((a, b) => b.count - a.count);
+
+            if (sorted.length <= n) return sorted.map(item => item.num);
+
+            // นำจำนวนครั้งของลำดับที่ N มาเป็น cutoff
+            const cutoffCount = sorted[n - 1].count;
+
+            // รวมทุกตัวเลขที่มีจำนวนครั้ง >= cutoff (เพื่อไม่ตัดตัวที่เท่ากันออก)
+            return sorted
+                .filter(item => item.count >= cutoffCount)
                 .map(item => item.num);
         }
 
