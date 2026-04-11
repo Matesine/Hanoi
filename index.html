@@ -76,8 +76,8 @@
             <form id="add-data-form" class="p-6" onsubmit="submitNewData(event)">
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">วันที่ (วว/ดด/ปปปป)</label>
-                        <input type="text" id="input-date" placeholder="เช่น 08/04/2026" class="w-full border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">วันที่</label>
+                        <input type="date" id="input-date" class="w-full border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">3 ตัวบน</label>
@@ -130,12 +130,17 @@
                         <i data-lucide="layers" class="w-5 h-5 text-indigo-600"></i>
                         <h3 class="font-bold text-indigo-800">ชุดจับคู่ 3 ตัวบน (<span id="top3-combo-count-title">...</span> ชุด)</h3>
                     </div>
-                    <!-- ส่วน Dropdown สำหรับเลือก Top 6 หรือ Top 7 -->
-                    <div class="flex items-center space-x-2 w-full sm:w-auto justify-start sm:justify-end">
+                    <!-- ส่วน Dropdown สำหรับเลือก Top 6 หรือ Top 7 และเรียงลำดับ -->
+                    <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-start sm:justify-end">
                         <span class="text-sm font-semibold text-indigo-800">เลือกจำนวน:</span>
                         <select id="top3-select" onchange="window.updateTop3Combos()" class="bg-white border border-indigo-200 text-indigo-700 text-sm rounded-md focus:ring-indigo-500 focus:border-indigo-500 block p-1.5 font-bold outline-none shadow-sm cursor-pointer">
                             <option value="6">Top 6</option>
                             <option value="7">Top 7</option>
+                        </select>
+                        <span class="text-sm font-semibold text-indigo-800">เรียงลำดับ:</span>
+                        <select id="top3-sort" onchange="window.updateTop3Combos()" class="bg-white border border-indigo-200 text-indigo-700 text-sm rounded-md focus:ring-indigo-500 focus:border-indigo-500 block p-1.5 font-bold outline-none shadow-sm cursor-pointer">
+                            <option value="asc">น้อยไปมาก</option>
+                            <option value="desc">มากไปน้อย</option>
                         </select>
                     </div>
                 </div>
@@ -167,12 +172,17 @@
                         <i data-lucide="layers" class="w-5 h-5 text-cyan-600"></i>
                         <h3 class="font-bold text-cyan-800">ชุดจับคู่ 2 ตัวบน (<span id="top2-combo-count-title">...</span> ชุด)</h3>
                     </div>
-                    <!-- ส่วน Dropdown สำหรับเลือก Top 6 หรือ Top 7 -->
-                    <div class="flex items-center space-x-2 w-full sm:w-auto justify-start sm:justify-end">
+                    <!-- ส่วน Dropdown สำหรับเลือก Top 6/7 และเรียงลำดับ -->
+                    <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-start sm:justify-end">
                         <span class="text-sm font-semibold text-cyan-800">เลือกจำนวน:</span>
                         <select id="top2-select" onchange="window.updateTop2Combos()" class="bg-white border border-cyan-200 text-cyan-700 text-sm rounded-md focus:ring-cyan-500 focus:border-cyan-500 block p-1.5 font-bold outline-none shadow-sm cursor-pointer">
                             <option value="6">Top 6</option>
                             <option value="7">Top 7</option>
+                        </select>
+                        <span class="text-sm font-semibold text-cyan-800">เรียงลำดับ:</span>
+                        <select id="top2-sort" onchange="window.updateTop2Combos()" class="bg-white border border-cyan-200 text-cyan-700 text-sm rounded-md focus:ring-cyan-500 focus:border-cyan-500 block p-1.5 font-bold outline-none shadow-sm cursor-pointer">
+                            <option value="asc">น้อยไปมาก</option>
+                            <option value="desc">มากไปน้อย</option>
                         </select>
                     </div>
                 </div>
@@ -203,12 +213,17 @@
                         <i data-lucide="layers" class="w-5 h-5 text-rose-600"></i>
                         <h3 class="font-bold text-rose-800">ชุดจับคู่ 2 ตัวล่าง (<span id="bot2-combo-count-title">...</span> ชุด)</h3>
                     </div>
-                    <!-- ส่วน Dropdown สำหรับเลือก Top 6 หรือ Top 7 -->
-                    <div class="flex items-center space-x-2 w-full sm:w-auto justify-start sm:justify-end">
+                    <!-- ส่วน Dropdown สำหรับเลือก Top 6/7 และเรียงลำดับ -->
+                    <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-start sm:justify-end">
                         <span class="text-sm font-semibold text-rose-800">เลือกจำนวน:</span>
                         <select id="bot2-select" onchange="window.updateBot2Combos()" class="bg-white border border-rose-200 text-rose-700 text-sm rounded-md focus:ring-rose-500 focus:border-rose-500 block p-1.5 font-bold outline-none shadow-sm cursor-pointer">
                             <option value="6">Top 6</option>
                             <option value="7">Top 7</option>
+                        </select>
+                        <span class="text-sm font-semibold text-rose-800">เรียงลำดับ:</span>
+                        <select id="bot2-sort" onchange="window.updateBot2Combos()" class="bg-white border border-rose-200 text-rose-700 text-sm rounded-md focus:ring-rose-500 focus:border-rose-500 block p-1.5 font-bold outline-none shadow-sm cursor-pointer">
+                            <option value="asc">น้อยไปมาก</option>
+                            <option value="desc">มากไปน้อย</option>
                         </select>
                     </div>
                 </div>
@@ -455,37 +470,41 @@
             return { numbers: indices, maxCount: max };
         }
 
-        // --- ฟังก์ชันดึง N อันดับที่ออกน้อยที่สุด (รวม tie ที่ cutoff, เรียงจากน้อยไปมาก) ---
-        function getTopN(dataArr, n) {
+        // --- ฟังก์ชันดึง N อันดับ (รวม tie ที่ cutoff)
+        //     ascending=true  → เลือก N ที่ออกน้อยที่สุด เรียงน้อย→มาก
+        //     ascending=false → เลือก N ที่ออกมากที่สุด เรียงมาก→น้อย ---
+        function getTopN(dataArr, n, ascending = true) {
             const sorted = dataArr
                 .map((count, num) => ({ num, count }))
-                .sort((a, b) => a.count - b.count); // เรียงน้อย → มาก
+                .sort((a, b) => ascending ? a.count - b.count : b.count - a.count);
 
             if (sorted.length <= n) return sorted.map(item => item.num);
 
-            // นำจำนวนครั้งของลำดับที่ N (น้อยสุด) มาเป็น cutoff
             const cutoffCount = sorted[n - 1].count;
 
-            // รวมทุกตัวเลขที่มีจำนวนครั้ง <= cutoff (ไม่ตัดตัวที่เท่ากันออก)
             return sorted
-                .filter(item => item.count <= cutoffCount)
+                .filter(item => ascending ? item.count <= cutoffCount : item.count >= cutoffCount)
                 .map(item => item.num);
         }
 
-        // --- ฟังก์ชันอัปเดต 3 ตัวบน (รองรับการเลือก Top 6 หรือ Top 7) ---
+        // --- ฟังก์ชันอัปเดต 3 ตัวบน (รองรับการเลือก Top 6/7 และเรียงลำดับ) ---
         window.updateTop3Combos = function() {
             const stats = calculateStats();
-            
+
             // อ่านค่าตัวเลข (N) จาก Dropdown
             const selectEl = document.getElementById('top3-select');
-            const n = parseInt(selectEl ? selectEl.value : 6); 
+            const n = parseInt(selectEl ? selectEl.value : 6);
+
+            // อ่านทิศทางการเรียง: asc = น้อยไปมาก, desc = มากไปน้อย
+            const sortEl = document.getElementById('top3-sort');
+            const ascending = sortEl ? sortEl.value === 'asc' : true;
 
             // อัปเดตข้อความบน UI ให้ตรงกับตัวเลือก N
             document.querySelectorAll('.top3-n-label').forEach(el => el.innerText = n);
 
-            const topHundreds = getTopN(stats.top100, n);
-            const topTens = getTopN(stats.top10, n);
-            const topUnits = getTopN(stats.top1, n);
+            const topHundreds = getTopN(stats.top100, n, ascending);
+            const topTens = getTopN(stats.top10, n, ascending);
+            const topUnits = getTopN(stats.top1, n, ascending);
 
             document.getElementById('top-100').innerText = topHundreds.join(', ');
             document.getElementById('top-10').innerText = topTens.join(', ');
@@ -521,16 +540,17 @@
         // --- ฟังก์ชันอัปเดต 2 ตัวบน ---
         window.updateTop2Combos = function() {
             const stats = calculateStats();
-            
-            // อ่านค่าตัวเลข (N) จาก Dropdown
-            const selectEl = document.getElementById('top2-select');
-            const n = parseInt(selectEl ? selectEl.value : 6); 
 
-            // อัปเดตข้อความบน UI ให้ตรงกับตัวเลือก N
+            const selectEl = document.getElementById('top2-select');
+            const n = parseInt(selectEl ? selectEl.value : 6);
+
+            const sortEl = document.getElementById('top2-sort');
+            const ascending = sortEl ? sortEl.value === 'asc' : true;
+
             document.querySelectorAll('.top2-n-label').forEach(el => el.innerText = n);
 
-            const topTens = getTopN(stats.top10, n);
-            const topUnits = getTopN(stats.top1, n);
+            const topTens = getTopN(stats.top10, n, ascending);
+            const topUnits = getTopN(stats.top1, n, ascending);
 
             document.getElementById('top2-10').innerText = topTens.join(', ');
             document.getElementById('top2-1').innerText = topUnits.join(', ');
@@ -560,16 +580,17 @@
         // --- ฟังก์ชันอัปเดต 2 ตัวล่าง ---
         window.updateBot2Combos = function() {
             const stats = calculateStats();
-            
-            // อ่านค่าตัวเลข (N) จาก Dropdown
-            const selectEl = document.getElementById('bot2-select');
-            const n = parseInt(selectEl ? selectEl.value : 6); 
 
-            // อัปเดตข้อความบน UI ให้ตรงกับตัวเลือก N
+            const selectEl = document.getElementById('bot2-select');
+            const n = parseInt(selectEl ? selectEl.value : 6);
+
+            const sortEl = document.getElementById('bot2-sort');
+            const ascending = sortEl ? sortEl.value === 'asc' : true;
+
             document.querySelectorAll('.bot2-n-label').forEach(el => el.innerText = n);
 
-            const topBotTens = getTopN(stats.bot10, n);
-            const topBotUnits = getTopN(stats.bot1, n);
+            const topBotTens = getTopN(stats.bot10, n, ascending);
+            const topBotUnits = getTopN(stats.bot1, n, ascending);
 
             document.getElementById('top-bot10').innerText = topBotTens.join(', ');
             document.getElementById('top-bot1').innerText = topBotUnits.join(', ');
@@ -847,11 +868,22 @@
                 return;
             }
 
-            const dateInput = document.getElementById('input-date').value;
+            const rawDate = document.getElementById('input-date').value; // YYYY-MM-DD
+            const [y, m, d] = rawDate.split('-');
+            const dateInput = `${d}/${m}/${y}`; // แปลงเป็น DD/MM/YYYY
             const top3Input = document.getElementById('input-top3').value;
             const bot2Input = document.getElementById('input-bot2').value;
             const btnSubmit = document.getElementById('btn-submit');
             const formMessage = document.getElementById('form-message');
+
+            // ตรวจสอบวันที่ซ้ำใน state.data
+            const isDuplicate = state.data.some(row => row.date.trim() === dateInput.trim());
+            if (isDuplicate) {
+                formMessage.innerText = `วันที่ ${dateInput} มีข้อมูลอยู่แล้ว ไม่สามารถบันทึกซ้ำได้`;
+                formMessage.className = 'mt-3 text-sm font-medium text-rose-600';
+                formMessage.classList.remove('hidden');
+                return;
+            }
 
             // แสดงสถานะกำลังโหลด
             btnSubmit.disabled = true;
