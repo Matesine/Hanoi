@@ -8,8 +8,8 @@
     <!-- Application Structure Plan: 
          - Maintained the 5-column horizontal bar layout.
          - Added a new section below for "Combinations" (ชุดจับคู่).
-         - Added Dropdowns for dynamic interaction: Top N selection and Sort Order.
-         - JavaScript dynamically calculates the Cartesian product of the top N digits for respective positions, scores them by combined frequency, sorts them, and renders them in scrollable containers.
+         - Fixed Mock Data Generator: Now uses Seeded Random to prevent numbers from changing dynamically.
+         - Added `realLotteryResults` object to allow hardcoding actual lottery results.
     -->
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
@@ -145,6 +145,135 @@
             </div>
         </section>
 
+        <!-- Historical & Formula Section -->
+        <section class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <span>📊</span> ข้อมูลย้อนหลัง & สูตรคำนวณ
+                    </h2>
+                    <p class="text-sm text-slate-500 mt-1" id="history-desc">สถิติการออกรางวัล และสูตรเลขดับ (กรอกข้อมูลจริงได้ในโค้ด)</p>
+                </div>
+                <div class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold border border-blue-100" id="history-count">
+                    พบ 0 งวด
+                </div>
+            </div>
+
+            <!-- Tabs Navigation -->
+            <div class="flex border-b border-slate-200 mb-4 gap-6 overflow-x-auto custom-scrollbar">
+                <button id="tab-btn-history" class="pb-2 border-b-2 border-blue-600 text-blue-700 font-bold transition-colors whitespace-nowrap" onclick="switchTab('history')">
+                    🗓️ ประวัติการออกรางวัล
+                </button>
+                <button id="tab-btn-formula" class="pb-2 border-b-2 border-transparent text-slate-500 font-medium hover:text-slate-700 transition-colors whitespace-nowrap" onclick="switchTab('formula')">
+                    🧮 สูตรเลขดับหลักร้อย
+                </button>
+                <button id="tab-btn-formula-ten" class="pb-2 border-b-2 border-transparent text-slate-500 font-medium hover:text-slate-700 transition-colors whitespace-nowrap" onclick="switchTab('formula-ten')">
+                    🧮 สูตรเลขดับหลักสิบ
+                </button>
+                <button id="tab-btn-formula-unit" class="pb-2 border-b-2 border-transparent text-slate-500 font-medium hover:text-slate-700 transition-colors whitespace-nowrap" onclick="switchTab('formula-unit')">
+                    🧮 สูตรเลขดับหลักหน่วย
+                </button>
+            </div>
+
+            <!-- Tab 1: Historical Data -->
+            <div id="tab-content-history" class="overflow-x-auto max-h-[400px] custom-scrollbar border border-slate-200 rounded-xl">
+                <table class="w-full text-left border-collapse min-w-[500px]">
+                    <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
+                        <tr>
+                            <th class="p-3 text-sm font-bold text-slate-600 border-b text-center w-16">ลำดับ</th>
+                            <th class="p-3 text-sm font-bold text-slate-600 border-b">งวดวันที่</th>
+                            <th class="p-3 text-sm font-bold text-slate-600 border-b text-center">3 ตัวบน</th>
+                            <th class="p-3 text-sm font-bold text-slate-600 border-b text-center">2 ตัวล่าง</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table-body" class="divide-y divide-slate-100">
+                        <!-- Rows injected by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Tab 2: Formula Dead Numbers (Hundreds) -->
+            <div id="tab-content-formula" class="hidden overflow-x-auto max-h-[400px] custom-scrollbar border border-slate-200 rounded-xl">
+                <table class="w-full text-center border-collapse min-w-[600px] font-mono">
+                    <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
+                        <tr>
+                            <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-left w-32">งวดวันที่</th>
+                            <th class="p-3 text-sm font-bold text-slate-600 border-b text-center tracking-widest bg-emerald-50">รางวัลที่ 1</th>
+                            <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-center tracking-widest bg-emerald-50">2 ตัวล่าง</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-100 whitespace-nowrap">ร้อย+สิบ+หน่วย</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+1</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+2</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+3</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+4</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+5</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+6</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+7</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+8</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+9</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+10</th>
+                        </tr>
+                    </thead>
+                    <tbody id="formula-table-body" class="divide-y divide-slate-100 text-sm">
+                        <!-- Rows injected by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Tab 3: Formula Dead Numbers (Tens) -->
+            <div id="tab-content-formula-ten" class="hidden overflow-x-auto max-h-[400px] custom-scrollbar border border-slate-200 rounded-xl">
+                <table class="w-full text-center border-collapse min-w-[600px] font-mono">
+                    <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
+                        <tr>
+                            <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-left w-32">งวดวันที่</th>
+                            <th class="p-3 text-sm font-bold text-slate-600 border-b text-center tracking-widest bg-emerald-50">รางวัลที่ 1</th>
+                            <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-center tracking-widest bg-emerald-50">2 ตัวล่าง</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-100 whitespace-nowrap">ร้อย+สิบ+หน่วย</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+1</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+2</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+3</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+4</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+5</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+6</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+7</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+8</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+9</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+10</th>
+                        </tr>
+                    </thead>
+                    <tbody id="formula-ten-table-body" class="divide-y divide-slate-100 text-sm">
+                        <!-- Rows injected by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Tab 4: Formula Dead Numbers (Units) -->
+            <div id="tab-content-formula-unit" class="hidden overflow-x-auto max-h-[400px] custom-scrollbar border border-slate-200 rounded-xl">
+                <table class="w-full text-center border-collapse min-w-[600px] font-mono">
+                    <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
+                        <tr>
+                            <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-left w-32">งวดวันที่</th>
+                            <th class="p-3 text-sm font-bold text-slate-600 border-b text-center tracking-widest bg-emerald-50">รางวัลที่ 1</th>
+                            <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-center tracking-widest bg-emerald-50">2 ตัวล่าง</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-100 whitespace-nowrap">ร้อย+สิบ+หน่วย</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+1</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+2</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+3</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+4</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+5</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+6</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+7</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+8</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+9</th>
+                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+10</th>
+                        </tr>
+                    </thead>
+                    <tbody id="formula-unit-table-body" class="divide-y divide-slate-100 text-sm">
+                        <!-- Rows injected by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
     </div>
 
     <script>
@@ -210,11 +339,13 @@
         let currentDay = "จันทร์";
         let currentTimeframe = "10";
 
+        let globalMockHistory = [];
+        let lastMockTimeframe = null;
+
         function initApp() {
             renderTimeframeSelector();
             renderDaySelector();
             
-            // Add Listeners for Dropdowns
             document.getElementById('top-n-select').addEventListener('change', updateCombinations);
             document.getElementById('sort-select').addEventListener('change', updateCombinations);
 
@@ -266,7 +397,6 @@
                     : `px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 transition-all duration-200 font-medium text-sm flex items-center gap-1.5 hover:bg-slate-50`;
             });
 
-            // Render the 5 Columns
             const statsContainer = document.getElementById('stats-container');
             statsContainer.innerHTML = '';
 
@@ -325,21 +455,15 @@
                 });
             }, 10);
 
-            // Update Combinations whenever dashboard updates
             updateCombinations();
+            updateHistoryTable();
         }
 
-        // --- New Combinations Logic ---
-
-        // Helper to get top N digits for a specific position (รองรับกรณีคะแนนความถี่เสมอกัน)
         function getTopDigits(freqArray, n) {
             let mapped = freqArray.map((val, idx) => ({ digit: idx, freq: val }));
             mapped.sort((a, b) => b.freq - a.freq);
             
-            // หาค่าความถี่ของตัวเลขที่อยู่ตรงขอบเขตพอดี (เช่น เลือก Top 6 ก็จะดูความถี่ของตัวที่ 6)
             const thresholdFreq = mapped[n - 1].freq;
-            
-            // กรองเอาตัวเลขลำดับที่ 1 ถึง n และดึงตัวถัดๆ ไปด้วย หากมีความถี่ "เท่ากับ" ตัวที่ n
             return mapped.filter((item, index) => index < n || item.freq === thresholdFreq);
         }
 
@@ -348,61 +472,45 @@
             const topN = parseInt(document.getElementById('top-n-select').value);
             const sortOrder = document.getElementById('sort-select').value;
 
-            // Get top digits for each pool
             const tHunUp = getTopDigits(data.hunUp, topN);
             const tTenUp = getTopDigits(data.tenUp, topN);
             const tUnitUp = getTopDigits(data.unitUp, topN);
             const tTenDown = getTopDigits(data.tenDown, topN);
             const tUnitDown = getTopDigits(data.unitDown, topN);
 
-            // 1. Generate 3-Up Combinations
             let combos3Up = [];
             for(let h of tHunUp) {
                 for(let t of tTenUp) {
                     for(let u of tUnitUp) {
-                        combos3Up.push({ 
-                            num: `${h.digit}${t.digit}${u.digit}`, 
-                            score: h.freq + t.freq + u.freq 
-                        });
+                        combos3Up.push({ num: `${h.digit}${t.digit}${u.digit}`, score: h.freq + t.freq + u.freq });
                     }
                 }
             }
 
-            // 2. Generate 2-Up Combinations
             let combos2Up = [];
             for(let t of tTenUp) {
                 for(let u of tUnitUp) {
-                    combos2Up.push({ 
-                        num: `${t.digit}${u.digit}`, 
-                        score: t.freq + u.freq 
-                    });
+                    combos2Up.push({ num: `${t.digit}${u.digit}`, score: t.freq + u.freq });
                 }
             }
 
-            // 3. Generate 2-Down Combinations
             let combos2Down = [];
             for(let t of tTenDown) {
                 for(let u of tUnitDown) {
-                    combos2Down.push({ 
-                        num: `${t.digit}${u.digit}`, 
-                        score: t.freq + u.freq 
-                    });
+                    combos2Down.push({ num: `${t.digit}${u.digit}`, score: t.freq + u.freq });
                 }
             }
 
-            // Sort Function
             const sortFn = (a, b) => sortOrder === 'desc' ? b.score - a.score : a.score - b.score;
             
             combos3Up.sort(sortFn);
             combos2Up.sort(sortFn);
             combos2Down.sort(sortFn);
 
-            // Update Counts
             document.getElementById('count-3up').innerText = `${combos3Up.length} ชุด`;
             document.getElementById('count-2up').innerText = `${combos2Up.length} ชุด`;
             document.getElementById('count-2down').innerText = `${combos2Down.length} ชุด`;
 
-            // Render UI
             renderComboBadges('combo-3up-container', combos3Up, 'bg-amber-100 text-amber-800 border-amber-200');
             renderComboBadges('combo-2up-container', combos2Up, 'bg-teal-100 text-teal-800 border-teal-200');
             renderComboBadges('combo-2down-container', combos2Down, 'bg-rose-100 text-rose-800 border-rose-200');
@@ -411,8 +519,6 @@
         function renderComboBadges(containerId, dataArr, styleClasses) {
             const container = document.getElementById(containerId);
             container.innerHTML = '';
-            
-            // To provide visual hierarchy, let's make the absolute top scores slightly bolder
             const maxScoreInArr = dataArr.length > 0 ? (document.getElementById('sort-select').value === 'desc' ? dataArr[0].score : dataArr[dataArr.length-1].score) : 0;
 
             dataArr.forEach(item => {
@@ -422,17 +528,12 @@
                 const badge = document.createElement('div');
                 badge.className = `border px-2 py-1 rounded text-sm md:text-base tracking-widest ${styleClasses} ${fontStyle} hover:scale-105 transition-transform cursor-default flex items-center gap-1`;
                 badge.setAttribute('data-num', item.num);
-                // Add tooltip to show score
                 badge.title = `ผลรวมความถี่: ${item.score}`;
-                badge.innerHTML = `
-                    ${item.num} 
-                    <span class="text-[10px] opacity-60 font-normal tracking-normal ml-0.5">(${item.score})</span>
-                `;
+                badge.innerHTML = `${item.num} <span class="text-[10px] opacity-60 font-normal tracking-normal ml-0.5">(${item.score})</span>`;
                 container.appendChild(badge);
             });
         }
 
-        // Copy Combinations to Clipboard
         function copyCombinations(containerId, btn) {
             const container = document.getElementById(containerId);
             const badges = container.querySelectorAll('[data-num]');
@@ -460,8 +561,364 @@
             } catch (err) {
                 console.error('Copy failed', err);
             }
-            
             document.body.removeChild(textarea);
+        }
+
+        function switchTab(tabId) {
+            const tabs = ['history', 'formula', 'formula-ten', 'formula-unit'];
+
+            tabs.forEach(id => {
+                const btn = document.getElementById(`tab-btn-${id}`);
+                const content = document.getElementById(`tab-content-${id}`);
+                
+                if (id === tabId) {
+                    btn.className = "pb-2 border-b-2 border-blue-600 text-blue-700 font-bold transition-colors whitespace-nowrap";
+                    content.classList.remove('hidden');
+                } else {
+                    btn.className = "pb-2 border-b-2 border-transparent text-slate-500 font-medium hover:text-slate-700 transition-colors whitespace-nowrap";
+                    content.classList.add('hidden');
+                }
+            });
+        }
+
+        // --- Historical Draws & Formula Logic ---
+        
+        // 1. ฐานข้อมูลของจริง (อ้างอิงจากตาราง Excel ย้อนหลัง 28 งวดล่าสุด)
+        const realHistoryData = [
+            { date: "16-4-2569", prize1: "309612", down2: "77" },
+            { date: "1-4-2569", prize1: "292514", down2: "47" },
+            { date: "16-3-2569", prize1: "833009", down2: "64" },
+            { date: "1-3-2569", prize1: "820866", down2: "06" },
+            { date: "16-2-2569", prize1: "340563", down2: "07" },
+            { date: "1-2-2569", prize1: "174629", down2: "48" },
+            { date: "17-1-2569", prize1: "878972", down2: "02" },
+            { date: "30-12-2568", prize1: "837706", down2: "16" },
+            { date: "16-12-2568", prize1: "763895", down2: "52" },
+            { date: "1-12-2568", prize1: "461252", down2: "22" },
+            { date: "16-11-2568", prize1: "458145", down2: "37" },
+            { date: "1-11-2568", prize1: "345898", down2: "87" },
+            { date: "16-10-2568", prize1: "059696", down2: "61" },
+            { date: "1-10-2568", prize1: "876978", down2: "77" },
+            { date: "16-9-2568", prize1: "074646", down2: "58" },
+            { date: "1-9-2568", prize1: "506356", down2: "31" },
+            { date: "16-8-2568", prize1: "994865", down2: "63" },
+            { date: "1-8-2568", prize1: "811852", down2: "50" },
+            { date: "16-7-2568", prize1: "245324", down2: "26" },
+            { date: "1-7-2568", prize1: "949246", down2: "91" },
+            { date: "16-6-2568", prize1: "507392", down2: "06" },
+            { date: "1-6-2568", prize1: "559352", down2: "20" },
+            { date: "16-5-2568", prize1: "251309", down2: "87" },
+            { date: "2-5-2568", prize1: "213388", down2: "06" },
+            { date: "16-4-2568", prize1: "266227", down2: "85" },
+            { date: "1-4-2568", prize1: "669687", down2: "36" },
+            { date: "16-3-2568", prize1: "757563", down2: "32" },
+            { date: "1-3-2568", prize1: "818894", down2: "54" }
+        ];
+
+        // 2. ฟังก์ชันสุ่มตัวเลขแบบคงที่ (Seeded Random) 
+        // สำหรับวันที่ยังไม่มีข้อมูลของจริง ระบบจะคำนวณตัวเลขจำลองที่ไม่เปลี่ยนไปมา
+        function seededRandom(seed) {
+            let x = Math.sin(seed) * 10000;
+            return x - Math.floor(x);
+        }
+
+        function generateFullMockHistory(years) {
+            const records = [];
+            const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+            const daysInWeek = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
+            
+            // ดึงข้อมูลของจริง (28 งวดล่าสุด) ใส่ลงไปก่อน
+            realHistoryData.forEach(item => {
+                const parts = item.date.split('-');
+                const d = parseInt(parts[0]);
+                const m = parseInt(parts[1]) - 1; // 0-11
+                const y = parseInt(parts[2]);
+                const dateObj = new Date(y - 543, m, d);
+                
+                const up3 = item.prize1.slice(-3);
+                
+                records.push({
+                    dayName: daysInWeek[dateObj.getDay()],
+                    dateStr: `วัน${daysInWeek[dateObj.getDay()]}ที่ ${d} ${months[m]} ${y}`,
+                    prize1: item.prize1,
+                    up3: up3,
+                    down2: item.down2,
+                    timestamp: dateObj.getTime()
+                });
+            });
+
+            // สร้างงวดจำลอง สำหรับอดีตที่ไกลกว่า 28 งวด เพื่อให้ประวัติครบ 5 ปี, 10 ปี, 20 ปี
+            let currentYear = 2569; 
+            let oldestYear = currentYear - years;
+            
+            for(let y = 2568; y >= oldestYear; y--) {
+                let startMonth = (y === 2568) ? 1 : 11; // ข้อมูลจริงมีถึง 1 มีนาคม 2568 ดังนั้นจำลองต่อจาก กุมภาพันธ์ (index 1) 2568 ย้อนลงไป
+                
+                for(let m = startMonth; m >= 0; m--) {
+                    let date16 = new Date(y - 543, m, 16);
+                    records.push(createMockRecord(date16, daysInWeek[date16.getDay()], 16, months[m], y, m));
+                    
+                    let date1 = new Date(y - 543, m, 1);
+                    records.push(createMockRecord(date1, daysInWeek[date1.getDay()], 1, months[m], y, m));
+                }
+            }
+            
+            // คืนค่าอาร์เรย์ที่เรียงจากใหม่สุดไปเก่าสุด
+            return records.sort((a, b) => b.timestamp - a.timestamp);
+        }
+
+        function createMockRecord(dateObj, dayName, d, mName, y, mIndex) {
+            // สุ่มแบบล็อก Seed (ยึดตามวันที่) เพื่อให้ได้เลขเดิมเสมอ
+            let seed = d + (mIndex * 100) + (y * 10000);
+            let p1_front = Math.floor(seededRandom(seed) * 1000).toString().padStart(3, '0');
+            let up3 = Math.floor(seededRandom(seed + 1) * 1000).toString().padStart(3, '0');
+            let down2 = Math.floor(seededRandom(seed + 2) * 100).toString().padStart(2, '0');
+            let prize1 = p1_front + up3;
+            
+            return {
+                dayName: dayName, 
+                dateStr: `วัน${dayName}ที่ ${d} ${mName} ${y}`,
+                prize1: prize1,
+                up3: up3,
+                down2: down2,
+                timestamp: dateObj.getTime()
+            };
+        }
+
+        function updateHistoryTable() {
+            if (lastMockTimeframe !== currentTimeframe) {
+                globalMockHistory = generateFullMockHistory(parseInt(currentTimeframe));
+                lastMockTimeframe = currentTimeframe;
+            }
+
+            const formulaData = globalMockHistory; 
+            const historyData = globalMockHistory.filter(r => r.dayName === currentDay); 
+            
+            const historyTbody = document.getElementById('history-table-body');
+            const formulaTbody = document.getElementById('formula-table-body');
+            const formulaTenTbody = document.getElementById('formula-ten-table-body');
+            const formulaUnitTbody = document.getElementById('formula-unit-table-body');
+            
+            historyTbody.innerHTML = '';
+            formulaTbody.innerHTML = '';
+            formulaTenTbody.innerHTML = '';
+            formulaUnitTbody.innerHTML = '';
+            
+            document.getElementById('history-count').innerText = `พบ ${historyData.length} งวด`;
+
+            if (historyData.length === 0) {
+                historyTbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-400">ไม่มีข้อมูลย้อนหลัง</td></tr>`;
+            } else {
+                historyData.forEach((record, index) => {
+                    const trHist = document.createElement('tr');
+                    trHist.className = 'hover:bg-slate-50 transition-colors';
+                    trHist.innerHTML = `
+                        <td class="p-3 text-center text-sm text-slate-400">${index + 1}</td>
+                        <td class="p-3 text-sm font-medium text-slate-700">${record.dateStr}</td>
+                        <td class="p-3 text-center">
+                            <span class="inline-block bg-amber-50 text-amber-700 font-bold tracking-widest px-3 py-1 rounded border border-amber-200 shadow-sm">${record.up3}</span>
+                        </td>
+                        <td class="p-3 text-center">
+                            <span class="inline-block bg-rose-50 text-rose-700 font-bold tracking-widest px-3 py-1 rounded border border-rose-200 shadow-sm">${record.down2}</span>
+                        </td>
+                    `;
+                    historyTbody.appendChild(trHist);
+                });
+            }
+
+            if (formulaData.length === 0) {
+                formulaTbody.innerHTML = `<tr><td colspan="14" class="p-6 text-center text-slate-400">ไม่มีข้อมูล</td></tr>`;
+                formulaTenTbody.innerHTML = `<tr><td colspan="14" class="p-6 text-center text-slate-400">ไม่มีข้อมูล</td></tr>`;
+                formulaUnitTbody.innerHTML = `<tr><td colspan="14" class="p-6 text-center text-slate-400">ไม่มีข้อมูล</td></tr>`;
+            } else {
+                // --- เพิ่มส่วนคำนวณ Streak (สูตรที่เดินดีติดกัน >= 10 งวด) ---
+                const totalRows = formulaData.length;
+                const numFormulas = 11;
+                
+                const failedH = Array.from({length: totalRows}, () => Array(numFormulas).fill(false));
+                const failedT = Array.from({length: totalRows}, () => Array(numFormulas).fill(false));
+                const failedU = Array.from({length: totalRows}, () => Array(numFormulas).fill(false));
+
+                // 1. คำนวณหางวดที่หลุด (สีแดง) ทั้งหมดก่อน
+                for (let r = 0; r < totalRows; r++) {
+                    const record = formulaData[r];
+                    const h = parseInt(record.up3[0]);
+                    const t = parseInt(record.up3[1]);
+                    const u = parseInt(record.up3[2]);
+                    
+                    let nextH = null, nextT = null, nextU = null;
+                    if (r - 1 >= 0) {
+                        nextH = parseInt(formulaData[r - 1].up3[0]);
+                        nextT = parseInt(formulaData[r - 1].up3[1]);
+                        nextU = parseInt(formulaData[r - 1].up3[2]);
+                    }
+                    
+                    const sH = [h+t+u, h+1, h+2, h+3, h+4, h+5, h+6, h+7, h+8, h+9, h+10];
+                    const sT = [h+t+u, t+1, t+2, t+3, t+4, t+5, t+6, t+7, t+8, t+9, t+10];
+                    const sU = [h+t+u, u+1, u+2, u+3, u+4, u+5, u+6, u+7, u+8, u+9, u+10];
+                    
+                    for (let c = 0; c < numFormulas; c++) {
+                        if (nextH !== null && (sH[c] % 10) === nextH) failedH[r][c] = true;
+                        if (nextT !== null && (sT[c] % 10) === nextT) failedT[r][c] = true;
+                        if (nextU !== null && (sU[c] % 10) === nextU) failedU[r][c] = true;
+                    }
+                }
+
+                const streakH = Array.from({length: totalRows}, () => Array(numFormulas).fill(false));
+                const streakT = Array.from({length: totalRows}, () => Array(numFormulas).fill(false));
+                const streakU = Array.from({length: totalRows}, () => Array(numFormulas).fill(false));
+
+                // 2. ฟังก์ชันจับกลุ่มสูตรที่ถูกติดกัน 10 งวดขึ้นไป
+                function markStreaks(fMatrix, sMatrix) {
+                    for (let c = 0; c < numFormulas; c++) {
+                        let currentStreak = 0;
+                        let streakStart = -1;
+                        for (let r = 0; r < totalRows; r++) {
+                            if (!fMatrix[r][c]) {
+                                if (currentStreak === 0) streakStart = r;
+                                currentStreak++;
+                            } else {
+                                if (currentStreak >= 10) {
+                                    for (let i = streakStart; i < r; i++) sMatrix[i][c] = true;
+                                }
+                                currentStreak = 0;
+                            }
+                        }
+                        if (currentStreak >= 10) {
+                            for (let i = streakStart; i < totalRows; i++) sMatrix[i][c] = true;
+                        }
+                    }
+                }
+
+                markStreaks(failedH, streakH);
+                markStreaks(failedT, streakT);
+                markStreaks(failedU, streakU);
+                // --- จบส่วนคำนวณ Streak ---
+
+                formulaData.forEach((record, index) => {
+                    const h = parseInt(record.up3[0]);
+                    const t = parseInt(record.up3[1]);
+                    const u = parseInt(record.up3[2]);
+                    
+                    // รวมสูตรทั้ง 11 แบบไว้ใน Array เพื่อวนลูป (หลักร้อย)
+                    const sums = [
+                        h + t + u, h + 1, h + 2, h + 3, h + 4, h + 5, h + 6, h + 7, h + 8, h + 9, h + 10
+                    ];
+
+                    // รวมสูตรทั้ง 11 แบบไว้ใน Array เพื่อวนลูป (หลักสิบ)
+                    const sumsTen = [
+                        h + t + u, t + 1, t + 2, t + 3, t + 4, t + 5, t + 6, t + 7, t + 8, t + 9, t + 10
+                    ];
+
+                    // รวมสูตรทั้ง 11 แบบไว้ใน Array เพื่อวนลูป (หลักหน่วย)
+                    const sumsUnit = [
+                        h + t + u, u + 1, u + 2, u + 3, u + 4, u + 5, u + 6, u + 7, u + 8, u + 9, u + 10
+                    ];
+                    
+                    const formattedPrize1 = record.prize1.split('').join(' ');
+                    const formattedDown2 = record.down2.split('').join(' ');
+
+                    // --- สร้างตารางสูตรหลักร้อย ---
+                    let cellsHtml = '';
+                    sums.forEach((sum, i) => {
+                        const deadDigit = sum % 10;
+                        const isFailed = failedH[index][i];
+                        const isStreak = streakH[index][i]; // เช็คว่าอยู่ในช่วงเดินดี 10 งวดหรือไม่
+                        
+                        const bgClass = i === 0 ? 'bg-slate-100/60' : 'bg-slate-50/40';
+                        
+                        let badgeClass = "inline-block bg-white text-slate-700 font-bold px-2 py-0.5 rounded shadow-sm border border-slate-300 min-w-[28px]";
+                        if (isFailed) {
+                            badgeClass = "inline-block bg-red-500 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-red-600 min-w-[28px]";
+                        } else if (isStreak) {
+                            // ถ้าสูตรไม่หลุดและอยู่ใน Streak >= 10 เปลี่ยนเป็นสีเขียว
+                            badgeClass = "inline-block bg-emerald-600 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-emerald-700 min-w-[28px]";
+                        }
+
+                        cellsHtml += `
+                            <td class="p-2 border-l text-center ${bgClass}">
+                                <span class="${badgeClass}">${deadDigit}</span>
+                            </td>
+                        `;
+                    });
+
+                    const trForm = document.createElement('tr');
+                    trForm.className = 'hover:bg-slate-100 transition-colors';
+                    trForm.innerHTML = `
+                        <td class="p-3 text-left border-r text-slate-600 font-sans whitespace-nowrap">${record.dateStr}</td>
+                        <td class="p-3 tracking-[0.3em] text-slate-700">${formattedPrize1}</td>
+                        <td class="p-3 border-r tracking-[0.3em] text-slate-700">${formattedDown2}</td>
+                        ${cellsHtml}
+                    `;
+                    formulaTbody.appendChild(trForm);
+
+                    // --- สร้างตารางสูตรหลักสิบ ---
+                    let cellsHtmlTen = '';
+                    sumsTen.forEach((sum, i) => {
+                        const deadDigit = sum % 10;
+                        const isFailed = failedT[index][i];
+                        const isStreak = streakT[index][i];
+                        
+                        const bgClass = i === 0 ? 'bg-slate-100/60' : 'bg-slate-50/40';
+                        
+                        let badgeClass = "inline-block bg-white text-slate-700 font-bold px-2 py-0.5 rounded shadow-sm border border-slate-300 min-w-[28px]";
+                        if (isFailed) {
+                            badgeClass = "inline-block bg-red-500 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-red-600 min-w-[28px]";
+                        } else if (isStreak) {
+                            badgeClass = "inline-block bg-emerald-600 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-emerald-700 min-w-[28px]";
+                        }
+
+                        cellsHtmlTen += `
+                            <td class="p-2 border-l text-center ${bgClass}">
+                                <span class="${badgeClass}">${deadDigit}</span>
+                            </td>
+                        `;
+                    });
+
+                    const trFormTen = document.createElement('tr');
+                    trFormTen.className = 'hover:bg-slate-100 transition-colors';
+                    trFormTen.innerHTML = `
+                        <td class="p-3 text-left border-r text-slate-600 font-sans whitespace-nowrap">${record.dateStr}</td>
+                        <td class="p-3 tracking-[0.3em] text-slate-700">${formattedPrize1}</td>
+                        <td class="p-3 border-r tracking-[0.3em] text-slate-700">${formattedDown2}</td>
+                        ${cellsHtmlTen}
+                    `;
+                    formulaTenTbody.appendChild(trFormTen);
+
+                    // --- สร้างตารางสูตรหลักหน่วย ---
+                    let cellsHtmlUnit = '';
+                    sumsUnit.forEach((sum, i) => {
+                        const deadDigit = sum % 10;
+                        const isFailed = failedU[index][i];
+                        const isStreak = streakU[index][i];
+                        
+                        const bgClass = i === 0 ? 'bg-slate-100/60' : 'bg-slate-50/40';
+                        
+                        let badgeClass = "inline-block bg-white text-slate-700 font-bold px-2 py-0.5 rounded shadow-sm border border-slate-300 min-w-[28px]";
+                        if (isFailed) {
+                            badgeClass = "inline-block bg-red-500 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-red-600 min-w-[28px]";
+                        } else if (isStreak) {
+                            badgeClass = "inline-block bg-emerald-600 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-emerald-700 min-w-[28px]";
+                        }
+
+                        cellsHtmlUnit += `
+                            <td class="p-2 border-l text-center ${bgClass}">
+                                <span class="${badgeClass}">${deadDigit}</span>
+                            </td>
+                        `;
+                    });
+
+                    const trFormUnit = document.createElement('tr');
+                    trFormUnit.className = 'hover:bg-slate-100 transition-colors';
+                    trFormUnit.innerHTML = `
+                        <td class="p-3 text-left border-r text-slate-600 font-sans whitespace-nowrap">${record.dateStr}</td>
+                        <td class="p-3 tracking-[0.3em] text-slate-700">${formattedPrize1}</td>
+                        <td class="p-3 border-r tracking-[0.3em] text-slate-700">${formattedDown2}</td>
+                        ${cellsHtmlUnit}
+                    `;
+                    formulaUnitTbody.appendChild(trFormUnit);
+                });
+            }
         }
 
         document.addEventListener('DOMContentLoaded', initApp);
