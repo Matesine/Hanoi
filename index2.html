@@ -176,7 +176,7 @@
             </div>
 
             <!-- Tab 1: Historical Data -->
-            <div id="tab-content-history" class="overflow-x-auto max-h-[400px] custom-scrollbar border border-slate-200 rounded-xl">
+            <div id="tab-content-history" class="overflow-auto max-h-[950px] custom-scrollbar border border-slate-200 rounded-xl">
                 <table class="w-full text-left border-collapse min-w-[500px]">
                     <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
                         <tr>
@@ -193,7 +193,7 @@
             </div>
 
             <!-- Tab 2: Formula Dead Numbers (Hundreds) -->
-            <div id="tab-content-formula" class="hidden overflow-x-auto max-h-[400px] custom-scrollbar border border-slate-200 rounded-xl">
+            <div id="tab-content-formula" class="hidden overflow-auto max-h-[950px] custom-scrollbar border border-slate-200 rounded-xl">
                 <table class="w-full text-center border-collapse min-w-[600px] font-mono">
                     <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
                         <tr>
@@ -220,7 +220,7 @@
             </div>
 
             <!-- Tab 3: Formula Dead Numbers (Tens) -->
-            <div id="tab-content-formula-ten" class="hidden overflow-x-auto max-h-[400px] custom-scrollbar border border-slate-200 rounded-xl">
+            <div id="tab-content-formula-ten" class="hidden overflow-auto max-h-[950px] custom-scrollbar border border-slate-200 rounded-xl">
                 <table class="w-full text-center border-collapse min-w-[600px] font-mono">
                     <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
                         <tr>
@@ -247,7 +247,7 @@
             </div>
 
             <!-- Tab 4: Formula Dead Numbers (Units) -->
-            <div id="tab-content-formula-unit" class="hidden overflow-x-auto max-h-[400px] custom-scrollbar border border-slate-200 rounded-xl">
+            <div id="tab-content-formula-unit" class="hidden overflow-auto max-h-[950px] custom-scrollbar border border-slate-200 rounded-xl">
                 <table class="w-full text-center border-collapse min-w-[600px] font-mono">
                     <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
                         <tr>
@@ -288,39 +288,6 @@
             "อาทิตย์": { name: "วันอาทิตย์", emoji: "❤️", themeClass: "red" }
         };
 
-        const baseFreqs = {
-            "จันทร์": [3, 2, 5, 4, 8, 3, 7, 6, 2, 4],
-            "อังคาร": [4, 5, 3, 7, 2, 8, 4, 3, 6, 2],
-            "พุธ": [2, 6, 4, 3, 5, 7, 2, 8, 4, 3],
-            "พฤหัสบดี": [5, 3, 8, 4, 2, 6, 3, 5, 7, 1],
-            "ศุกร์": [4, 7, 2, 5, 3, 8, 4, 2, 6, 3],
-            "เสาร์": [3, 5, 4, 2, 8, 6, 3, 7, 2, 4],
-            "อาทิตย์": [8, 3, 5, 2, 4, 7, 3, 6, 4, 2]
-        };
-
-        function generateData(multiplier) {
-            const result = {};
-            for (const [day, conf] of Object.entries(baseDayConfigs)) {
-                const baseF = baseFreqs[day];
-                const mutate = (arr, shift) => arr.map((v, i) => Math.max(0, Math.floor(v * multiplier) + (i % shift === 0 ? 1 : 0)));
-                result[day] = {
-                    name: conf.name, emoji: conf.emoji, themeClass: conf.themeClass,
-                    hunUp: mutate(baseF, 2),
-                    tenUp: mutate(baseF.slice().reverse(), 3),
-                    unitUp: mutate([...baseF.slice(5), ...baseF.slice(0,5)], 4),
-                    tenDown: mutate(baseF, 5),
-                    unitDown: mutate(baseF.slice().reverse(), 2)
-                };
-            }
-            return result;
-        }
-
-        const positionData = {
-            "5": generateData(0.8),   
-            "10": generateData(1.5),  
-            "20": generateData(2.8)   
-        };
-
         const timeframes = [
             { id: "5", label: "ย้อนหลัง 5 ปี" },
             { id: "10", label: "ย้อนหลัง 10 ปี" },
@@ -341,6 +308,7 @@
 
         let globalMockHistory = [];
         let lastMockTimeframe = null;
+        let currentCalculatedData = null; // ตัวแปรเก็บสถิติที่คำนวณจริงจากประวัติ
 
         function initApp() {
             renderTimeframeSelector();
@@ -378,7 +346,45 @@
         }
 
         function updateDashboard() {
-            const data = positionData[currentTimeframe][currentDay];
+            // 1. ดึงข้อมูลประวัติย้อนหลังทั้งหมดตามช่วงเวลาที่เลือก
+            if (lastMockTimeframe !== currentTimeframe) {
+                globalMockHistory = generateFullMockHistory(parseInt(currentTimeframe));
+                lastMockTimeframe = currentTimeframe;
+            }
+            
+            // 2. กรองข้อมูลเฉพาะ "วัน" ที่เลือก
+            const historyDataForDay = globalMockHistory.filter(r => r.dayName === currentDay);
+
+            // 3. คำนวณความถี่ของตัวเลข 0-9 ในแต่ละหลัก จากประวัติจริงๆ
+            const freqs = {
+                hunUp: Array(10).fill(0),
+                tenUp: Array(10).fill(0),
+                unitUp: Array(10).fill(0),
+                tenDown: Array(10).fill(0),
+                unitDown: Array(10).fill(0)
+            };
+
+            historyDataForDay.forEach(record => {
+                freqs.hunUp[parseInt(record.up3[0])]++;
+                freqs.tenUp[parseInt(record.up3[1])]++;
+                freqs.unitUp[parseInt(record.up3[2])]++;
+                freqs.tenDown[parseInt(record.down2[0])]++;
+                freqs.unitDown[parseInt(record.down2[1])]++;
+            });
+
+            // 4. บันทึกข้อมูลที่คำนวณได้เพื่อใช้แสดงผลกราฟและชุดจับคู่
+            currentCalculatedData = {
+                name: baseDayConfigs[currentDay].name,
+                emoji: baseDayConfigs[currentDay].emoji,
+                themeClass: baseDayConfigs[currentDay].themeClass,
+                hunUp: freqs.hunUp,
+                tenUp: freqs.tenUp,
+                unitUp: freqs.unitUp,
+                tenDown: freqs.tenDown,
+                unitDown: freqs.unitDown
+            };
+
+            const data = currentCalculatedData;
             const tfLabel = timeframes.find(t => t.id === currentTimeframe).label;
             
             document.getElementById('dynamic-subtitle').innerHTML = `แสดงข้อมูล ${data.name} (${tfLabel})`;
@@ -456,19 +462,24 @@
             }, 10);
 
             updateCombinations();
-            updateHistoryTable();
+            updateHistoryTable(); // ประวัติจะดึงจาก globalMockHistory ไปกรองเอง
         }
 
         function getTopDigits(freqArray, n) {
             let mapped = freqArray.map((val, idx) => ({ digit: idx, freq: val }));
             mapped.sort((a, b) => b.freq - a.freq);
             
+            // ป้องกัน Error กรณีข้อมูลประวัติมีน้อยกว่าค่า N ที่เลือก
+            if (n > mapped.length) n = mapped.length;
+            if (n === 0) return [];
+
             const thresholdFreq = mapped[n - 1].freq;
             return mapped.filter((item, index) => index < n || item.freq === thresholdFreq);
         }
 
         function updateCombinations() {
-            const data = positionData[currentTimeframe][currentDay];
+            // ใช้ข้อมูลที่นับจากประวัติจริงแทน
+            const data = currentCalculatedData;
             const topN = parseInt(document.getElementById('top-n-select').value);
             const sortOrder = document.getElementById('sort-select').value;
 
@@ -623,12 +634,14 @@
         }
 
         function generateFullMockHistory(years) {
+            const totalDrawsRequired = years * 24; // 1 ปี มี 24 งวด (กำหนดจำนวนงวดเป๊ะๆ เช่น 120, 240)
             const records = [];
             const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
             const daysInWeek = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
             
-            // ดึงข้อมูลของจริง (28 งวดล่าสุด) ใส่ลงไปก่อน
-            realHistoryData.forEach(item => {
+            // 1. ดึงข้อมูลของจริง (28 งวดล่าสุด) ใส่ลงไปก่อน
+            for (let i = 0; i < realHistoryData.length && records.length < totalDrawsRequired; i++) {
+                const item = realHistoryData[i];
                 const parts = item.date.split('-');
                 const d = parseInt(parts[0]);
                 const m = parseInt(parts[1]) - 1; // 0-11
@@ -643,46 +656,55 @@
                     prize1: item.prize1,
                     up3: up3,
                     down2: item.down2,
-                    timestamp: dateObj.getTime()
+                    timestamp: dateObj.getTime(),
+                    d: d, m: m, y: y // เก็บข้อมูลสำหรับใช้คำนวณงวดก่อนหน้าต่อ
                 });
-            });
+            }
 
-            // สร้างงวดจำลอง สำหรับอดีตที่ไกลกว่า 28 งวด เพื่อให้ประวัติครบ 5 ปี, 10 ปี, 20 ปี
-            let currentYear = 2569; 
-            let oldestYear = currentYear - years;
-            
-            for(let y = 2568; y >= oldestYear; y--) {
-                let startMonth = (y === 2568) ? 1 : 11; // ข้อมูลจริงมีถึง 1 มีนาคม 2568 ดังนั้นจำลองต่อจาก กุมภาพันธ์ (index 1) 2568 ย้อนลงไป
-                
-                for(let m = startMonth; m >= 0; m--) {
-                    let date16 = new Date(y - 543, m, 16);
-                    records.push(createMockRecord(date16, daysInWeek[date16.getDay()], 16, months[m], y, m));
-                    
-                    let date1 = new Date(y - 543, m, 1);
-                    records.push(createMockRecord(date1, daysInWeek[date1.getDay()], 1, months[m], y, m));
+            // 2. สร้างงวดจำลองแบบถอยหลังทีละงวด เพื่อให้ครบตามจำนวนรวมที่กำหนดเป๊ะๆ
+            if (records.length < totalDrawsRequired) {
+                let lastRecord = records[records.length - 1];
+                let curD = lastRecord.d;
+                let curM = lastRecord.m;
+                let curY = lastRecord.y;
+
+                while (records.length < totalDrawsRequired) {
+                    // ถอยเวลาไป 1 งวด
+                    if (curD === 16) {
+                        curD = 1;
+                    } else {
+                        curD = 16;
+                        if (curM === 0) {
+                            curM = 11; // ถอยกลับไปเดือนธันวาคมของปีที่แล้ว
+                            curY--;
+                        } else {
+                            curM--;
+                        }
+                    }
+
+                    let dateObj = new Date(curY - 543, curM, curD);
+                    let dayName = daysInWeek[dateObj.getDay()];
+
+                    // สุ่มแบบล็อก Seed (ยึดตามวันที่)
+                    let seed = curD + (curM * 100) + (curY * 10000);
+                    let p1_front = Math.floor(seededRandom(seed) * 1000).toString().padStart(3, '0');
+                    let up3 = Math.floor(seededRandom(seed + 1) * 1000).toString().padStart(3, '0');
+                    let down2 = Math.floor(seededRandom(seed + 2) * 100).toString().padStart(2, '0');
+                    let prize1 = p1_front + up3;
+
+                    records.push({
+                        dayName: dayName, 
+                        dateStr: `วัน${dayName}ที่ ${curD} ${months[curM]} ${curY}`,
+                        prize1: prize1,
+                        up3: up3,
+                        down2: down2,
+                        timestamp: dateObj.getTime(),
+                        d: curD, m: curM, y: curY
+                    });
                 }
             }
             
-            // คืนค่าอาร์เรย์ที่เรียงจากใหม่สุดไปเก่าสุด
-            return records.sort((a, b) => b.timestamp - a.timestamp);
-        }
-
-        function createMockRecord(dateObj, dayName, d, mName, y, mIndex) {
-            // สุ่มแบบล็อก Seed (ยึดตามวันที่) เพื่อให้ได้เลขเดิมเสมอ
-            let seed = d + (mIndex * 100) + (y * 10000);
-            let p1_front = Math.floor(seededRandom(seed) * 1000).toString().padStart(3, '0');
-            let up3 = Math.floor(seededRandom(seed + 1) * 1000).toString().padStart(3, '0');
-            let down2 = Math.floor(seededRandom(seed + 2) * 100).toString().padStart(2, '0');
-            let prize1 = p1_front + up3;
-            
-            return {
-                dayName: dayName, 
-                dateStr: `วัน${dayName}ที่ ${d} ${mName} ${y}`,
-                prize1: prize1,
-                up3: up3,
-                down2: down2,
-                timestamp: dateObj.getTime()
-            };
+            return records;
         }
 
         function updateHistoryTable() {
@@ -704,7 +726,8 @@
             formulaTenTbody.innerHTML = '';
             formulaUnitTbody.innerHTML = '';
             
-            document.getElementById('history-count').innerText = `พบ ${historyData.length} งวด`;
+            // แสดงผลจำนวนทั้งหมดเปรียบเทียบกับจำนวนในวันที่เลือก
+            document.getElementById('history-count').innerText = `รวม ${globalMockHistory.length} งวด (ตรงกับวัน${currentDay} ${historyData.length} งวด)`;
 
             if (historyData.length === 0) {
                 historyTbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-400">ไม่มีข้อมูลย้อนหลัง</td></tr>`;
