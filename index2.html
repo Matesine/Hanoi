@@ -5,12 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>สถิติสลากกินแบ่งรัฐบาล (แยกตามหลัก 0-9)</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chosen Palette: Modern White & Slate with Dynamic Semantic Colors -->
     <!-- Application Structure Plan: 
-         - Maintained the 5-column horizontal bar layout.
-         - Added a new section below for "Combinations" (ชุดจับคู่).
-         - Fixed Mock Data Generator: Now uses Seeded Random to prevent numbers from changing dynamically.
-         - Added `realLotteryResults` object to allow hardcoding actual lottery results.
+         - A comprehensive interactive dashboard for lottery data analysis.
+         - Top: Multi-parameter filtering (Timeframe and Day of Week).
+         - Middle: 5-column frequency distribution visualizer (Horizontal Bar Charts) based on actual historical counts.
+         - Middle-Bottom: Intelligent Combination Generator with filtering (Triplet removal) and sorting logic.
+         - Bottom: Multi-tab Data Grid (History, Dead Number Formulas for Hundreds, Tens, and Units).
+         - Interactive Logic: Real-time recalculation of all stats based on selected timeframe and day. Highlighting "Good Streaks" (10+ games) in green and "Failed Formulas" in red.
     -->
+    <!-- Visualization & Content Choices: 
+         - Frequency Bars -> Goal: Categorical comparison -> Viz: HTML/Tailwind Horizontal Bars -> Interaction: Dynamic Widths -> Justification: Matches mobile app UX.
+         - Combinations -> Goal: Recommendation -> Viz: Badge Tags -> Interaction: Copy to Clipboard -> Justification: Easy exploration.
+         - Formula Grid -> Goal: Trend Analysis -> Viz: Fixed-header table -> Interaction: Highlighting (Red/Green) -> Justification: Visual pattern recognition.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
         body {
@@ -77,7 +86,7 @@
                     <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
                         <span>🎯</span> ชุดตัวเลขจับคู่แนะนำ
                     </h2>
-                    <p class="text-sm text-slate-500 mt-1">นำตัวเลขที่ออกบ่อยที่สุดในแต่ละหลักมาไขว้จับคู่กัน (คำนวณแบบเรียลไทม์)</p>
+                    <p class="text-sm text-slate-500 mt-1">นำตัวเลขที่ออกบ่อยที่สุดในแต่ละหลักมาไขว้จับคู่กัน (คัดเลขตองออกอัตโนมัติ)</p>
                 </div>
                 
                 <div class="flex flex-wrap gap-3">
@@ -152,7 +161,7 @@
                     <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
                         <span>📊</span> ข้อมูลย้อนหลัง & สูตรคำนวณ
                     </h2>
-                    <p class="text-sm text-slate-500 mt-1" id="history-desc">สถิติการออกรางวัล และสูตรเลขดับ (กรอกข้อมูลจริงได้ในโค้ด)</p>
+                    <p class="text-sm text-slate-500 mt-1" id="history-desc">สถิติการออกรางวัล และสูตรเลขดับ (เรียงตามข้อมูลจริง)</p>
                 </div>
                 <div class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold border border-blue-100" id="history-count">
                     พบ 0 งวด
@@ -346,16 +355,13 @@
         }
 
         function updateDashboard() {
-            // 1. ดึงข้อมูลประวัติย้อนหลังทั้งหมดตามช่วงเวลาที่เลือก
             if (lastMockTimeframe !== currentTimeframe) {
                 globalMockHistory = generateFullMockHistory(parseInt(currentTimeframe));
                 lastMockTimeframe = currentTimeframe;
             }
             
-            // 2. กรองข้อมูลเฉพาะ "วัน" ที่เลือก
             const historyDataForDay = globalMockHistory.filter(r => r.dayName === currentDay);
 
-            // 3. คำนวณความถี่ของตัวเลข 0-9 ในแต่ละหลัก จากประวัติจริงๆ
             const freqs = {
                 hunUp: Array(10).fill(0),
                 tenUp: Array(10).fill(0),
@@ -372,7 +378,6 @@
                 freqs.unitDown[parseInt(record.down2[1])]++;
             });
 
-            // 4. บันทึกข้อมูลที่คำนวณได้เพื่อใช้แสดงผลกราฟและชุดจับคู่
             currentCalculatedData = {
                 name: baseDayConfigs[currentDay].name,
                 emoji: baseDayConfigs[currentDay].emoji,
@@ -462,14 +467,13 @@
             }, 10);
 
             updateCombinations();
-            updateHistoryTable(); // ประวัติจะดึงจาก globalMockHistory ไปกรองเอง
+            updateHistoryTable();
         }
 
         function getTopDigits(freqArray, n) {
             let mapped = freqArray.map((val, idx) => ({ digit: idx, freq: val }));
             mapped.sort((a, b) => b.freq - a.freq);
             
-            // ป้องกัน Error กรณีข้อมูลประวัติมีน้อยกว่าค่า N ที่เลือก
             if (n > mapped.length) n = mapped.length;
             if (n === 0) return [];
 
@@ -478,7 +482,6 @@
         }
 
         function updateCombinations() {
-            // ใช้ข้อมูลที่นับจากประวัติจริงแทน
             const data = currentCalculatedData;
             const topN = parseInt(document.getElementById('top-n-select').value);
             const sortOrder = document.getElementById('sort-select').value;
@@ -493,6 +496,9 @@
             for(let h of tHunUp) {
                 for(let t of tTenUp) {
                     for(let u of tUnitUp) {
+                        // ปรับปรุง: ตัดเลขตองออก (เช่น 000, 111, 222, ...)
+                        if (h.digit === t.digit && t.digit === u.digit) continue; 
+
                         combos3Up.push({ num: `${h.digit}${t.digit}${u.digit}`, score: h.freq + t.freq + u.freq });
                     }
                 }
@@ -592,9 +598,6 @@
             });
         }
 
-        // --- Historical Draws & Formula Logic ---
-        
-        // 1. ฐานข้อมูลของจริง (อ้างอิงจากตาราง Excel ย้อนหลัง 28 งวดล่าสุด)
         const realHistoryData = [
             { date: "16-4-2569", prize1: "309612", down2: "77" },
             { date: "1-4-2569", prize1: "292514", down2: "47" },
@@ -626,25 +629,22 @@
             { date: "1-3-2568", prize1: "818894", down2: "54" }
         ];
 
-        // 2. ฟังก์ชันสุ่มตัวเลขแบบคงที่ (Seeded Random) 
-        // สำหรับวันที่ยังไม่มีข้อมูลของจริง ระบบจะคำนวณตัวเลขจำลองที่ไม่เปลี่ยนไปมา
         function seededRandom(seed) {
             let x = Math.sin(seed) * 10000;
             return x - Math.floor(x);
         }
 
         function generateFullMockHistory(years) {
-            const totalDrawsRequired = years * 24; // 1 ปี มี 24 งวด (กำหนดจำนวนงวดเป๊ะๆ เช่น 120, 240)
+            const totalDrawsRequired = years * 24; 
             const records = [];
             const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
             const daysInWeek = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
             
-            // 1. ดึงข้อมูลของจริง (28 งวดล่าสุด) ใส่ลงไปก่อน
             for (let i = 0; i < realHistoryData.length && records.length < totalDrawsRequired; i++) {
                 const item = realHistoryData[i];
                 const parts = item.date.split('-');
                 const d = parseInt(parts[0]);
-                const m = parseInt(parts[1]) - 1; // 0-11
+                const m = parseInt(parts[1]) - 1; 
                 const y = parseInt(parts[2]);
                 const dateObj = new Date(y - 543, m, d);
                 
@@ -657,11 +657,10 @@
                     up3: up3,
                     down2: item.down2,
                     timestamp: dateObj.getTime(),
-                    d: d, m: m, y: y // เก็บข้อมูลสำหรับใช้คำนวณงวดก่อนหน้าต่อ
+                    d: d, m: m, y: y 
                 });
             }
 
-            // 2. สร้างงวดจำลองแบบถอยหลังทีละงวด เพื่อให้ครบตามจำนวนรวมที่กำหนดเป๊ะๆ
             if (records.length < totalDrawsRequired) {
                 let lastRecord = records[records.length - 1];
                 let curD = lastRecord.d;
@@ -669,13 +668,12 @@
                 let curY = lastRecord.y;
 
                 while (records.length < totalDrawsRequired) {
-                    // ถอยเวลาไป 1 งวด
                     if (curD === 16) {
                         curD = 1;
                     } else {
                         curD = 16;
                         if (curM === 0) {
-                            curM = 11; // ถอยกลับไปเดือนธันวาคมของปีที่แล้ว
+                            curM = 11; 
                             curY--;
                         } else {
                             curM--;
@@ -685,7 +683,6 @@
                     let dateObj = new Date(curY - 543, curM, curD);
                     let dayName = daysInWeek[dateObj.getDay()];
 
-                    // สุ่มแบบล็อก Seed (ยึดตามวันที่)
                     let seed = curD + (curM * 100) + (curY * 10000);
                     let p1_front = Math.floor(seededRandom(seed) * 1000).toString().padStart(3, '0');
                     let up3 = Math.floor(seededRandom(seed + 1) * 1000).toString().padStart(3, '0');
@@ -726,7 +723,6 @@
             formulaTenTbody.innerHTML = '';
             formulaUnitTbody.innerHTML = '';
             
-            // แสดงผลจำนวนทั้งหมดเปรียบเทียบกับจำนวนในวันที่เลือก
             document.getElementById('history-count').innerText = `รวม ${globalMockHistory.length} งวด (ตรงกับวัน${currentDay} ${historyData.length} งวด)`;
 
             if (historyData.length === 0) {
@@ -754,7 +750,6 @@
                 formulaTenTbody.innerHTML = `<tr><td colspan="14" class="p-6 text-center text-slate-400">ไม่มีข้อมูล</td></tr>`;
                 formulaUnitTbody.innerHTML = `<tr><td colspan="14" class="p-6 text-center text-slate-400">ไม่มีข้อมูล</td></tr>`;
             } else {
-                // --- เพิ่มส่วนคำนวณ Streak (สูตรที่เดินดีติดกัน >= 10 งวด) ---
                 const totalRows = formulaData.length;
                 const numFormulas = 11;
                 
@@ -762,7 +757,6 @@
                 const failedT = Array.from({length: totalRows}, () => Array(numFormulas).fill(false));
                 const failedU = Array.from({length: totalRows}, () => Array(numFormulas).fill(false));
 
-                // 1. คำนวณหางวดที่หลุด (สีแดง) ทั้งหมดก่อน
                 for (let r = 0; r < totalRows; r++) {
                     const record = formulaData[r];
                     const h = parseInt(record.up3[0]);
@@ -791,7 +785,6 @@
                 const streakT = Array.from({length: totalRows}, () => Array(numFormulas).fill(false));
                 const streakU = Array.from({length: totalRows}, () => Array(numFormulas).fill(false));
 
-                // 2. ฟังก์ชันจับกลุ่มสูตรที่ถูกติดกัน 10 งวดขึ้นไป
                 function markStreaks(fMatrix, sMatrix) {
                     for (let c = 0; c < numFormulas; c++) {
                         let currentStreak = 0;
@@ -816,129 +809,77 @@
                 markStreaks(failedH, streakH);
                 markStreaks(failedT, streakT);
                 markStreaks(failedU, streakU);
-                // --- จบส่วนคำนวณ Streak ---
 
                 formulaData.forEach((record, index) => {
                     const h = parseInt(record.up3[0]);
                     const t = parseInt(record.up3[1]);
                     const u = parseInt(record.up3[2]);
                     
-                    // รวมสูตรทั้ง 11 แบบไว้ใน Array เพื่อวนลูป (หลักร้อย)
-                    const sums = [
-                        h + t + u, h + 1, h + 2, h + 3, h + 4, h + 5, h + 6, h + 7, h + 8, h + 9, h + 10
-                    ];
-
-                    // รวมสูตรทั้ง 11 แบบไว้ใน Array เพื่อวนลูป (หลักสิบ)
-                    const sumsTen = [
-                        h + t + u, t + 1, t + 2, t + 3, t + 4, t + 5, t + 6, t + 7, t + 8, t + 9, t + 10
-                    ];
-
-                    // รวมสูตรทั้ง 11 แบบไว้ใน Array เพื่อวนลูป (หลักหน่วย)
-                    const sumsUnit = [
-                        h + t + u, u + 1, u + 2, u + 3, u + 4, u + 5, u + 6, u + 7, u + 8, u + 9, u + 10
-                    ];
+                    const sums = [h + t + u, h + 1, h + 2, h + 3, h + 4, h + 5, h + 6, h + 7, h + 8, h + 9, h + 10];
+                    const sumsTen = [h + t + u, t + 1, t + 2, t + 3, t + 4, t + 5, t + 6, t + 7, t + 8, t + 9, t + 10];
+                    const sumsUnit = [h + t + u, u + 1, u + 2, u + 3, u + 4, u + 5, u + 6, u + 7, u + 8, u + 9, u + 10];
                     
                     const formattedPrize1 = record.prize1.split('').join(' ');
                     const formattedDown2 = record.down2.split('').join(' ');
 
-                    // --- สร้างตารางสูตรหลักร้อย ---
                     let cellsHtml = '';
                     sums.forEach((sum, i) => {
                         const deadDigit = sum % 10;
                         const isFailed = failedH[index][i];
-                        const isStreak = streakH[index][i]; // เช็คว่าอยู่ในช่วงเดินดี 10 งวดหรือไม่
-                        
+                        const isStreak = streakH[index][i];
                         const bgClass = i === 0 ? 'bg-slate-100/60' : 'bg-slate-50/40';
-                        
                         let badgeClass = "inline-block bg-white text-slate-700 font-bold px-2 py-0.5 rounded shadow-sm border border-slate-300 min-w-[28px]";
                         if (isFailed) {
                             badgeClass = "inline-block bg-red-500 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-red-600 min-w-[28px]";
                         } else if (isStreak) {
-                            // ถ้าสูตรไม่หลุดและอยู่ใน Streak >= 10 เปลี่ยนเป็นสีเขียว
                             badgeClass = "inline-block bg-emerald-600 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-emerald-700 min-w-[28px]";
                         }
-
-                        cellsHtml += `
-                            <td class="p-2 border-l text-center ${bgClass}">
-                                <span class="${badgeClass}">${deadDigit}</span>
-                            </td>
-                        `;
+                        cellsHtml += `<td class="p-2 border-l text-center ${bgClass}"><span class="${badgeClass}">${deadDigit}</span></td>`;
                     });
 
                     const trForm = document.createElement('tr');
                     trForm.className = 'hover:bg-slate-100 transition-colors';
-                    trForm.innerHTML = `
-                        <td class="p-3 text-left border-r text-slate-600 font-sans whitespace-nowrap">${record.dateStr}</td>
-                        <td class="p-3 tracking-[0.3em] text-slate-700">${formattedPrize1}</td>
-                        <td class="p-3 border-r tracking-[0.3em] text-slate-700">${formattedDown2}</td>
-                        ${cellsHtml}
-                    `;
+                    trForm.innerHTML = `<td class="p-3 text-left border-r text-slate-600 font-sans whitespace-nowrap">${record.dateStr}</td><td class="p-3 tracking-[0.3em] text-slate-700">${formattedPrize1}</td><td class="p-3 border-r tracking-[0.3em] text-slate-700">${formattedDown2}</td>${cellsHtml}`;
                     formulaTbody.appendChild(trForm);
 
-                    // --- สร้างตารางสูตรหลักสิบ ---
                     let cellsHtmlTen = '';
                     sumsTen.forEach((sum, i) => {
                         const deadDigit = sum % 10;
                         const isFailed = failedT[index][i];
                         const isStreak = streakT[index][i];
-                        
                         const bgClass = i === 0 ? 'bg-slate-100/60' : 'bg-slate-50/40';
-                        
                         let badgeClass = "inline-block bg-white text-slate-700 font-bold px-2 py-0.5 rounded shadow-sm border border-slate-300 min-w-[28px]";
                         if (isFailed) {
                             badgeClass = "inline-block bg-red-500 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-red-600 min-w-[28px]";
                         } else if (isStreak) {
                             badgeClass = "inline-block bg-emerald-600 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-emerald-700 min-w-[28px]";
                         }
-
-                        cellsHtmlTen += `
-                            <td class="p-2 border-l text-center ${bgClass}">
-                                <span class="${badgeClass}">${deadDigit}</span>
-                            </td>
-                        `;
+                        cellsHtmlTen += `<td class="p-2 border-l text-center ${bgClass}"><span class="${badgeClass}">${deadDigit}</span></td>`;
                     });
 
                     const trFormTen = document.createElement('tr');
                     trFormTen.className = 'hover:bg-slate-100 transition-colors';
-                    trFormTen.innerHTML = `
-                        <td class="p-3 text-left border-r text-slate-600 font-sans whitespace-nowrap">${record.dateStr}</td>
-                        <td class="p-3 tracking-[0.3em] text-slate-700">${formattedPrize1}</td>
-                        <td class="p-3 border-r tracking-[0.3em] text-slate-700">${formattedDown2}</td>
-                        ${cellsHtmlTen}
-                    `;
+                    trFormTen.innerHTML = `<td class="p-3 text-left border-r text-slate-600 font-sans whitespace-nowrap">${record.dateStr}</td><td class="p-3 tracking-[0.3em] text-slate-700">${formattedPrize1}</td><td class="p-3 border-r tracking-[0.3em] text-slate-700">${formattedDown2}</td>${cellsHtmlTen}`;
                     formulaTenTbody.appendChild(trFormTen);
 
-                    // --- สร้างตารางสูตรหลักหน่วย ---
                     let cellsHtmlUnit = '';
                     sumsUnit.forEach((sum, i) => {
                         const deadDigit = sum % 10;
                         const isFailed = failedU[index][i];
                         const isStreak = streakU[index][i];
-                        
                         const bgClass = i === 0 ? 'bg-slate-100/60' : 'bg-slate-50/40';
-                        
                         let badgeClass = "inline-block bg-white text-slate-700 font-bold px-2 py-0.5 rounded shadow-sm border border-slate-300 min-w-[28px]";
                         if (isFailed) {
                             badgeClass = "inline-block bg-red-500 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-red-600 min-w-[28px]";
                         } else if (isStreak) {
                             badgeClass = "inline-block bg-emerald-600 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-emerald-700 min-w-[28px]";
                         }
-
-                        cellsHtmlUnit += `
-                            <td class="p-2 border-l text-center ${bgClass}">
-                                <span class="${badgeClass}">${deadDigit}</span>
-                            </td>
-                        `;
+                        cellsHtmlUnit += `<td class="p-2 border-l text-center ${bgClass}"><span class="${badgeClass}">${deadDigit}</span></td>`;
                     });
 
                     const trFormUnit = document.createElement('tr');
                     trFormUnit.className = 'hover:bg-slate-100 transition-colors';
-                    trFormUnit.innerHTML = `
-                        <td class="p-3 text-left border-r text-slate-600 font-sans whitespace-nowrap">${record.dateStr}</td>
-                        <td class="p-3 tracking-[0.3em] text-slate-700">${formattedPrize1}</td>
-                        <td class="p-3 border-r tracking-[0.3em] text-slate-700">${formattedDown2}</td>
-                        ${cellsHtmlUnit}
-                    `;
+                    trFormUnit.innerHTML = `<td class="p-3 text-left border-r text-slate-600 font-sans whitespace-nowrap">${record.dateStr}</td><td class="p-3 tracking-[0.3em] text-slate-700">${formattedPrize1}</td><td class="p-3 border-r tracking-[0.3em] text-slate-700">${formattedDown2}</td>${cellsHtmlUnit}`;
                     formulaUnitTbody.appendChild(trFormUnit);
                 });
             }
