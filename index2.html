@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สถิติสลากกินแบ่งรัฐบาล (แยกตามหลัก 0-9)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Application Structure Plan: 
+         - Maintained the 5-column horizontal bar layout.
+         - Added a new section below for "Combinations" (ชุดจับคู่).
+         - Added Dropdowns for dynamic interaction: Top N selection and Sort Order.
+         - JavaScript dynamically calculates the Cartesian product of the top N digits for respective positions, scores them by combined frequency, sorts them, and renders them in scrollable containers.
+    -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #f4f7f9; 
+            color: #334155;
+        }
+        
+        .progress-bar {
+            transition: width 0.5s ease-in-out;
+        }
+        
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12">
+
+    <div class="max-w-[1400px] mx-auto px-4 pt-8 pb-4">
+        <header class="mb-6 flex flex-col md:flex-row items-center gap-3 text-center md:text-left">
+            <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl shadow-sm border border-blue-200">
+                🕒
+            </div>
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-slate-800">สถิติการออกรางวัลแยกตามหลัก (0-9)</h1>
+                <p class="text-slate-500 text-sm mt-1" id="dynamic-subtitle">กำลังโหลดข้อมูล...</p>
+            </div>
+        </header>
+
+        <!-- Time & Day Selectors -->
+        <section class="mb-6 bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex flex-col md:flex-row gap-6">
+                <div>
+                    <p class="text-slate-500 mb-2 font-medium text-sm">เลือกช่วงเวลาย้อนหลัง:</p>
+                    <div class="flex flex-wrap gap-2" id="timeframe-selector"></div>
+                </div>
+                <div class="flex-1 md:border-l md:border-slate-100 md:pl-6">
+                    <p class="text-slate-500 mb-2 font-medium text-sm">เลือกวันออกรางวัล:</p>
+                    <div class="flex flex-wrap gap-2" id="day-selector"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stats 5 Columns Container -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6" id="stats-container">
+            <!-- Columns injected by JS -->
+        </section>
+
+        <!-- Combinations Generator Section -->
+        <section class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-5 gap-4 border-b border-slate-100 pb-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <span>🎯</span> ชุดตัวเลขจับคู่แนะนำ
+                    </h2>
+                    <p class="text-sm text-slate-500 mt-1">นำตัวเลขที่ออกบ่อยที่สุดในแต่ละหลักมาไขว้จับคู่กัน (คำนวณแบบเรียลไทม์)</p>
+                </div>
+                
+                <div class="flex flex-wrap gap-3">
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-medium text-slate-600">ดึงตัวเด่น:</label>
+                        <select id="top-n-select" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
+                            <option value="4">Top 4 (หลักละ 4 ตัว)</option>
+                            <option value="5">Top 5 (หลักละ 5 ตัว)</option>
+                            <option value="6" selected>Top 6 (หลักละ 6 ตัว)</option>
+                            <option value="7">Top 7 (หลักละ 7 ตัว)</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-medium text-slate-600">จัดเรียงผลรวม:</label>
+                        <select id="sort-select" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
+                            <option value="desc" selected>ความถี่ มาก ➔ น้อย</option>
+                            <option value="asc">ความถี่ น้อย ➔ มาก</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 3 Up Combinations -->
+                <div class="bg-amber-50/50 rounded-xl border border-amber-100 flex flex-col">
+                    <div class="bg-amber-100 px-4 py-2 rounded-t-xl border-b border-amber-200 flex justify-between items-center">
+                        <h3 class="font-bold text-amber-800">ชุดจับคู่ 3 ตัวบน</h3>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full" id="count-3up">0 ชุด</span>
+                            <button onclick="copyCombinations('combo-3up-container', this)" class="text-xs bg-white text-amber-700 px-2 py-0.5 rounded border border-amber-300 hover:bg-amber-50 transition-colors">📋 คัดลอก</button>
+                        </div>
+                    </div>
+                    <div class="p-3 overflow-y-auto max-h-[300px] custom-scrollbar flex-1">
+                        <div class="flex flex-wrap gap-2" id="combo-3up-container"></div>
+                    </div>
+                </div>
+
+                <!-- 2 Up Combinations -->
+                <div class="bg-teal-50/50 rounded-xl border border-teal-100 flex flex-col">
+                    <div class="bg-teal-100 px-4 py-2 rounded-t-xl border-b border-teal-200 flex justify-between items-center">
+                        <h3 class="font-bold text-teal-800">ชุดจับคู่ 2 ตัวบน</h3>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs bg-teal-200 text-teal-800 px-2 py-0.5 rounded-full" id="count-2up">0 ชุด</span>
+                            <button onclick="copyCombinations('combo-2up-container', this)" class="text-xs bg-white text-teal-700 px-2 py-0.5 rounded border border-teal-300 hover:bg-teal-50 transition-colors">📋 คัดลอก</button>
+                        </div>
+                    </div>
+                    <div class="p-3 overflow-y-auto max-h-[300px] custom-scrollbar flex-1">
+                        <div class="flex flex-wrap gap-2" id="combo-2up-container"></div>
+                    </div>
+                </div>
+
+                <!-- 2 Down Combinations -->
+                <div class="bg-rose-50/50 rounded-xl border border-rose-100 flex flex-col">
+                    <div class="bg-rose-100 px-4 py-2 rounded-t-xl border-b border-rose-200 flex justify-between items-center">
+                        <h3 class="font-bold text-rose-800">ชุดจับคู่ 2 ตัวล่าง</h3>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs bg-rose-200 text-rose-800 px-2 py-0.5 rounded-full" id="count-2down">0 ชุด</span>
+                            <button onclick="copyCombinations('combo-2down-container', this)" class="text-xs bg-white text-rose-700 px-2 py-0.5 rounded border border-rose-300 hover:bg-rose-50 transition-colors">📋 คัดลอก</button>
+                        </div>
+                    </div>
+                    <div class="p-3 overflow-y-auto max-h-[300px] custom-scrollbar flex-1">
+                        <div class="flex flex-wrap gap-2" id="combo-2down-container"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // Data Structure
+        const baseDayConfigs = {
+            "จันทร์": { name: "วันจันทร์", emoji: "💛", themeClass: "yellow" },
+            "อังคาร": { name: "วันอังคาร", emoji: "🩷", themeClass: "pink" },
+            "พุธ": { name: "วันพุธ", emoji: "💚", themeClass: "green" },
+            "พฤหัสบดี": { name: "วันพฤหัสบดี", emoji: "🧡", themeClass: "orange" },
+            "ศุกร์": { name: "วันศุกร์", emoji: "💙", themeClass: "blue" },
+            "เสาร์": { name: "วันเสาร์", emoji: "💜", themeClass: "purple" },
+            "อาทิตย์": { name: "วันอาทิตย์", emoji: "❤️", themeClass: "red" }
+        };
+
+        const baseFreqs = {
+            "จันทร์": [3, 2, 5, 4, 8, 3, 7, 6, 2, 4],
+            "อังคาร": [4, 5, 3, 7, 2, 8, 4, 3, 6, 2],
+            "พุธ": [2, 6, 4, 3, 5, 7, 2, 8, 4, 3],
+            "พฤหัสบดี": [5, 3, 8, 4, 2, 6, 3, 5, 7, 1],
+            "ศุกร์": [4, 7, 2, 5, 3, 8, 4, 2, 6, 3],
+            "เสาร์": [3, 5, 4, 2, 8, 6, 3, 7, 2, 4],
+            "อาทิตย์": [8, 3, 5, 2, 4, 7, 3, 6, 4, 2]
+        };
+
+        function generateData(multiplier) {
+            const result = {};
+            for (const [day, conf] of Object.entries(baseDayConfigs)) {
+                const baseF = baseFreqs[day];
+                const mutate = (arr, shift) => arr.map((v, i) => Math.max(0, Math.floor(v * multiplier) + (i % shift === 0 ? 1 : 0)));
+                result[day] = {
+                    name: conf.name, emoji: conf.emoji, themeClass: conf.themeClass,
+                    hunUp: mutate(baseF, 2),
+                    tenUp: mutate(baseF.slice().reverse(), 3),
+                    unitUp: mutate([...baseF.slice(5), ...baseF.slice(0,5)], 4),
+                    tenDown: mutate(baseF, 5),
+                    unitDown: mutate(baseF.slice().reverse(), 2)
+                };
+            }
+            return result;
+        }
+
+        const positionData = {
+            "5": generateData(0.8),   
+            "10": generateData(1.5),  
+            "20": generateData(2.8)   
+        };
+
+        const timeframes = [
+            { id: "5", label: "ย้อนหลัง 5 ปี" },
+            { id: "10", label: "ย้อนหลัง 10 ปี" },
+            { id: "20", label: "ย้อนหลัง 20 ปี" }
+        ];
+        const daysOrder = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์", "อาทิตย์"];
+
+        const columnConfigs = [
+            { id: "hunUp", title: "หลักร้อยบน", theme: { main: "text-amber-500", bgLight: "bg-amber-50", barBg: "bg-amber-400", border: "border-amber-100" } },
+            { id: "tenUp", title: "หลักสิบบน", theme: { main: "text-blue-600", bgLight: "bg-blue-50", barBg: "bg-blue-500", border: "border-blue-100" } },
+            { id: "unitUp", title: "หลักหน่วยบน", theme: { main: "text-teal-500", bgLight: "bg-teal-50", barBg: "bg-teal-400", border: "border-teal-100" } },
+            { id: "tenDown", title: "หลักสิบล่าง", theme: { main: "text-rose-500", bgLight: "bg-rose-50", barBg: "bg-rose-500", border: "border-rose-100" } },
+            { id: "unitDown", title: "หลักหน่วยล่าง", theme: { main: "text-fuchsia-500", bgLight: "bg-fuchsia-50", barBg: "bg-fuchsia-400", border: "border-fuchsia-100" } }
+        ];
+
+        let currentDay = "จันทร์";
+        let currentTimeframe = "10";
+
+        function initApp() {
+            renderTimeframeSelector();
+            renderDaySelector();
+            
+            // Add Listeners for Dropdowns
+            document.getElementById('top-n-select').addEventListener('change', updateCombinations);
+            document.getElementById('sort-select').addEventListener('change', updateCombinations);
+
+            updateDashboard();
+        }
+
+        function renderTimeframeSelector() {
+            const container = document.getElementById('timeframe-selector');
+            timeframes.forEach(tf => {
+                const btn = document.createElement('button');
+                btn.className = `px-3 py-1.5 rounded-lg border transition-all duration-200 font-medium text-sm hover:bg-slate-50`;
+                btn.innerHTML = tf.label;
+                btn.onclick = () => { currentTimeframe = tf.id; updateDashboard(); };
+                btn.id = `btn-tf-${tf.id}`;
+                container.appendChild(btn);
+            });
+        }
+
+        function renderDaySelector() {
+            const container = document.getElementById('day-selector');
+            daysOrder.forEach(day => {
+                const btn = document.createElement('button');
+                const conf = baseDayConfigs[day];
+                btn.className = `px-3 py-1.5 rounded-lg border transition-all duration-200 font-medium text-sm flex items-center gap-1.5 hover:bg-slate-50`;
+                btn.innerHTML = `<span>${conf.emoji}</span> ${conf.name}`;
+                btn.onclick = () => { currentDay = day; updateDashboard(); };
+                btn.id = `btn-day-${day}`;
+                container.appendChild(btn);
+            });
+        }
+
+        function updateDashboard() {
+            const data = positionData[currentTimeframe][currentDay];
+            const tfLabel = timeframes.find(t => t.id === currentTimeframe).label;
+            
+            document.getElementById('dynamic-subtitle').innerHTML = `แสดงข้อมูล ${data.name} (${tfLabel})`;
+
+            timeframes.forEach(tf => {
+                const btn = document.getElementById(`btn-tf-${tf.id}`);
+                btn.className = tf.id === currentTimeframe 
+                    ? `px-3 py-1.5 rounded-lg border-2 transition-all duration-200 font-bold text-sm bg-slate-800 border-slate-800 text-white shadow-sm` 
+                    : `px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 transition-all duration-200 font-medium text-sm hover:bg-slate-50`;
+            });
+
+            daysOrder.forEach(d => {
+                const btn = document.getElementById(`btn-day-${d}`);
+                btn.className = d === currentDay 
+                    ? `px-3 py-1.5 rounded-lg border-2 transition-all duration-200 font-bold text-sm flex items-center gap-1.5 bg-slate-100 border-slate-400 text-slate-800 shadow-sm` 
+                    : `px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 transition-all duration-200 font-medium text-sm flex items-center gap-1.5 hover:bg-slate-50`;
+            });
+
+            // Render the 5 Columns
+            const statsContainer = document.getElementById('stats-container');
+            statsContainer.innerHTML = '';
+
+            columnConfigs.forEach(col => {
+                const freqArray = data[col.id];
+                let combined = freqArray.map((val, index) => ({ digit: index, count: val }));
+                combined.sort((a, b) => b.count - a.count);
+                const maxCount = combined[0].count;
+
+                let colHTML = `
+                    <div class="bg-white rounded-xl shadow-sm border ${col.theme.border} overflow-hidden flex flex-col">
+                        <div class="${col.theme.bgLight} p-3 flex items-center gap-2 border-b ${col.theme.border}">
+                            <div class="font-bold text-lg ${col.theme.main}">◎</div>
+                            <h3 class="font-bold text-md ${col.theme.main}">${col.title}</h3>
+                        </div>
+                        <div class="p-2 flex-1 flex flex-col gap-1">
+                `;
+
+                combined.forEach(item => {
+                    const isMax = item.count === maxCount;
+                    const percent = maxCount === 0 ? 0 : (item.count / maxCount) * 100;
+                    
+                    if (isMax) {
+                        colHTML += `
+                            <div class="flex items-center justify-between p-2 rounded-lg ${col.theme.bgLight} transition-colors">
+                                <span class="w-5 text-center font-bold text-xl ${col.theme.main}">${item.digit}</span>
+                                <div class="flex-1 mx-3 bg-white rounded-full h-3.5 overflow-hidden">
+                                    <div class="${col.theme.barBg} h-full rounded-full progress-bar" style="width: ${percent}%;"></div>
+                                </div>
+                                <span class="text-sm font-bold text-slate-700 min-w-[3rem] text-right">${item.count} <span class="text-[10px] font-normal text-slate-400">ครั้ง</span></span>
+                            </div>
+                        `;
+                    } else {
+                        colHTML += `
+                            <div class="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                                <span class="w-5 text-center font-medium text-lg text-slate-500">${item.digit}</span>
+                                <div class="flex-1 mx-3 bg-transparent rounded-full h-3.5 overflow-hidden flex items-center">
+                                    <div class="bg-slate-200 h-[80%] rounded-full progress-bar" style="width: ${percent}%;"></div>
+                                </div>
+                                <span class="text-sm font-semibold text-slate-500 min-w-[3rem] text-right">${item.count} <span class="text-[10px] font-normal text-slate-300">ครั้ง</span></span>
+                            </div>
+                        `;
+                    }
+                });
+
+                colHTML += `</div></div>`;
+                statsContainer.innerHTML += colHTML;
+            });
+            
+            setTimeout(() => {
+                document.querySelectorAll('.progress-bar').forEach(el => {
+                    const w = el.style.width;
+                    el.style.width = '0';
+                    el.offsetHeight; 
+                    el.style.width = w;
+                });
+            }, 10);
+
+            // Update Combinations whenever dashboard updates
+            updateCombinations();
+        }
+
+        // --- New Combinations Logic ---
+
+        // Helper to get top N digits for a specific position (รองรับกรณีคะแนนความถี่เสมอกัน)
+        function getTopDigits(freqArray, n) {
+            let mapped = freqArray.map((val, idx) => ({ digit: idx, freq: val }));
+            mapped.sort((a, b) => b.freq - a.freq);
+            
+            // หาค่าความถี่ของตัวเลขที่อยู่ตรงขอบเขตพอดี (เช่น เลือก Top 6 ก็จะดูความถี่ของตัวที่ 6)
+            const thresholdFreq = mapped[n - 1].freq;
+            
+            // กรองเอาตัวเลขลำดับที่ 1 ถึง n และดึงตัวถัดๆ ไปด้วย หากมีความถี่ "เท่ากับ" ตัวที่ n
+            return mapped.filter((item, index) => index < n || item.freq === thresholdFreq);
+        }
+
+        function updateCombinations() {
+            const data = positionData[currentTimeframe][currentDay];
+            const topN = parseInt(document.getElementById('top-n-select').value);
+            const sortOrder = document.getElementById('sort-select').value;
+
+            // Get top digits for each pool
+            const tHunUp = getTopDigits(data.hunUp, topN);
+            const tTenUp = getTopDigits(data.tenUp, topN);
+            const tUnitUp = getTopDigits(data.unitUp, topN);
+            const tTenDown = getTopDigits(data.tenDown, topN);
+            const tUnitDown = getTopDigits(data.unitDown, topN);
+
+            // 1. Generate 3-Up Combinations
+            let combos3Up = [];
+            for(let h of tHunUp) {
+                for(let t of tTenUp) {
+                    for(let u of tUnitUp) {
+                        combos3Up.push({ 
+                            num: `${h.digit}${t.digit}${u.digit}`, 
+                            score: h.freq + t.freq + u.freq 
+                        });
+                    }
+                }
+            }
+
+            // 2. Generate 2-Up Combinations
+            let combos2Up = [];
+            for(let t of tTenUp) {
+                for(let u of tUnitUp) {
+                    combos2Up.push({ 
+                        num: `${t.digit}${u.digit}`, 
+                        score: t.freq + u.freq 
+                    });
+                }
+            }
+
+            // 3. Generate 2-Down Combinations
+            let combos2Down = [];
+            for(let t of tTenDown) {
+                for(let u of tUnitDown) {
+                    combos2Down.push({ 
+                        num: `${t.digit}${u.digit}`, 
+                        score: t.freq + u.freq 
+                    });
+                }
+            }
+
+            // Sort Function
+            const sortFn = (a, b) => sortOrder === 'desc' ? b.score - a.score : a.score - b.score;
+            
+            combos3Up.sort(sortFn);
+            combos2Up.sort(sortFn);
+            combos2Down.sort(sortFn);
+
+            // Update Counts
+            document.getElementById('count-3up').innerText = `${combos3Up.length} ชุด`;
+            document.getElementById('count-2up').innerText = `${combos2Up.length} ชุด`;
+            document.getElementById('count-2down').innerText = `${combos2Down.length} ชุด`;
+
+            // Render UI
+            renderComboBadges('combo-3up-container', combos3Up, 'bg-amber-100 text-amber-800 border-amber-200');
+            renderComboBadges('combo-2up-container', combos2Up, 'bg-teal-100 text-teal-800 border-teal-200');
+            renderComboBadges('combo-2down-container', combos2Down, 'bg-rose-100 text-rose-800 border-rose-200');
+        }
+
+        function renderComboBadges(containerId, dataArr, styleClasses) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            
+            // To provide visual hierarchy, let's make the absolute top scores slightly bolder
+            const maxScoreInArr = dataArr.length > 0 ? (document.getElementById('sort-select').value === 'desc' ? dataArr[0].score : dataArr[dataArr.length-1].score) : 0;
+
+            dataArr.forEach(item => {
+                const isTopScore = item.score === maxScoreInArr && document.getElementById('sort-select').value === 'desc';
+                const fontStyle = isTopScore ? 'font-bold shadow-sm ring-1 ring-black/5' : 'font-medium opacity-90';
+                
+                const badge = document.createElement('div');
+                badge.className = `border px-2 py-1 rounded text-sm md:text-base tracking-widest ${styleClasses} ${fontStyle} hover:scale-105 transition-transform cursor-default flex items-center gap-1`;
+                badge.setAttribute('data-num', item.num);
+                // Add tooltip to show score
+                badge.title = `ผลรวมความถี่: ${item.score}`;
+                badge.innerHTML = `
+                    ${item.num} 
+                    <span class="text-[10px] opacity-60 font-normal tracking-normal ml-0.5">(${item.score})</span>
+                `;
+                container.appendChild(badge);
+            });
+        }
+
+        // Copy Combinations to Clipboard
+        function copyCombinations(containerId, btn) {
+            const container = document.getElementById(containerId);
+            const badges = container.querySelectorAll('[data-num]');
+            const nums = Array.from(badges).map(b => b.getAttribute('data-num')).join(' ');
+            
+            if (!nums) return;
+
+            const textarea = document.createElement('textarea');
+            textarea.value = nums;
+            document.body.appendChild(textarea);
+            textarea.select();
+            
+            try {
+                document.execCommand('copy');
+                const originalHtml = btn.innerHTML;
+                const originalClasses = btn.className;
+                
+                btn.innerHTML = '✅ คัดลอกแล้ว';
+                btn.className = `text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded border border-green-300 transition-colors`;
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    btn.className = originalClasses;
+                }, 2000);
+            } catch (err) {
+                console.error('Copy failed', err);
+            }
+            
+            document.body.removeChild(textarea);
+        }
+
+        document.addEventListener('DOMContentLoaded', initApp);
+
+    </script>
+</body>
+</html>
