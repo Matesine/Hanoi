@@ -431,7 +431,7 @@
             { id: "unitDown", title: "หลักหน่วยล่าง", theme: { main: "text-fuchsia-500", bgLight: "bg-fuchsia-50", barBg: "bg-fuchsia-400", border: "border-fuchsia-100" } }
         ];
 
-        let currentDay = "จันทร์";
+        let currentDay = "all";
         let currentTimeframe = "10";
 
         let globalMockHistory = [];
@@ -462,6 +462,15 @@
 
         function renderDaySelector() {
             const container = document.getElementById('day-selector');
+
+            // ปุ่ม "ทั้งหมด"
+            const allBtn = document.createElement('button');
+            allBtn.className = `px-3 py-1.5 rounded-lg border transition-all duration-200 font-medium text-sm flex items-center gap-1.5 hover:bg-slate-50`;
+            allBtn.innerHTML = `<span>🗓️</span> ทั้งหมด`;
+            allBtn.onclick = () => { currentDay = 'all'; updateDashboard(); };
+            allBtn.id = `btn-day-all`;
+            container.appendChild(allBtn);
+
             daysOrder.forEach(day => {
                 const btn = document.createElement('button');
                 const conf = baseDayConfigs[day];
@@ -479,7 +488,10 @@
                 lastMockTimeframe = currentTimeframe;
             }
             
-            const historyDataForDay = globalMockHistory.filter(r => r.dayName === currentDay);
+            // กรองข้อมูลตามวัน หรือใช้ทั้งหมดถ้าเลือก 'all'
+            const historyDataForDay = currentDay === 'all'
+                ? globalMockHistory
+                : globalMockHistory.filter(r => r.dayName === currentDay);
 
             const freqs = {
                 hunUp: Array(10).fill(0),
@@ -497,10 +509,11 @@
                 freqs.unitDown[parseInt(record.down2[1])]++;
             });
 
+            const dayLabel = currentDay === 'all' ? 'ทุกวัน' : baseDayConfigs[currentDay]?.name;
             currentCalculatedData = {
-                name: baseDayConfigs[currentDay].name,
-                emoji: baseDayConfigs[currentDay].emoji,
-                themeClass: baseDayConfigs[currentDay].themeClass,
+                name: dayLabel,
+                emoji: currentDay === 'all' ? '🗓️' : baseDayConfigs[currentDay]?.emoji,
+                themeClass: currentDay === 'all' ? 'slate' : baseDayConfigs[currentDay]?.themeClass,
                 hunUp: freqs.hunUp,
                 tenUp: freqs.tenUp,
                 unitUp: freqs.unitUp,
@@ -520,11 +533,16 @@
                     : `px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 transition-all duration-200 font-medium text-sm hover:bg-slate-50`;
             });
 
+            // Highlight ปุ่มวัน (รองรับ 'all')
+            const activeClass = `px-3 py-1.5 rounded-lg border-2 transition-all duration-200 font-bold text-sm flex items-center gap-1.5 bg-slate-100 border-slate-400 text-slate-800 shadow-sm`;
+            const inactiveClass = `px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 transition-all duration-200 font-medium text-sm flex items-center gap-1.5 hover:bg-slate-50`;
+
+            const allDayBtn = document.getElementById(`btn-day-all`);
+            if (allDayBtn) allDayBtn.className = currentDay === 'all' ? activeClass : inactiveClass;
+
             daysOrder.forEach(d => {
                 const btn = document.getElementById(`btn-day-${d}`);
-                btn.className = d === currentDay 
-                    ? `px-3 py-1.5 rounded-lg border-2 transition-all duration-200 font-bold text-sm flex items-center gap-1.5 bg-slate-100 border-slate-400 text-slate-800 shadow-sm` 
-                    : `px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 transition-all duration-200 font-medium text-sm flex items-center gap-1.5 hover:bg-slate-50`;
+                btn.className = d === currentDay ? activeClass : inactiveClass;
             });
 
             const statsContainer = document.getElementById('stats-container');
