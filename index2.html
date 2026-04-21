@@ -185,101 +185,141 @@
             </div>
 
             <!-- Tab 1: Historical Data -->
-            <div id="tab-content-history" class="overflow-auto max-h-[950px] custom-scrollbar border border-slate-200 rounded-xl">
-                <table class="w-full text-left border-collapse min-w-[500px]">
-                    <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
-                        <tr>
-                            <th class="p-3 text-sm font-bold text-slate-600 border-b text-center w-16">ลำดับ</th>
-                            <th class="p-3 text-sm font-bold text-slate-600 border-b">งวดวันที่</th>
-                            <th class="p-3 text-sm font-bold text-slate-600 border-b text-center">3 ตัวบน</th>
-                            <th class="p-3 text-sm font-bold text-slate-600 border-b text-center">2 ตัวล่าง</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history-table-body" class="divide-y divide-slate-100">
-                        <!-- Rows injected by JS -->
-                    </tbody>
-                </table>
+            <div id="tab-content-history">
+                <!-- History View Mode Dropdown -->
+                <div class="flex items-center justify-end mb-3">
+                    <label class="text-sm font-medium text-slate-600 mr-2">การแสดงผล:</label>
+                    <select id="history-view-mode" onchange="updateHistoryTable()" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
+                        <option value="day" selected>แสดงเป็นวัน</option>
+                        <option value="all">แสดงทั้งหมด</option>
+                    </select>
+                </div>
+                <div class="overflow-auto max-h-[900px] custom-scrollbar border border-slate-200 rounded-xl">
+                    <table class="w-full text-left border-collapse min-w-[500px]">
+                        <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
+                            <tr>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b text-center w-16">ลำดับ</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b">งวดวันที่</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b text-center">3 ตัวบน</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b text-center">2 ตัวล่าง</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table-body" class="divide-y divide-slate-100">
+                            <!-- Rows injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- Tab 2: Formula Dead Numbers (Hundreds) -->
-            <div id="tab-content-formula" class="hidden overflow-auto max-h-[950px] custom-scrollbar border border-slate-200 rounded-xl">
-                <table class="w-full text-center border-collapse min-w-[600px] font-mono">
-                    <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
-                        <tr>
-                            <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-left w-32">งวดวันที่</th>
-                            <th class="p-3 text-sm font-bold text-slate-600 border-b text-center tracking-widest bg-emerald-50">รางวัลที่ 1</th>
-                            <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-center tracking-widest bg-emerald-50">2 ตัวล่าง</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-100 whitespace-nowrap">ร้อย+สิบ+หน่วย</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+1</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+2</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+3</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+4</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+5</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+6</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+7</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+8</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+9</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+10</th>
-                        </tr>
-                    </thead>
-                    <tbody id="formula-table-body" class="divide-y divide-slate-100 text-sm">
-                        <!-- Rows injected by JS -->
-                    </tbody>
-                </table>
+            <div id="tab-content-formula" class="hidden">
+                <!-- Formula Hundreds View Mode Dropdown -->
+                <div class="flex items-center justify-end mb-3">
+                    <label class="text-sm font-medium text-slate-600 mr-2">การแสดงผล:</label>
+                    <select id="formula-view-mode" onchange="updateHistoryTable()" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
+                        <option value="all" selected>แสดงทั้งหมด</option>
+                        <option value="day">แสดงเป็นวัน</option>
+                    </select>
+                </div>
+                <div class="overflow-auto max-h-[900px] custom-scrollbar border border-slate-200 rounded-xl">
+                    <table class="w-full text-center border-collapse min-w-[600px] font-mono">
+                        <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
+                            <tr>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-left w-32">งวดวันที่</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b text-center tracking-widest bg-emerald-50">รางวัลที่ 1</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-center tracking-widest bg-emerald-50">2 ตัวล่าง</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-100 whitespace-nowrap">ร้อย+สิบ+หน่วย</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+1</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+2</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+3</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+4</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+5</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+6</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+7</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+8</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+9</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+10</th>
+                            </tr>
+                        </thead>
+                        <tbody id="formula-table-body" class="divide-y divide-slate-100 text-sm">
+                            <!-- Rows injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- Tab 3: Formula Dead Numbers (Tens) -->
-            <div id="tab-content-formula-ten" class="hidden overflow-auto max-h-[950px] custom-scrollbar border border-slate-200 rounded-xl">
-                <table class="w-full text-center border-collapse min-w-[600px] font-mono">
-                    <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
-                        <tr>
-                            <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-left w-32">งวดวันที่</th>
-                            <th class="p-3 text-sm font-bold text-slate-600 border-b text-center tracking-widest bg-emerald-50">รางวัลที่ 1</th>
-                            <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-center tracking-widest bg-emerald-50">2 ตัวล่าง</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-100 whitespace-nowrap">ร้อย+สิบ+หน่วย</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+1</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+2</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+3</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+4</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+5</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+6</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+7</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+8</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+9</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+10</th>
-                        </tr>
-                    </thead>
-                    <tbody id="formula-ten-table-body" class="divide-y divide-slate-100 text-sm">
-                        <!-- Rows injected by JS -->
-                    </tbody>
-                </table>
+            <div id="tab-content-formula-ten" class="hidden">
+                <!-- Formula Tens View Mode Dropdown -->
+                <div class="flex items-center justify-end mb-3">
+                    <label class="text-sm font-medium text-slate-600 mr-2">การแสดงผล:</label>
+                    <select id="formula-ten-view-mode" onchange="updateHistoryTable()" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
+                        <option value="all" selected>แสดงทั้งหมด</option>
+                        <option value="day">แสดงเป็นวัน</option>
+                    </select>
+                </div>
+                <div class="overflow-auto max-h-[900px] custom-scrollbar border border-slate-200 rounded-xl">
+                    <table class="w-full text-center border-collapse min-w-[600px] font-mono">
+                        <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
+                            <tr>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-left w-32">งวดวันที่</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b text-center tracking-widest bg-emerald-50">รางวัลที่ 1</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-center tracking-widest bg-emerald-50">2 ตัวล่าง</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-100 whitespace-nowrap">ร้อย+สิบ+หน่วย</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+1</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+2</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+3</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+4</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+5</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+6</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+7</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+8</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+9</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+10</th>
+                            </tr>
+                        </thead>
+                        <tbody id="formula-ten-table-body" class="divide-y divide-slate-100 text-sm">
+                            <!-- Rows injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- Tab 4: Formula Dead Numbers (Units) -->
-            <div id="tab-content-formula-unit" class="hidden overflow-auto max-h-[950px] custom-scrollbar border border-slate-200 rounded-xl">
-                <table class="w-full text-center border-collapse min-w-[600px] font-mono">
-                    <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
-                        <tr>
-                            <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-left w-32">งวดวันที่</th>
-                            <th class="p-3 text-sm font-bold text-slate-600 border-b text-center tracking-widest bg-emerald-50">รางวัลที่ 1</th>
-                            <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-center tracking-widest bg-emerald-50">2 ตัวล่าง</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-100 whitespace-nowrap">ร้อย+สิบ+หน่วย</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+1</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+2</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+3</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+4</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+5</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+6</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+7</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+8</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+9</th>
-                            <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+10</th>
-                        </tr>
-                    </thead>
-                    <tbody id="formula-unit-table-body" class="divide-y divide-slate-100 text-sm">
-                        <!-- Rows injected by JS -->
-                    </tbody>
-                </table>
+            <div id="tab-content-formula-unit" class="hidden">
+                <!-- Formula Units View Mode Dropdown -->
+                <div class="flex items-center justify-end mb-3">
+                    <label class="text-sm font-medium text-slate-600 mr-2">การแสดงผล:</label>
+                    <select id="formula-unit-view-mode" onchange="updateHistoryTable()" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
+                        <option value="all" selected>แสดงทั้งหมด</option>
+                        <option value="day">แสดงเป็นวัน</option>
+                    </select>
+                </div>
+                <div class="overflow-auto max-h-[900px] custom-scrollbar border border-slate-200 rounded-xl">
+                    <table class="w-full text-center border-collapse min-w-[600px] font-mono">
+                        <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
+                            <tr>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-left w-32">งวดวันที่</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b text-center tracking-widest bg-emerald-50">รางวัลที่ 1</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-center tracking-widest bg-emerald-50">2 ตัวล่าง</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-100 whitespace-nowrap">ร้อย+สิบ+หน่วย</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+1</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+2</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+3</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+4</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+5</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+6</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+7</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+8</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+9</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+10</th>
+                            </tr>
+                        </thead>
+                        <tbody id="formula-unit-table-body" class="divide-y divide-slate-100 text-sm">
+                            <!-- Rows injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </section>
 
@@ -710,8 +750,19 @@
                 lastMockTimeframe = currentTimeframe;
             }
 
-            const formulaData = globalMockHistory; 
-            const historyData = globalMockHistory.filter(r => r.dayName === currentDay); 
+            // อ่าน View Mode ของแต่ละแท็บ
+            const historyViewMode = document.getElementById('history-view-mode') ? document.getElementById('history-view-mode').value : 'day';
+            const formulaViewMode = document.getElementById('formula-view-mode') ? document.getElementById('formula-view-mode').value : 'all';
+            const formulaTenViewMode = document.getElementById('formula-ten-view-mode') ? document.getElementById('formula-ten-view-mode').value : 'all';
+            const formulaUnitViewMode = document.getElementById('formula-unit-view-mode') ? document.getElementById('formula-unit-view-mode').value : 'all';
+
+            const allData = globalMockHistory;
+            const dayData = globalMockHistory.filter(r => r.dayName === currentDay);
+
+            const historyData = historyViewMode === 'all' ? allData : dayData;
+            const formulaData = formulaViewMode === 'all' ? allData : dayData;
+            const formulaTenData = formulaTenViewMode === 'all' ? allData : dayData;
+            const formulaUnitData = formulaUnitViewMode === 'all' ? allData : dayData;
             
             const historyTbody = document.getElementById('history-table-body');
             const formulaTbody = document.getElementById('formula-table-body');
@@ -723,8 +774,9 @@
             formulaTenTbody.innerHTML = '';
             formulaUnitTbody.innerHTML = '';
             
-            document.getElementById('history-count').innerText = `รวม ${globalMockHistory.length} งวด (ตรงกับวัน${currentDay} ${historyData.length} งวด)`;
+            document.getElementById('history-count').innerText = `รวม ${allData.length} งวด (ตรงกับวัน${currentDay} ${dayData.length} งวด)`;
 
+            // --- ประวัติการออกรางวัล ---
             if (historyData.length === 0) {
                 historyTbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-400">ไม่มีข้อมูลย้อนหลัง</td></tr>`;
             } else {
@@ -745,88 +797,73 @@
                 });
             }
 
-            if (formulaData.length === 0) {
-                formulaTbody.innerHTML = `<tr><td colspan="14" class="p-6 text-center text-slate-400">ไม่มีข้อมูล</td></tr>`;
-                formulaTenTbody.innerHTML = `<tr><td colspan="14" class="p-6 text-center text-slate-400">ไม่มีข้อมูล</td></tr>`;
-                formulaUnitTbody.innerHTML = `<tr><td colspan="14" class="p-6 text-center text-slate-400">ไม่มีข้อมูล</td></tr>`;
-            } else {
-                const totalRows = formulaData.length;
+            // --- ฟังก์ชันสร้างตารางสูตร (ใช้ร่วมกัน) ---
+            function buildFormulaRows(dataSet, tbodyEl, getDigit, labelType) {
+                if (dataSet.length === 0) {
+                    tbodyEl.innerHTML = `<tr><td colspan="14" class="p-6 text-center text-slate-400">ไม่มีข้อมูล</td></tr>`;
+                    return;
+                }
+
+                const totalRows = dataSet.length;
                 const numFormulas = 11;
-                
-                const failedH = Array.from({length: totalRows}, () => Array(numFormulas).fill(false));
-                const failedT = Array.from({length: totalRows}, () => Array(numFormulas).fill(false));
-                const failedU = Array.from({length: totalRows}, () => Array(numFormulas).fill(false));
+                const failed = Array.from({length: totalRows}, () => Array(numFormulas).fill(false));
 
                 for (let r = 0; r < totalRows; r++) {
-                    const record = formulaData[r];
+                    const record = dataSet[r];
                     const h = parseInt(record.up3[0]);
                     const t = parseInt(record.up3[1]);
                     const u = parseInt(record.up3[2]);
-                    
-                    let nextH = null, nextT = null, nextU = null;
+                    const baseDigit = getDigit(h, t, u);
+                    const sums = [h+t+u, baseDigit+1, baseDigit+2, baseDigit+3, baseDigit+4, baseDigit+5, baseDigit+6, baseDigit+7, baseDigit+8, baseDigit+9, baseDigit+10];
+
+                    let nextDigit = null;
                     if (r - 1 >= 0) {
-                        nextH = parseInt(formulaData[r - 1].up3[0]);
-                        nextT = parseInt(formulaData[r - 1].up3[1]);
-                        nextU = parseInt(formulaData[r - 1].up3[2]);
+                        const nh = parseInt(dataSet[r - 1].up3[0]);
+                        const nt = parseInt(dataSet[r - 1].up3[1]);
+                        const nu = parseInt(dataSet[r - 1].up3[2]);
+                        nextDigit = getDigit(nh, nt, nu);
                     }
-                    
-                    const sH = [h+t+u, h+1, h+2, h+3, h+4, h+5, h+6, h+7, h+8, h+9, h+10];
-                    const sT = [h+t+u, t+1, t+2, t+3, t+4, t+5, t+6, t+7, t+8, t+9, t+10];
-                    const sU = [h+t+u, u+1, u+2, u+3, u+4, u+5, u+6, u+7, u+8, u+9, u+10];
-                    
+
                     for (let c = 0; c < numFormulas; c++) {
-                        if (nextH !== null && (sH[c] % 10) === nextH) failedH[r][c] = true;
-                        if (nextT !== null && (sT[c] % 10) === nextT) failedT[r][c] = true;
-                        if (nextU !== null && (sU[c] % 10) === nextU) failedU[r][c] = true;
+                        if (nextDigit !== null && (sums[c] % 10) === nextDigit) failed[r][c] = true;
                     }
                 }
 
-                const streakH = Array.from({length: totalRows}, () => Array(numFormulas).fill(false));
-                const streakT = Array.from({length: totalRows}, () => Array(numFormulas).fill(false));
-                const streakU = Array.from({length: totalRows}, () => Array(numFormulas).fill(false));
-
-                function markStreaks(fMatrix, sMatrix) {
-                    for (let c = 0; c < numFormulas; c++) {
-                        let currentStreak = 0;
-                        let streakStart = -1;
-                        for (let r = 0; r < totalRows; r++) {
-                            if (!fMatrix[r][c]) {
-                                if (currentStreak === 0) streakStart = r;
-                                currentStreak++;
-                            } else {
-                                if (currentStreak >= 10) {
-                                    for (let i = streakStart; i < r; i++) sMatrix[i][c] = true;
-                                }
-                                currentStreak = 0;
+                const streak = Array.from({length: totalRows}, () => Array(numFormulas).fill(false));
+                for (let c = 0; c < numFormulas; c++) {
+                    let currentStreak = 0;
+                    let streakStart = -1;
+                    for (let r = 0; r < totalRows; r++) {
+                        if (!failed[r][c]) {
+                            if (currentStreak === 0) streakStart = r;
+                            currentStreak++;
+                        } else {
+                            if (currentStreak >= 10) {
+                                for (let i = streakStart; i < r; i++) streak[i][c] = true;
                             }
+                            currentStreak = 0;
                         }
-                        if (currentStreak >= 10) {
-                            for (let i = streakStart; i < totalRows; i++) sMatrix[i][c] = true;
-                        }
+                    }
+                    if (currentStreak >= 10) {
+                        for (let i = streakStart; i < totalRows; i++) streak[i][c] = true;
                     }
                 }
 
-                markStreaks(failedH, streakH);
-                markStreaks(failedT, streakT);
-                markStreaks(failedU, streakU);
-
-                formulaData.forEach((record, index) => {
+                dataSet.forEach((record, index) => {
                     const h = parseInt(record.up3[0]);
                     const t = parseInt(record.up3[1]);
                     const u = parseInt(record.up3[2]);
-                    
-                    const sums = [h + t + u, h + 1, h + 2, h + 3, h + 4, h + 5, h + 6, h + 7, h + 8, h + 9, h + 10];
-                    const sumsTen = [h + t + u, t + 1, t + 2, t + 3, t + 4, t + 5, t + 6, t + 7, t + 8, t + 9, t + 10];
-                    const sumsUnit = [h + t + u, u + 1, u + 2, u + 3, u + 4, u + 5, u + 6, u + 7, u + 8, u + 9, u + 10];
-                    
+                    const baseDigit = getDigit(h, t, u);
+                    const sums = [h+t+u, baseDigit+1, baseDigit+2, baseDigit+3, baseDigit+4, baseDigit+5, baseDigit+6, baseDigit+7, baseDigit+8, baseDigit+9, baseDigit+10];
+
                     const formattedPrize1 = record.prize1.split('').join(' ');
                     const formattedDown2 = record.down2.split('').join(' ');
 
                     let cellsHtml = '';
                     sums.forEach((sum, i) => {
                         const deadDigit = sum % 10;
-                        const isFailed = failedH[index][i];
-                        const isStreak = streakH[index][i];
+                        const isFailed = failed[index][i];
+                        const isStreak = streak[index][i];
                         const bgClass = i === 0 ? 'bg-slate-100/60' : 'bg-slate-50/40';
                         let badgeClass = "inline-block bg-white text-slate-700 font-bold px-2 py-0.5 rounded shadow-sm border border-slate-300 min-w-[28px]";
                         if (isFailed) {
@@ -837,52 +874,19 @@
                         cellsHtml += `<td class="p-2 border-l text-center ${bgClass}"><span class="${badgeClass}">${deadDigit}</span></td>`;
                     });
 
-                    const trForm = document.createElement('tr');
-                    trForm.className = 'hover:bg-slate-100 transition-colors';
-                    trForm.innerHTML = `<td class="p-3 text-left border-r text-slate-600 font-sans whitespace-nowrap">${record.dateStr}</td><td class="p-3 tracking-[0.3em] text-slate-700">${formattedPrize1}</td><td class="p-3 border-r tracking-[0.3em] text-slate-700">${formattedDown2}</td>${cellsHtml}`;
-                    formulaTbody.appendChild(trForm);
-
-                    let cellsHtmlTen = '';
-                    sumsTen.forEach((sum, i) => {
-                        const deadDigit = sum % 10;
-                        const isFailed = failedT[index][i];
-                        const isStreak = streakT[index][i];
-                        const bgClass = i === 0 ? 'bg-slate-100/60' : 'bg-slate-50/40';
-                        let badgeClass = "inline-block bg-white text-slate-700 font-bold px-2 py-0.5 rounded shadow-sm border border-slate-300 min-w-[28px]";
-                        if (isFailed) {
-                            badgeClass = "inline-block bg-red-500 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-red-600 min-w-[28px]";
-                        } else if (isStreak) {
-                            badgeClass = "inline-block bg-emerald-600 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-emerald-700 min-w-[28px]";
-                        }
-                        cellsHtmlTen += `<td class="p-2 border-l text-center ${bgClass}"><span class="${badgeClass}">${deadDigit}</span></td>`;
-                    });
-
-                    const trFormTen = document.createElement('tr');
-                    trFormTen.className = 'hover:bg-slate-100 transition-colors';
-                    trFormTen.innerHTML = `<td class="p-3 text-left border-r text-slate-600 font-sans whitespace-nowrap">${record.dateStr}</td><td class="p-3 tracking-[0.3em] text-slate-700">${formattedPrize1}</td><td class="p-3 border-r tracking-[0.3em] text-slate-700">${formattedDown2}</td>${cellsHtmlTen}`;
-                    formulaTenTbody.appendChild(trFormTen);
-
-                    let cellsHtmlUnit = '';
-                    sumsUnit.forEach((sum, i) => {
-                        const deadDigit = sum % 10;
-                        const isFailed = failedU[index][i];
-                        const isStreak = streakU[index][i];
-                        const bgClass = i === 0 ? 'bg-slate-100/60' : 'bg-slate-50/40';
-                        let badgeClass = "inline-block bg-white text-slate-700 font-bold px-2 py-0.5 rounded shadow-sm border border-slate-300 min-w-[28px]";
-                        if (isFailed) {
-                            badgeClass = "inline-block bg-red-500 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-red-600 min-w-[28px]";
-                        } else if (isStreak) {
-                            badgeClass = "inline-block bg-emerald-600 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-emerald-700 min-w-[28px]";
-                        }
-                        cellsHtmlUnit += `<td class="p-2 border-l text-center ${bgClass}"><span class="${badgeClass}">${deadDigit}</span></td>`;
-                    });
-
-                    const trFormUnit = document.createElement('tr');
-                    trFormUnit.className = 'hover:bg-slate-100 transition-colors';
-                    trFormUnit.innerHTML = `<td class="p-3 text-left border-r text-slate-600 font-sans whitespace-nowrap">${record.dateStr}</td><td class="p-3 tracking-[0.3em] text-slate-700">${formattedPrize1}</td><td class="p-3 border-r tracking-[0.3em] text-slate-700">${formattedDown2}</td>${cellsHtmlUnit}`;
-                    formulaUnitTbody.appendChild(trFormUnit);
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-100 transition-colors';
+                    tr.innerHTML = `<td class="p-3 text-left border-r text-slate-600 font-sans whitespace-nowrap">${record.dateStr}</td><td class="p-3 tracking-[0.3em] text-slate-700">${formattedPrize1}</td><td class="p-3 border-r tracking-[0.3em] text-slate-700">${formattedDown2}</td>${cellsHtml}`;
+                    tbodyEl.appendChild(tr);
                 });
             }
+
+            // สร้างแถวสูตรหลักร้อย
+            buildFormulaRows(formulaData, formulaTbody, (h, t, u) => h, 'hundred');
+            // สร้างแถวสูตรหลักสิบ
+            buildFormulaRows(formulaTenData, formulaTenTbody, (h, t, u) => t, 'ten');
+            // สร้างแถวสูตรหลักหน่วย
+            buildFormulaRows(formulaUnitData, formulaUnitTbody, (h, t, u) => u, 'unit');
         }
 
         document.addEventListener('DOMContentLoaded', initApp);
