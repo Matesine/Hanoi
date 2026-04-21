@@ -53,8 +53,24 @@
                 </div>
             </div>
             
-            <div class="flex items-center bg-black bg-opacity-20 rounded-lg p-1" id="period-selectors">
-                <!-- ปุ่มเลือกวันจะถูกแทรกด้วย JS -->
+            <div class="flex flex-col md:flex-row items-center gap-2 w-full md:w-auto justify-center mt-4 md:mt-0">
+                <div class="flex items-center bg-black bg-opacity-20 rounded-lg p-1" id="period-selectors">
+                    <!-- ปุ่มเลือกวันจะถูกแทรกด้วย JS -->
+                </div>
+                <div class="flex items-center bg-black bg-opacity-20 rounded-lg p-1" id="day-filter-selectors">
+                    <!-- ปุ่มเลือกวันของสัปดาห์จะถูกแทรกด้วย JS -->
+                </div>
+            </div>
+
+            <!-- Auto Refresh Toggle -->
+            <div class="flex items-center gap-2 text-white text-sm mt-4 md:mt-0 md:ml-6">
+                <label for="auto-refresh-toggle" class="font-medium cursor-pointer select-none">อัปเดตอัตโนมัติ</label>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="auto-refresh-toggle" class="sr-only peer" onchange="toggleAutoRefresh(this.checked)">
+                    <div class="w-9 h-5 bg-gray-400 rounded-full peer peer-checked:bg-green-500"></div>
+                    <div class="absolute top-0.5 left-[2px] w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-full"></div>
+                </label>
+                <span id="refresh-status" class="text-xs text-blue-200 w-28 text-left ml-2"></span>
             </div>
         </div>
     </header>
@@ -347,14 +363,30 @@
             },
         ];
         
+        const REFRESH_INTERVAL_SECONDS = 300; // 5 นาที
         const PERIODS = [30, 60, 90];
+        const DAYS_OF_WEEK = [
+            { name: 'ทั้งหมด', short: 'ทั้งหมด', index: -1 },
+            { name: 'วันอาทิตย์', short: 'อา', index: 0 },
+            { name: 'วันจันทร์', short: 'จ', index: 1 },
+            { name: 'วันอังคาร', short: 'อ', index: 2 },
+            { name: 'วันพุธ', short: 'พ', index: 3 },
+            { name: 'วันพฤหัสบดี', short: 'พฤ', index: 4 },
+            { name: 'วันศุกร์', short: 'ศ', index: 5 },
+            { name: 'วันเสาร์', short: 'ส', index: 6 },
+        ];
         
         let state = {
             activeSheet: SHEETS[0],
             period: 30,
+            dayFilter: -1, // -1 for all days
             data: [],
             loading: false,
-            error: null
+            error: null,
+            autoRefreshEnabled: false,
+            autoRefreshIntervalId: null,
+            countdownIntervalId: null,
+            countdown: REFRESH_INTERVAL_SECONDS,
         };
 
         // 🟢 เอา URL ที่ได้จากขั้นตอนที่ 1 มาใส่ตรงนี้ครับ
@@ -381,9 +413,46 @@
 
         // --- 3. ฟังก์ชันดึงข้อมูลจาก Google Sheets ---
         async function fetchSheetData() {
+            // ถ้าเปิดอัปเดตอัตโนมัติ ให้รีเซ็ต timer ใหม่ทุกครั้งที่มีการดึงข้อมูล
+            if (state.autoRefreshEnabled) {
+                resetAutoRefreshTimer();
+            }
+
             state.loading = true;
             state.error = null;
             renderUI();
+
+            // Helper function to parse various date formats into a valid Date object
+            const getDateFromString = (dateStr) => {
+                if (!dateStr || typeof dateStr !== 'string') return null;
+                const parts = dateStr.trim().split(/[\/\-]/);
+                if (parts.length !== 3) return null;
+                
+                let day, month, year;
+                
+                // YYYY-MM-DD or YYYY/MM/DD
+                if (parts[0].length === 4) {
+                    year = parseInt(parts[0], 10);
+                    month = parseInt(parts[1], 10) - 1; // JS month is 0-indexed
+                    day = parseInt(parts[2], 10);
+                } 
+                // DD/MM/YYYY or DD-MM-YYYY
+                else {
+                    day = parseInt(parts[0], 10);
+                    month = parseInt(parts[1], 10) - 1;
+                    year = parseInt(parts[2], 10);
+                }
+
+                if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
+                
+                // Handle Thai Buddhist year (e.g. 2567 -> 2024)
+                if (year > 2500) { year -= 543; }
+                
+                const date = new Date(Date.UTC(year, month, day));
+                // Check if date is valid (e.g. not 31/02/2024)
+                if (date.getUTCFullYear() === year && date.getUTCMonth() === month && date.getUTCDate() === day) return date;
+                return null;
+            };
 
             try {
                 let url;
@@ -434,34 +503,26 @@
                     }
                 }
 
-                // เรียงลำดับข้อมูลจากวันที่ใหม่ล่าสุดไปเก่าสุด (Descending Order)
-                parsedData.sort((a, b) => {
-                    const partsA = a.date.split(/[\/\-]/);
-                    const partsB = b.date.split(/[\/\-]/);
-                    
-                    if (partsA.length === 3 && partsB.length === 3) {
-                        let yearA = parseInt(partsA[2], 10), monthA = parseInt(partsA[1], 10), dayA = parseInt(partsA[0], 10);
-                        let yearB = parseInt(partsB[2], 10), monthB = parseInt(partsB[1], 10), dayB = parseInt(partsB[0], 10);
-                        
-                        // รองรับกรณีที่วันที่ในชีตเป็น YYYY-MM-DD
-                        if (dayA > 31) { yearA = parseInt(partsA[0], 10); dayA = parseInt(partsA[2], 10); }
-                        if (dayB > 31) { yearB = parseInt(partsB[0], 10); dayB = parseInt(partsB[2], 10); }
-
-                        if (yearB !== yearA) return yearB - yearA;
-                        if (monthB !== monthA) return monthB - monthA;
-                        return dayB - dayA;
-                    }
-                    return 0; // ถ้าไม่ใช่ format วันที่ ปล่อยไว้ลำดับเดิม
+                // Add a valid Date object to each row for easier processing
+                parsedData.forEach(row => {
+                    row.dateObject = getDateFromString(row.date);
                 });
 
-                // ดึงเฉพาะจำนวนงวดที่ต้องการ (โดยจะดึงจากวันที่ใหม่ที่สุดลงมา)
-                const recentData = parsedData.slice(0, state.period);
-                
-                if (recentData.length > 0) {
-                    state.data = recentData;
-                } else {
-                    throw new Error('อ่านไฟล์ได้ แต่ไม่พบข้อมูลตัวเลขที่สามารถนำมาคำนวณได้');
+                // Filter out rows with invalid dates and sort by date descending
+                let processedData = parsedData
+                    .filter(row => row.dateObject)
+                    .sort((a, b) => b.dateObject - a.dateObject);
+
+                // Filter by day of the week if a specific day is selected
+                if (state.dayFilter !== -1) {
+                    processedData = processedData.filter(row => row.dateObject.getDay() === state.dayFilter);
                 }
+
+                // Slice to get the desired period from the (potentially filtered) data
+                const recentData = processedData.slice(0, state.period);
+                
+                if (recentData.length > 0) state.data = recentData;
+                else throw new Error('อ่านไฟล์ได้ แต่ไม่พบข้อมูลที่ตรงตามเงื่อนไขการกรอง (วัน/จำนวนงวด)');
 
             } catch (err) {
                 console.error(err);
@@ -475,6 +536,67 @@
                 }, 300);
             }
         }
+
+        // --- ฟังก์ชันสำหรับอัปเดตอัตโนมัติ ---
+        function updateRefreshStatus() {
+            const statusEl = document.getElementById('refresh-status');
+            if (!statusEl) return;
+
+            if (state.autoRefreshEnabled && state.countdownIntervalId) {
+                const minutes = Math.floor(state.countdown / 60);
+                const seconds = state.countdown % 60;
+                statusEl.innerText = `รีเฟรชใน ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                statusEl.classList.remove('text-amber-200');
+                statusEl.classList.add('text-blue-200');
+            } else {
+                statusEl.innerText = 'ปิดใช้งาน';
+                statusEl.classList.add('text-amber-200');
+                statusEl.classList.remove('text-blue-200');
+            }
+        }
+
+        function clearAutoRefreshTimers() {
+            if (state.autoRefreshIntervalId) clearInterval(state.autoRefreshIntervalId);
+            if (state.countdownIntervalId) clearInterval(state.countdownIntervalId);
+            state.autoRefreshIntervalId = null;
+            state.countdownIntervalId = null;
+        }
+
+        function resetAutoRefreshTimer() {
+            clearAutoRefreshTimers(); // หยุด timer ที่มีอยู่
+
+            state.countdown = REFRESH_INTERVAL_SECONDS;
+
+            // ตั้งเวลาสำหรับดึงข้อมูลครั้งถัดไป
+            state.autoRefreshIntervalId = setInterval(() => {
+                if (state.loading || !document.getElementById('edit-modal').classList.contains('hidden')) {
+                    console.log('Auto-refresh skipped: modal open or already loading.');
+                    return;
+                }
+                fetchSheetData(); // การเรียกนี้จะรีเซ็ต timer อีกครั้ง
+            }, REFRESH_INTERVAL_SECONDS * 1000);
+
+            // ตั้งเวลานับถอยหลังเพื่อแสดงผลบน UI
+            state.countdownIntervalId = setInterval(() => {
+                state.countdown--;
+                if (state.countdown < 0) {
+                    state.countdown = 0;
+                }
+                updateRefreshStatus();
+            }, 1000);
+            
+            updateRefreshStatus();
+        }
+
+        window.toggleAutoRefresh = function(isEnabled) {
+            state.autoRefreshEnabled = isEnabled;
+            if (isEnabled) {
+                fetchSheetData(); // เริ่มดึงข้อมูลครั้งแรก ซึ่งจะไปกระตุ้นการตั้งเวลา
+            } else {
+                clearAutoRefreshTimers(); // หยุดการทำงานทั้งหมด
+                updateRefreshStatus();
+            }
+        };
 
         // --- 4. ฟังก์ชันคำนวณสถิติ ---
         function calculateStats() {
@@ -708,6 +830,14 @@
                 }">${sheet.name}</button>
             `).join('');
 
+            // Render Day Filter Selectors
+            const dayFilterContainer = document.getElementById('day-filter-selectors');
+            dayFilterContainer.innerHTML = DAYS_OF_WEEK.map(day => `
+                <button onclick="changeDayFilter(${day.index})" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    state.dayFilter === day.index ? 'bg-white text-blue-800 shadow-sm' : 'text-white hover:bg-white hover:bg-opacity-20'
+                }">${day.short}</button>
+            `).join('');
+
             // อัปเดตชื่อแท็บในหัวข้อฟอร์มด้วย
             document.getElementById('form-sheet-name').innerText = state.activeSheet.name;
         }
@@ -723,7 +853,13 @@
             };
 
             // Update Titles
-            document.getElementById('table-title').innerText = `ข้อมูลที่ใช้คำนวณ ${state.data.length} งวดล่าสุด (ตัวอย่าง)`;
+            let titleText = `ข้อมูลที่ใช้คำนวณ ${state.data.length} งวดล่าสุด`;
+            if (state.dayFilter !== -1) {
+                const dayName = DAYS_OF_WEEK.find(d => d.index === state.dayFilter).name;
+                titleText += ` (เฉพาะ${dayName})`;
+            }
+            titleText += ' (ตัวอย่าง)';
+            document.getElementById('table-title').innerText = titleText;
 
             // Render Detailed Stats Grid
             const gridContainer = document.getElementById('stats-grid');
@@ -828,6 +964,11 @@
 
         window.changePeriod = function(days) {
             state.period = days;
+            fetchSheetData();
+        };
+
+        window.changeDayFilter = function(dayIndex) {
+            state.dayFilter = dayIndex;
             fetchSheetData();
         };
 
@@ -1089,6 +1230,7 @@
         // --- 8. เริ่มทำงานเมื่อเปิดหน้าเว็บ ---
         document.addEventListener('DOMContentLoaded', () => {
             renderNavigations();
+            updateRefreshStatus(); // แสดงสถานะเริ่มต้น "ปิดใช้งาน"
             if(window.lucide) {
                 lucide.createIcons();
             }
