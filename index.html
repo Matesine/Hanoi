@@ -521,8 +521,13 @@
                 // Slice to get the desired period from the (potentially filtered) data
                 const recentData = processedData.slice(0, state.period);
                 
-                if (recentData.length > 0) state.data = recentData;
-                else throw new Error('อ่านไฟล์ได้ แต่ไม่พบข้อมูลที่ตรงตามเงื่อนไขการกรอง (วัน/จำนวนงวด)');
+                if (recentData.length > 0) {
+                    state.data = recentData;
+                    // บันทึกข้อมูลล่าสุดลงฐานข้อมูลอัตโนมัติ
+                    autoSaveLatestData(state.activeSheet.name, recentData);
+                } else {
+                    throw new Error('อ่านไฟล์ได้ แต่ไม่พบข้อมูลที่ตรงตามเงื่อนไขการกรอง (วัน/จำนวนงวด)');
+                }
 
             } catch (err) {
                 console.error(err);
@@ -535,6 +540,41 @@
                     renderUI();
                 }, 300);
             }
+        }
+
+        // --- ฟังก์ชันบันทึกข้อมูลอัตโนมัติ (Auto-Save to DB) ---
+        function autoSaveLatestData(sheetName, currentData) {
+            if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes('ใส่_URL')) return;
+            if (!currentData || currentData.length === 0) return;
+
+            // ตรวจสอบข้อมูล 3 งวดล่าสุด (เผื่อมีอัปเดตพร้อมกันหลายวัน)
+            const rowsToCheck = currentData.slice(0, 3);
+
+            rowsToCheck.forEach(row => {
+                const storageKey = `autosave_${sheetName}_${row.date.replace(/[\/\-]/g, '')}`;
+                
+                // ถ้าเคยบันทึกข้อมูลของวันที่นี้สำเร็จแล้ว ให้ข้ามไปเลย จะได้ไม่ส่งข้อมูลซ้ำ
+                if (localStorage.getItem(storageKey)) return;
+
+                const formData = new URLSearchParams();
+                formData.append('sheetName', sheetName);
+                formData.append('date', row.date);
+                formData.append('top3', row.top3);
+                formData.append('bot2', row.bot2);
+                formData.append('isAutoSave', 'true'); // ส่ง flag ว่ามาจาก Auto-save
+
+                // ส่งข้อมูลเข้า Database แบบเงียบๆ (Silent POST)
+                fetch(APPS_SCRIPT_URL, { method: 'POST', body: formData })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.status === 'success') {
+                            // บันทึกสถานะลงในเครื่องว่าซิงค์แล้ว
+                            localStorage.setItem(storageKey, 'saved');
+                            console.log(`[Auto-Save] ซิงค์ข้อมูล ${sheetName} งวด ${row.date} เข้าฐานข้อมูลสำเร็จ`);
+                        }
+                    })
+                    .catch(err => console.error(`[Auto-Save] Error syncing ${sheetName}:`, err));
+            });
         }
 
         // --- ฟังก์ชันสำหรับอัปเดตอัตโนมัติ ---
@@ -1103,6 +1143,10 @@
                     formMessage.className = 'mt-3 text-sm font-medium text-emerald-600';
                     document.getElementById('add-data-form').reset();
                     
+                    // มาร์คสถานะว่าบันทึกแล้ว จะได้ไม่ทำงานซ้ำในฟังก์ชัน Auto-Save
+                    const storageKey = `autosave_${state.activeSheet.name}_${dateInput.replace(/[\/\-]/g, '')}`;
+                    localStorage.setItem(storageKey, 'saved');
+
                     // สั่งให้ระบบโหลดข้อมูลจาก Sheets มาอัปเดตตารางและกราฟใหม่ทันที
                     fetchSheetData();
                 } else {
@@ -1189,6 +1233,10 @@
                     state.data[index] = { date: dateFormatted, top3, bot2 };
                     closeEditModal();
                     renderUI();
+                    
+                    // มาร์คสถานะไว้สำหรับ Auto-save
+                    const storageKey = `autosave_${state.activeSheet.name}_${dateFormatted.replace(/[\/\-]/g, '')}`;
+                    localStorage.setItem(storageKey, 'saved');
                 } else {
                     throw new Error(result.message || 'บันทึกไม่สำเร็จ');
                 }
