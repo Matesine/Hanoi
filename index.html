@@ -81,38 +81,6 @@
             <!-- แท็บชีตจะถูกแทรกด้วย JS -->
         </div>
 
-        <!-- Add Data Form -->
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
-            <div class="bg-blue-50 px-6 py-4 border-b border-blue-100 flex items-center justify-between">
-                <div class="flex items-center space-x-2">
-                    <i data-lucide="file-plus-2" class="w-5 h-5 text-blue-600"></i>
-                    <h3 class="font-bold text-blue-800">เพิ่มข้อมูลผลรางวัล (<span id="form-sheet-name">...</span>)</h3>
-                </div>
-            </div>
-            <form id="add-data-form" class="p-6" onsubmit="submitNewData(event)">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">วันที่</label>
-                        <input type="date" id="input-date" class="w-full border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">3 ตัวบน</label>
-                        <input type="text" id="input-top3" maxlength="3" pattern="\d{3}" placeholder="เช่น 123" class="w-full border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">2 ตัวล่าง</label>
-                        <input type="text" id="input-bot2" maxlength="2" pattern="\d{2}" placeholder="เช่น 45" class="w-full border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                    </div>
-                    <div>
-                        <button type="submit" id="btn-submit" class="w-full bg-blue-600 text-white font-bold rounded-md px-4 py-2 hover:bg-blue-700 transition flex justify-center items-center">
-                            <i data-lucide="save" class="w-4 h-4 mr-2"></i> บันทึกข้อมูล
-                        </button>
-                    </div>
-                </div>
-                <div id="form-message" class="mt-3 text-sm hidden"></div>
-            </form>
-        </div>
-
         <!-- Status / Error -->
         <div id="error-container" class="hidden-temp bg-amber-50 border border-amber-200 text-amber-700 p-4 rounded-lg mb-6 flex items-center space-x-3 shadow-sm">
             <i data-lucide="alert-triangle" class="w-6 h-6 flex-shrink-0 text-amber-500"></i>
@@ -268,7 +236,7 @@
                <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
                  <div class="flex items-center space-x-2">
                     <i data-lucide="calendar-days" class="w-5 h-5 text-slate-500"></i>
-                    <h3 class="font-bold text-slate-700" id="table-title">ข้อมูลที่ใช้คำนวณ (ตัวอย่าง 5 งวดล่าสุด)</h3>
+                    <h3 class="font-bold text-slate-700" id="table-title">ข้อมูลที่ใช้คำนวณ</h3>
                  </div>
                </div>
                <div class="overflow-x-auto">
@@ -278,7 +246,6 @@
                        <th class="px-6 py-3 font-semibold">วันที่</th>
                        <th class="px-6 py-3 font-semibold text-center">3 ตัวบน</th>
                        <th class="px-6 py-3 font-semibold text-center">2 ตัวล่าง</th>
-                       <th class="px-6 py-3 font-semibold text-center">จัดการ</th>
                      </tr>
                    </thead>
                    <tbody id="recent-data-table">
@@ -291,76 +258,22 @@
         </div>
     </main>
 
-    <!-- Edit Modal -->
-    <div id="edit-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
-            <div class="bg-amber-50 px-6 py-4 border-b border-amber-100 flex items-center justify-between">
-                <div class="flex items-center space-x-2">
-                    <i data-lucide="pencil" class="w-5 h-5 text-amber-600"></i>
-                    <h3 class="font-bold text-amber-800">แก้ไขข้อมูลผลรางวัล</h3>
-                </div>
-                <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600 transition">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-            <div class="p-6 space-y-4">
-                <input type="hidden" id="edit-index">
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">วันที่</label>
-                    <input type="date" id="edit-date" class="w-full border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">3 ตัวบน</label>
-                    <input type="text" id="edit-top3" maxlength="3" pattern="\d{3}" placeholder="เช่น 123" class="w-full border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">2 ตัวล่าง</label>
-                    <input type="text" id="edit-bot2" maxlength="2" pattern="\d{2}" placeholder="เช่น 45" class="w-full border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" required>
-                </div>
-                <div id="edit-message" class="hidden text-sm font-medium"></div>
-                <div class="flex gap-3 pt-2">
-                    <button id="btn-edit-save" onclick="saveEditRow()" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-md px-4 py-2 flex justify-center items-center transition">
-                        <i data-lucide="save" class="w-4 h-4 mr-1"></i> บันทึก
-                    </button>
-                    <button onclick="closeEditModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-md px-4 py-2 transition">
-                        ยกเลิก
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script>
         // --- 1. การตั้งค่าและการจัดการ State ---
         const SHEETS = [
-            { id: '1184033934', name: 'ฮานอย HD' },
-            { id: '221352074', name: 'ฮานอยสตาร์' },
-            { id: '470609893', name: 'ฮานอยทีวี' },
-            { id: '286751529', name: 'ฮานอยกาชาด' },
-            { id: '1290512523', name: 'ฮานอยพิเศษ' },
-            { id: '712690837', name: 'ฮานอยปกติ' },
-            { id: '2092880425', name: 'ฮานอยพัฒนา' },
-            { id: '583541557', name: 'ฮานอย VIP' },
-            { 
-                id: '222119155', 
-                name: 'นิคเคอิเช้า', 
-                customUrl: 'https://docs.google.com/spreadsheets/d/13ZNRVPDceqWFYe-4e4YF0qv5wy_rOPeiwbwPS11qsW4/export?format=csv&gid=222119155' 
-            },
-            { 
-                id: '1400029804', 
-                name: 'จีนเช้า', 
-                customUrl: 'https://docs.google.com/spreadsheets/d/13ZNRVPDceqWFYe-4e4YF0qv5wy_rOPeiwbwPS11qsW4/export?format=csv&gid=1400029804' 
-            },
-            { 
-                id: '358511639', 
-                name: 'ลาว HD', 
-                customUrl: 'https://docs.google.com/spreadsheets/d/13ZNRVPDceqWFYe-4e4YF0qv5wy_rOPeiwbwPS11qsW4/export?format=csv&gid=358511639' 
-            },
-            { 
-                id: '1384070217', 
-                name: 'ลาวสตาร์', 
-                customUrl: 'https://docs.google.com/spreadsheets/d/13ZNRVPDceqWFYe-4e4YF0qv5wy_rOPeiwbwPS11qsW4/export?format=csv&gid=1384070217' 
-            },
+            { slug: 'xosohd',         name: 'ฮานอย HD' },
+            { slug: 'minhngocstar',   name: 'ฮานอยสตาร์' },
+            { slug: 'minhngoctv',     name: 'ฮานอยทีวี' },
+            { slug: 'xosoredcross',   name: 'ฮานอยกาชาด' },
+            { slug: 'xsthm',          name: 'ฮานอยพิเศษ' },
+            { slug: 'minhngoc',       name: 'ฮานอยปกติ' },
+            { slug: 'xosodevelop',    name: 'ฮานอยพัฒนา' },
+            { slug: 'mlnhngo',        name: 'ฮานอย VIP' },
+            { slug: 'nikkei-morning', name: 'นิคเคอิเช้า' },
+            { slug: 'szse-morning',   name: 'จีนเช้า' },
+            { slug: 'laoshd',         name: 'ลาว HD' },
+            { slug: 'laostars',       name: 'ลาวสตาร์' },
+            { slug: 'laosdevelops',   name: 'ลาวพัฒนา' },
         ];
         
         const REFRESH_INTERVAL_SECONDS = 300; // 5 นาที
@@ -389,10 +302,7 @@
             countdown: REFRESH_INTERVAL_SECONDS,
         };
 
-        // 🟢 เอา URL ที่ได้จากขั้นตอนที่ 1 มาใส่ตรงนี้ครับ
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwuL7f_tZgmRu8ZGkScKgE2gxu6vIsmrez_1YAhwlh8TXVZHi5ZBRH5Lqnt8uVXXE-w/exec';
-
-        // --- 2. ฟังก์ชันจำลองข้อมูล (Fallback) ---
+// --- 2. ฟังก์ชันจำลองข้อมูล (Fallback) ---
         const generateMockData = (days) => {
             const data = [];
             const today = new Date();
@@ -411,9 +321,132 @@
             return data;
         };
 
-        // --- 3. ฟังก์ชันดึงข้อมูลจาก Google Sheets ---
+        // --- 3. ฟังก์ชันดึงข้อมูลจาก exphuay.com ---
+        const EXPHUAY_BASE = 'https://exphuay.com/backward/';
+        const CORS_PROXIES = [
+            url => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`,
+            url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+        ];
+
+        const THAI_MONTHS = {
+            'ม.ค.': 1, 'ก.พ.': 2, 'มี.ค.': 3, 'เม.ย.': 4,
+            'พ.ค.': 5, 'มิ.ย.': 6, 'ก.ค.': 7, 'ส.ค.': 8,
+            'ก.ย.': 9, 'ต.ค.': 10, 'พ.ย.': 11, 'ธ.ค.': 12
+        };
+
+        // แปลงวันที่จาก href เช่น /result/xosohd?date=2026-04-20
+        // exphuay.com บันทึก date ล่วงหน้า 1 วัน → เพิ่ม +1 เพื่อให้ตรงกับวันออกรางวัลจริง
+        function parseDateFromHref(href) {
+            const m = href && href.match(/date=(\d{4}-\d{2}-\d{2})/);
+            if (!m) return null;
+            const [y, mo, d] = m[1].split('-').map(Number);
+            return new Date(Date.UTC(y, mo - 1, d + 1));
+        }
+
+        // แปลงวันที่แบบไทย เช่น "20 เม.ย. 69" → Date object (+1 วัน เหมือนกัน)
+        function parseThaiDateText(text) {
+            const parts = text.trim().split(/\s+/);
+            const day = parseInt(parts[0], 10);
+            const monthNum = THAI_MONTHS[parts[1]];
+            const yearShort = parseInt(parts[2], 10);
+            if (isNaN(day) || !monthNum || isNaN(yearShort)) return null;
+            const ceYear = (2500 + yearShort) - 543;
+            return new Date(Date.UTC(ceYear, monthNum - 1, day + 1));
+        }
+
+        // ดึง HTML 1 หน้าผ่าน CORS proxy (ลองทีละตัวจนกว่าจะสำเร็จ)
+        async function fetchPageHTML(slug, page) {
+            const targetUrl = `${EXPHUAY_BASE}${slug}?page=${page}`;
+            for (const proxyFn of CORS_PROXIES) {
+                try {
+                    const res = await fetch(proxyFn(targetUrl), { cache: 'no-store' });
+                    if (res.ok) return await res.text();
+                } catch (_) {}
+            }
+            throw new Error(`ไม่สามารถดึงข้อมูลหน้า ${page} ของ ${slug} ได้`);
+        }
+
+        // แยกข้อมูลหวยจาก HTML ของ exphuay.com
+        function parseExphuayHTML(html) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const results = [];
+
+            // ใช้ a[href*="/result/"] เพื่อระบุเฉพาะแถวผลหวยจริง
+            // ป้องกันการดึง span จากส่วน stats หรือ header ที่ไม่ใช่ผลรางวัล
+            doc.querySelectorAll('a[href*="/result/"]').forEach(anchor => {
+                const li = anchor.closest('li.grid');
+                if (!li) return;
+
+                // ดึงวันที่จาก href (e.g. /result/xosohd?date=2026-04-20)
+                let dateObject = parseDateFromHref(anchor.getAttribute('href'));
+                if (!dateObject) {
+                    const textParts = anchor.textContent.split('|');
+                    dateObject = parseThaiDateText(textParts[textParts.length - 1].trim());
+                }
+                if (!dateObject) return;
+
+                // ตัวเลขอยู่ใน span.text-center ภายใน li เดียวกัน
+                const numSpans = li.querySelectorAll('span.text-center');
+                if (numSpans.length < 2) return;
+
+                const top3Raw = numSpans[0].textContent.trim();
+                const bot2Raw = numSpans[1].textContent.trim();
+
+                // ตรวจสอบว่าเป็นตัวเลขล้วน และความยาวถูกต้อง (3 ตัวบน / 2 ตัวล่าง)
+                if (!/^\d{1,3}$/.test(top3Raw) || !/^\d{1,2}$/.test(bot2Raw)) return;
+
+                const d = dateObject.getUTCDate().toString().padStart(2, '0');
+                const mo = (dateObject.getUTCMonth() + 1).toString().padStart(2, '0');
+                const y = dateObject.getUTCFullYear();
+
+                results.push({
+                    date: `${d}/${mo}/${y}`,
+                    top3: top3Raw.padStart(3, '0'),
+                    bot2: bot2Raw.padStart(2, '0'),
+                    dateObject,
+                });
+            });
+            return results;
+        }
+
+        // ดึงข้อมูลหวยจาก exphuay.com ตาม slug, period และ dayFilter ปัจจุบัน
+        async function fetchExphuayData(slug) {
+            // คำนวณจำนวนหน้าที่ต้องดึง (20 ผลต่อหน้า)
+            const multiplier = state.dayFilter !== -1 ? 7 : 1;
+            const pagesNeeded = Math.min(20, Math.ceil((state.period * multiplier) / 20) + 1);
+
+            // ดึงทุกหน้าพร้อมกัน
+            const pageNums = Array.from({ length: pagesNeeded }, (_, i) => i + 1);
+            const htmlResults = await Promise.allSettled(pageNums.map(p => fetchPageHTML(slug, p)));
+
+            const allData = [];
+            for (const r of htmlResults) {
+                if (r.status === 'fulfilled') {
+                    allData.push(...parseExphuayHTML(r.value));
+                }
+            }
+
+            if (allData.length === 0) throw new Error('ไม่พบข้อมูลจาก exphuay.com');
+
+            // เรียงจากล่าสุด → เก่าสุด และกำจัดซ้ำ
+            allData.sort((a, b) => b.dateObject - a.dateObject);
+            const seen = new Set();
+            const unique = allData.filter(row => {
+                if (seen.has(row.date)) return false;
+                seen.add(row.date);
+                return true;
+            });
+
+            // กรองตามวันในสัปดาห์ (ใช้ UTC Day ตรงกับวันที่บันทึก)
+            const filtered = state.dayFilter !== -1
+                ? unique.filter(row => row.dateObject.getUTCDay() === state.dayFilter)
+                : unique;
+
+            return filtered.slice(0, state.period);
+        }
+
         async function fetchSheetData() {
-            // ถ้าเปิดอัปเดตอัตโนมัติ ให้รีเซ็ต timer ใหม่ทุกครั้งที่มีการดึงข้อมูล
             if (state.autoRefreshEnabled) {
                 resetAutoRefreshTimer();
             }
@@ -422,119 +455,14 @@
             state.error = null;
             renderUI();
 
-            // Helper function to parse various date formats into a valid Date object
-            const getDateFromString = (dateStr) => {
-                if (!dateStr || typeof dateStr !== 'string') return null;
-                const parts = dateStr.trim().split(/[\/\-]/);
-                if (parts.length !== 3) return null;
-                
-                let day, month, year;
-                
-                // YYYY-MM-DD or YYYY/MM/DD
-                if (parts[0].length === 4) {
-                    year = parseInt(parts[0], 10);
-                    month = parseInt(parts[1], 10) - 1; // JS month is 0-indexed
-                    day = parseInt(parts[2], 10);
-                } 
-                // DD/MM/YYYY or DD-MM-YYYY
-                else {
-                    day = parseInt(parts[0], 10);
-                    month = parseInt(parts[1], 10) - 1;
-                    year = parseInt(parts[2], 10);
-                }
-
-                if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
-                
-                // Handle Thai Buddhist year (e.g. 2567 -> 2024)
-                if (year > 2500) { year -= 543; }
-                
-                const date = new Date(Date.UTC(year, month, day));
-                // Check if date is valid (e.g. not 31/02/2024)
-                if (date.getUTCFullYear() === year && date.getUTCMonth() === month && date.getUTCDate() === day) return date;
-                return null;
-            };
-
             try {
-                let url;
-                
-                // ตรวจสอบว่ามี customUrl หรือไม่ (สำหรับชีตที่แยกไฟล์)
-                if (state.activeSheet.customUrl) {
-                    url = `${state.activeSheet.customUrl}&_cb=${new Date().getTime()}`;
-                } else {
-                    // ใช้ชุดข้อมูลฮานอยเดิม (เผยแพร่ทางเว็บ)
-                    const pubId = '2PACX-1vRlfpkEQlIBtbTCeGL7V9nvjBTXZy8yp5BbmpjhPyN_X73kAbK2gKLK4IcHXhl49buYsbQK_B6nPUjt';
-                    const sheetId = state.activeSheet.id;
-                    
-                    if (!/^\d+$/.test(sheetId)) {
-                        throw new Error(`รหัส GID (${sheetId}) ไม่ถูกต้อง`);
-                    }
-                    
-                    url = `https://docs.google.com/spreadsheets/d/e/${pubId}/pub?gid=${sheetId}&single=true&output=csv&_cb=${new Date().getTime()}`;
-                }
-
-                const response = await fetch(url);
-                
-                if (!response.ok) throw new Error('ไม่สามารถดึงข้อมูลได้ (โปรดตรวจสอบว่าเปิดแชร์และเผยแพร่ทางเว็บแล้ว)');
-                
-                const csvText = await response.text();
-                const lines = csvText.split(/\r?\n/);
-                const parsedData = [];
-
-                // แปลงข้อมูล CSV (เริ่มจาก i=1 เพื่อข้ามบรรทัดหัวตาราง)
-                for (let i = 1; i < lines.length; i++) {
-                    if (!lines[i].trim()) continue;
-                    
-                    // แยกข้อมูลด้วยลูกน้ำ และเอาเครื่องหมาย " ออก
-                    const cols = lines[i].split(',').map(col => col.replace(/"/g, '').trim());
-                    
-                    if (cols.length >= 3) {
-                        const dateStr = cols[0] || '-';
-                        let top3 = cols[1];
-                        let bot2 = cols[2];
-
-                        // ถ้ามีตัวเลขครบ ให้จัดฟอร์แมต 3 ตัว และ 2 ตัว แล้วเก็บเข้า array
-                        if (top3 && bot2 && !isNaN(top3) && !isNaN(bot2)) {
-                            parsedData.push({
-                                date: dateStr,
-                                top3: top3.padStart(3, '0').slice(-3),
-                                bot2: bot2.padStart(2, '0').slice(-2)
-                            });
-                        }
-                    }
-                }
-
-                // Add a valid Date object to each row for easier processing
-                parsedData.forEach(row => {
-                    row.dateObject = getDateFromString(row.date);
-                });
-
-                // Filter out rows with invalid dates and sort by date descending
-                let processedData = parsedData
-                    .filter(row => row.dateObject)
-                    .sort((a, b) => b.dateObject - a.dateObject);
-
-                // Filter by day of the week if a specific day is selected
-                if (state.dayFilter !== -1) {
-                    processedData = processedData.filter(row => row.dateObject.getDay() === state.dayFilter);
-                }
-
-                // Slice to get the desired period from the (potentially filtered) data
-                const recentData = processedData.slice(0, state.period);
-                
-                if (recentData.length > 0) {
-                    state.data = recentData;
-                    // บันทึกข้อมูลล่าสุดลงฐานข้อมูลอัตโนมัติ
-                    autoSaveLatestData(state.activeSheet.name, recentData);
-                } else {
-                    throw new Error('อ่านไฟล์ได้ แต่ไม่พบข้อมูลที่ตรงตามเงื่อนไขการกรอง (วัน/จำนวนงวด)');
-                }
-
+                const results = await fetchExphuayData(state.activeSheet.slug);
+                state.data = results;
             } catch (err) {
                 console.error(err);
                 state.error = `การเชื่อมต่อมีปัญหา: ${err.message} (ระบบสลับมาใช้ข้อมูลจำลองชั่วคราว)`;
                 state.data = generateMockData(state.period);
             } finally {
-                // หน่วงเวลาเล็กน้อยให้เห็น Loading state ในกรณีโหลดเร็วเกินไป
                 setTimeout(() => {
                     state.loading = false;
                     renderUI();
@@ -542,42 +470,7 @@
             }
         }
 
-        // --- ฟังก์ชันบันทึกข้อมูลอัตโนมัติ (Auto-Save to DB) ---
-        function autoSaveLatestData(sheetName, currentData) {
-            if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes('ใส่_URL')) return;
-            if (!currentData || currentData.length === 0) return;
-
-            // ตรวจสอบข้อมูล 3 งวดล่าสุด (เผื่อมีอัปเดตพร้อมกันหลายวัน)
-            const rowsToCheck = currentData.slice(0, 3);
-
-            rowsToCheck.forEach(row => {
-                const storageKey = `autosave_${sheetName}_${row.date.replace(/[\/\-]/g, '')}`;
-                
-                // ถ้าเคยบันทึกข้อมูลของวันที่นี้สำเร็จแล้ว ให้ข้ามไปเลย จะได้ไม่ส่งข้อมูลซ้ำ
-                if (localStorage.getItem(storageKey)) return;
-
-                const formData = new URLSearchParams();
-                formData.append('sheetName', sheetName);
-                formData.append('date', row.date);
-                formData.append('top3', row.top3);
-                formData.append('bot2', row.bot2);
-                formData.append('isAutoSave', 'true'); // ส่ง flag ว่ามาจาก Auto-save
-
-                // ส่งข้อมูลเข้า Database แบบเงียบๆ (Silent POST)
-                fetch(APPS_SCRIPT_URL, { method: 'POST', body: formData })
-                    .then(response => response.json())
-                    .then(result => {
-                        if (result.status === 'success') {
-                            // บันทึกสถานะลงในเครื่องว่าซิงค์แล้ว
-                            localStorage.setItem(storageKey, 'saved');
-                            console.log(`[Auto-Save] ซิงค์ข้อมูล ${sheetName} งวด ${row.date} เข้าฐานข้อมูลสำเร็จ`);
-                        }
-                    })
-                    .catch(err => console.error(`[Auto-Save] Error syncing ${sheetName}:`, err));
-            });
-        }
-
-        // --- ฟังก์ชันสำหรับอัปเดตอัตโนมัติ ---
+// --- ฟังก์ชันสำหรับอัปเดตอัตโนมัติ ---
         function updateRefreshStatus() {
             const statusEl = document.getElementById('refresh-status');
             if (!statusEl) return;
@@ -609,10 +502,7 @@
 
             // ตั้งเวลาสำหรับดึงข้อมูลครั้งถัดไป
             state.autoRefreshIntervalId = setInterval(() => {
-                if (state.loading || !document.getElementById('edit-modal').classList.contains('hidden')) {
-                    console.log('Auto-refresh skipped: modal open or already loading.');
-                    return;
-                }
+                if (state.loading) return;
                 fetchSheetData(); // การเรียกนี้จะรีเซ็ต timer อีกครั้ง
             }, REFRESH_INTERVAL_SECONDS * 1000);
 
@@ -864,7 +754,7 @@
             const sheetContainer = document.getElementById('sheet-selectors');
             sheetContainer.innerHTML = SHEETS.map((sheet, index) => `
                 <button onclick="changeSheet(${index})" class="px-4 py-2 md:px-5 md:py-2 rounded-full font-bold text-sm shadow-sm transition-all border ${
-                    state.activeSheet.id === sheet.id 
+                    state.activeSheet.slug === sheet.slug
                     ? 'bg-blue-600 text-white border-blue-600 ring-2 ring-blue-300 ring-offset-1 z-10' 
                     : 'bg-white text-slate-600 hover:bg-slate-50 border-slate-200 hover:border-blue-300'
                 }">${sheet.name}</button>
@@ -878,8 +768,6 @@
                 }">${day.short}</button>
             `).join('');
 
-            // อัปเดตชื่อแท็บในหัวข้อฟอร์มด้วย
-            document.getElementById('form-sheet-name').innerText = state.activeSheet.name;
         }
 
         function renderDashboard() {
@@ -898,7 +786,6 @@
                 const dayName = DAYS_OF_WEEK.find(d => d.index === state.dayFilter).name;
                 titleText += ` (เฉพาะ${dayName})`;
             }
-            titleText += ' (ตัวอย่าง)';
             document.getElementById('table-title').innerText = titleText;
 
             // Render Detailed Stats Grid
@@ -930,16 +817,6 @@
                     <td class="px-6 py-3 whitespace-nowrap">${row.date}</td>
                     <td class="px-6 py-3 text-center font-mono font-bold text-blue-600 tracking-widest text-base">${row.top3}</td>
                     <td class="px-6 py-3 text-center font-mono font-bold text-rose-500 tracking-widest text-base">${row.bot2}</td>
-                    <td class="px-6 py-3 text-center">
-                        <div class="flex items-center justify-center gap-2">
-                            <button onclick="openEditModal(${index})" class="text-xs bg-amber-100 hover:bg-amber-200 text-amber-700 px-2.5 py-1.5 rounded-md flex items-center gap-1 transition font-bold">
-                                <i data-lucide="pencil" class="w-3.5 h-3.5"></i> แก้ไข
-                            </button>
-                            <button onclick="deleteRow(${index})" class="text-xs bg-rose-100 hover:bg-rose-200 text-rose-700 px-2.5 py-1.5 rounded-md flex items-center gap-1 transition font-bold">
-                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> ลบ
-                            </button>
-                        </div>
-                    </td>
                 </tr>
             `).join('');
         }
@@ -1090,192 +967,7 @@
             }, 2000);
         };
 
-        // ฟังก์ชันเมื่อกดปุ่มบันทึกข้อมูล
-        window.submitNewData = async function(event) {
-            event.preventDefault(); // ป้องกันหน้าเว็บรีเฟรช
-            
-            if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes('ใส่_URL')) {
-                alert('โปรดนำ URL จาก Google Apps Script มาใส่ในตัวแปร APPS_SCRIPT_URL ก่อนครับ');
-                return;
-            }
-
-            const rawDate = document.getElementById('input-date').value; // YYYY-MM-DD
-            const [y, m, d] = rawDate.split('-');
-            const dateInput = `${d}/${m}/${y}`; // แปลงเป็น DD/MM/YYYY
-            const top3Input = document.getElementById('input-top3').value;
-            const bot2Input = document.getElementById('input-bot2').value;
-            const btnSubmit = document.getElementById('btn-submit');
-            const formMessage = document.getElementById('form-message');
-
-            // ตรวจสอบวันที่ซ้ำใน state.data
-            const isDuplicate = state.data.some(row => row.date.trim() === dateInput.trim());
-            if (isDuplicate) {
-                formMessage.innerText = `วันที่ ${dateInput} มีข้อมูลอยู่แล้ว ไม่สามารถบันทึกซ้ำได้`;
-                formMessage.className = 'mt-3 text-sm font-medium text-rose-600';
-                formMessage.classList.remove('hidden');
-                return;
-            }
-
-            // แสดงสถานะกำลังโหลด
-            btnSubmit.disabled = true;
-            btnSubmit.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 mr-2 animate-spin"></i> กำลังบันทึก...';
-            if(window.lucide) lucide.createIcons();
-            formMessage.classList.add('hidden');
-
-            try {
-                // แพ็คข้อมูลเตรียมส่ง
-                const formData = new URLSearchParams();
-                formData.append('sheetName', state.activeSheet.name);
-                formData.append('date', dateInput);
-                formData.append('top3', top3Input);
-                formData.append('bot2', bot2Input);
-
-                // ส่งไปที่ Google Apps Script
-                const response = await fetch(APPS_SCRIPT_URL, {
-                    method: 'POST',
-                    body: formData,
-                });
-
-                const result = await response.json();
-
-                if (result.status === 'success') {
-                    formMessage.innerText = 'บันทึกข้อมูลสำเร็จ! ระบบกำลังดึงข้อมูลใหม่...';
-                    formMessage.className = 'mt-3 text-sm font-medium text-emerald-600';
-                    document.getElementById('add-data-form').reset();
-                    
-                    // มาร์คสถานะว่าบันทึกแล้ว จะได้ไม่ทำงานซ้ำในฟังก์ชัน Auto-Save
-                    const storageKey = `autosave_${state.activeSheet.name}_${dateInput.replace(/[\/\-]/g, '')}`;
-                    localStorage.setItem(storageKey, 'saved');
-
-                    // สั่งให้ระบบโหลดข้อมูลจาก Sheets มาอัปเดตตารางและกราฟใหม่ทันที
-                    fetchSheetData();
-                } else {
-                    throw new Error(result.message || 'บันทึกไม่สำเร็จ');
-                }
-            } catch (error) {
-                formMessage.innerText = `เกิดข้อผิดพลาด: ${error.message}`;
-                formMessage.className = 'mt-3 text-sm font-medium text-rose-600';
-            } finally {
-                // คืนสถานะปุ่ม
-                btnSubmit.disabled = false;
-                btnSubmit.innerHTML = '<i data-lucide="save" class="w-4 h-4 mr-2"></i> บันทึกข้อมูล';
-                if(window.lucide) lucide.createIcons();
-                formMessage.classList.remove('hidden');
-            }
-        };
-
-        // --- 7. แก้ไข / ลบ ข้อมูลในตาราง ---
-        window.openEditModal = function(index) {
-            const row = state.data[index];
-            document.getElementById('edit-index').value = index;
-
-            // แปลง DD/MM/YYYY → YYYY-MM-DD สำหรับ input[type=date]
-            const parts = row.date.split('/');
-            if (parts.length === 3) {
-                document.getElementById('edit-date').value = `${parts[2]}-${parts[1]}-${parts[0]}`;
-            } else {
-                document.getElementById('edit-date').value = '';
-            }
-            document.getElementById('edit-top3').value = row.top3;
-            document.getElementById('edit-bot2').value = row.bot2;
-            document.getElementById('edit-message').classList.add('hidden');
-            document.getElementById('edit-modal').classList.remove('hidden');
-        };
-
-        window.closeEditModal = function() {
-            document.getElementById('edit-modal').classList.add('hidden');
-        };
-
-        window.saveEditRow = async function() {
-            const index = parseInt(document.getElementById('edit-index').value);
-            const rawDate = document.getElementById('edit-date').value;
-            const top3 = document.getElementById('edit-top3').value.trim();
-            const bot2 = document.getElementById('edit-bot2').value.trim();
-            const editMsg = document.getElementById('edit-message');
-            const btnSave = document.getElementById('btn-edit-save');
-
-            if (!rawDate || !/^\d{3}$/.test(top3) || !/^\d{2}$/.test(bot2)) {
-                editMsg.innerText = 'กรุณากรอกข้อมูลให้ครบและถูกต้อง';
-                editMsg.className = 'mt-3 text-sm font-medium text-rose-600';
-                editMsg.classList.remove('hidden');
-                return;
-            }
-
-            const [y, m, d] = rawDate.split('-');
-            const dateFormatted = `${d}/${m}/${y}`;
-
-            // ตรวจสอบวันที่ซ้ำ (ยกเว้น row ที่กำลังแก้ไข)
-            const isDuplicate = state.data.some((row, i) => i !== index && row.date.trim() === dateFormatted);
-            if (isDuplicate) {
-                editMsg.innerText = `วันที่ ${dateFormatted} มีข้อมูลอยู่แล้ว`;
-                editMsg.className = 'mt-3 text-sm font-medium text-rose-600';
-                editMsg.classList.remove('hidden');
-                return;
-            }
-
-            btnSave.disabled = true;
-            btnSave.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 mr-1 animate-spin inline"></i> กำลังบันทึก...';
-            if(window.lucide) lucide.createIcons();
-
-            try {
-                const formData = new URLSearchParams();
-                formData.append('action', 'edit');
-                formData.append('sheetName', state.activeSheet.name);
-                formData.append('oldDate', state.data[index].date);
-                formData.append('date', dateFormatted);
-                formData.append('top3', top3);
-                formData.append('bot2', bot2);
-
-                const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: formData });
-                const result = await response.json();
-
-                if (result.status === 'success') {
-                    state.data[index] = { date: dateFormatted, top3, bot2 };
-                    closeEditModal();
-                    renderUI();
-                    
-                    // มาร์คสถานะไว้สำหรับ Auto-save
-                    const storageKey = `autosave_${state.activeSheet.name}_${dateFormatted.replace(/[\/\-]/g, '')}`;
-                    localStorage.setItem(storageKey, 'saved');
-                } else {
-                    throw new Error(result.message || 'บันทึกไม่สำเร็จ');
-                }
-            } catch (err) {
-                editMsg.innerText = `เกิดข้อผิดพลาด: ${err.message}`;
-                editMsg.className = 'mt-3 text-sm font-medium text-rose-600';
-                editMsg.classList.remove('hidden');
-            } finally {
-                btnSave.disabled = false;
-                btnSave.innerHTML = '<i data-lucide="save" class="w-4 h-4 mr-1 inline"></i> บันทึก';
-                if(window.lucide) lucide.createIcons();
-            }
-        };
-
-        window.deleteRow = async function(index) {
-            const row = state.data[index];
-            if (!confirm(`ยืนยันลบข้อมูลวันที่ ${row.date} (${row.top3} / ${row.bot2}) ?`)) return;
-
-            try {
-                const formData = new URLSearchParams();
-                formData.append('action', 'delete');
-                formData.append('sheetName', state.activeSheet.name);
-                formData.append('date', row.date);
-
-                const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: formData });
-                const result = await response.json();
-
-                if (result.status === 'success') {
-                    state.data.splice(index, 1);
-                    renderUI();
-                } else {
-                    throw new Error(result.message || 'ลบไม่สำเร็จ');
-                }
-            } catch (err) {
-                alert(`เกิดข้อผิดพลาด: ${err.message}`);
-            }
-        };
-
-        // --- 8. เริ่มทำงานเมื่อเปิดหน้าเว็บ ---
+// --- 8. เริ่มทำงานเมื่อเปิดหน้าเว็บ ---
         document.addEventListener('DOMContentLoaded', () => {
             renderNavigations();
             updateRefreshStatus(); // แสดงสถานะเริ่มต้น "ปิดใช้งาน"
