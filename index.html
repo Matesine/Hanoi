@@ -719,7 +719,7 @@
             hidden.value = combinations.join(', ');
 
             if (combinations.length === 0) {
-                grid.innerHTML = '<div class="col-span-full text-center text-sm text-slate-400 py-2">ใส่เลขอย่างน้อย 3 ตัวเพื่อสร้างวิน 3 ตัวบน</div>';
+                grid.innerHTML = '<div class="col-span-full text-center text-sm text-slate-400 py-2">ใส่เลขอย่างน้อย 2 ตัวเพื่อสร้างวิน 3 ตัวบน</div>';
                 return;
             }
 
@@ -730,26 +730,73 @@
             `).join('');
         };
 
+        function getDerivedDigitsFromLatestTop3() {
+            const latest = state.data.find(row => row.top3 && row.top3.length === 3);
+            if (!latest) return [];
+
+            const sum = latest.top3.split('').reduce((total, digit) => total + parseInt(digit, 10), 0);
+            return [sum, sum + 1, sum + 2, sum + 3].map(value => value % 10);
+        }
+
+        function rankTop3WinDigits() {
+            const frequencyCounts = Array(10).fill(0);
+            const trendCounts = Array(10).fill(0);
+            const recentRecords = state.data.slice(0, 10);
+            const derivedDigits = getDerivedDigitsFromLatestTop3();
+
+            state.data.forEach(record => {
+                if (!record.top3 || record.top3.length !== 3) return;
+                record.top3.split('').forEach(digit => {
+                    frequencyCounts[parseInt(digit, 10)]++;
+                });
+            });
+
+            recentRecords.forEach((record, index) => {
+                if (!record.top3 || record.top3.length !== 3) return;
+                const weight = Math.max(1, 10 - index);
+                record.top3.split('').forEach(digit => {
+                    trendCounts[parseInt(digit, 10)] += weight;
+                });
+            });
+
+            const maxFrequency = Math.max(...frequencyCounts, 1);
+            const maxTrend = Math.max(...trendCounts, 1);
+
+            return Array.from({ length: 10 }, (_, digit) => {
+                const frequencyScore = (frequencyCounts[digit] / maxFrequency) * 55;
+                const trendScore = (trendCounts[digit] / maxTrend) * 30;
+                const formulaScore = derivedDigits.includes(digit) ? 15 : 0;
+
+                return {
+                    digit,
+                    frequency: frequencyCounts[digit],
+                    trend: trendCounts[digit],
+                    formula: derivedDigits.includes(digit),
+                    score: frequencyScore + trendScore + formulaScore,
+                };
+            }).sort((a, b) => b.score - a.score || b.frequency - a.frequency || a.digit - b.digit);
+        }
+
         window.analyzeTop3WinDigits = function(limit = 7) {
             const input = document.getElementById('top3-win-input');
             const analysis = document.getElementById('top3-win-analysis');
             if (!input || !analysis) return;
 
-            const stats = calculateStats();
-            const rankedDigits = Array.from({ length: 10 }, (_, digit) => ({
-                digit,
-                count: stats.top100[digit] + stats.top10[digit] + stats.top1[digit],
-            }))
-                .sort((a, b) => b.count - a.count || a.digit - b.digit)
-                .slice(0, limit);
+            const rankedDigits = rankTop3WinDigits();
+            const selectedDigits = rankedDigits.slice(0, limit);
+            const coldDigits = rankedDigits.slice(limit).map(item => item.digit);
+            const formulaDigits = getDerivedDigitsFromLatestTop3();
 
-            const digits = rankedDigits.map(item => item.digit);
+            const digits = selectedDigits.map(item => item.digit);
             const dayText = state.dayFilter !== -1
                 ? `เฉพาะ${DAYS_OF_WEEK.find(day => day.index === state.dayFilter).name}`
                 : 'รวมทุกวัน';
 
             input.value = digits.join(' ');
-            analysis.innerHTML = `เลขเด่น ${limit} ตัวจากสถิติ 3 ตัวบน (${dayText}): <span class="font-mono text-base">${digits.join(' ')}</span>`;
+            analysis.innerHTML = `
+                เลขเด่น ${limit} ตัวจากสถิติ 3 ตัวบน (${dayText}): <span class="font-mono text-base">${digits.join(' ')}</span>
+                <span class="block mt-1 text-xs text-indigo-600">ตัดเลขดับ: <span class="font-mono">${coldDigits.join(' ') || '-'}</span> | สูตรงวดล่าสุด: <span class="font-mono">${formulaDigits.join(' ') || '-'}</span></span>
+            `;
             analysis.classList.remove('hidden-temp');
             window.updateTop3WinNumbers();
         };
