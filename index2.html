@@ -278,21 +278,41 @@
             <!-- Tab 1: Historical Data -->
             <div id="tab-content-history">
                 <!-- History View Mode Dropdown -->
-                <div class="flex items-center justify-end mb-3">
-                    <label class="text-sm font-medium text-slate-600 mr-2">การแสดงผล:</label>
-                    <select id="history-view-mode" onchange="updateHistoryTable()" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
-                        <option value="day" selected>แสดงเป็นวัน</option>
-                        <option value="all">แสดงทั้งหมด</option>
-                    </select>
+                <div class="flex flex-wrap items-center justify-end gap-3 mb-3">
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-medium text-slate-600">การแสดงผล:</label>
+                        <select id="history-view-mode" onchange="updateHistoryTable()" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
+                            <option value="day" selected>แสดงเป็นวัน</option>
+                            <option value="all">แสดงทั้งหมด</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-medium text-slate-600">ตรวจชุด:</label>
+                        <select id="history-result-type" onchange="updateHistoryTable()" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
+                            <option value="all" selected>ทั้งหมด</option>
+                            <option value="up3">3 ตัวบน</option>
+                            <option value="up2">2 ตัวบน</option>
+                            <option value="down2">2 ตัวล่าง</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-medium text-slate-600">ผล:</label>
+                        <select id="history-hit-filter" onchange="updateHistoryTable()" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
+                            <option value="all" selected>ทั้งหมด</option>
+                            <option value="hit">ถูก</option>
+                            <option value="miss">ไม่ถูก</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="overflow-x-auto border border-slate-200 rounded-xl">
-                    <table class="w-full text-left border-collapse min-w-[500px]">
+                    <table class="w-full text-left border-collapse min-w-[640px]">
                         <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
                             <tr>
                                 <th class="p-3 text-sm font-bold text-slate-600 border-b text-center w-16">ลำดับ</th>
                                 <th class="p-3 text-sm font-bold text-slate-600 border-b">งวดวันที่</th>
                                 <th class="p-3 text-sm font-bold text-slate-600 border-b text-center">3 ตัวบน</th>
                                 <th class="p-3 text-sm font-bold text-slate-600 border-b text-center">2 ตัวล่าง</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b text-center">ผลชุดแนะนำ</th>
                             </tr>
                         </thead>
                         <tbody id="history-table-body" class="divide-y divide-slate-100">
@@ -449,6 +469,11 @@
         let globalMockHistory = [];
         let lastMockTimeframe = null;
         let currentCalculatedData = null; // ตัวแปรเก็บสถิติที่คำนวณจริงจากประวัติ
+        let currentRecommendedSets = {
+            up3: new Set(),
+            up2: new Set(),
+            down2: new Set()
+        };
 
         function initApp() {
             renderTimeframeSelector();
@@ -615,7 +640,7 @@
                 });
             }, 10);
 
-            updateCombinations();
+            updateCombinations(false);
             updateHistoryTable();
         }
 
@@ -636,7 +661,7 @@
             return mapped.filter((item, index) => index < n || item.freq === thresholdFreq);
         }
 
-        function updateCombinations() {
+        function updateCombinations(refreshHistory = true) {
             const data = currentCalculatedData;
             const topN = parseInt(document.getElementById('top-n-select').value);
             const sortOrder = document.getElementById('sort-select').value;
@@ -704,6 +729,12 @@
             combos2Up.sort(sortFn);
             combos2Down.sort(sortFn);
 
+            currentRecommendedSets = {
+                up3: new Set(combos3Up.map(item => item.num)),
+                up2: new Set(combos2Up.map(item => item.num)),
+                down2: new Set(combos2Down.map(item => item.num))
+            };
+
             document.getElementById('count-3up').innerText = `${combos3Up.length} ชุด`;
             document.getElementById('count-2up').innerText = `${combos2Up.length} ชุด`;
             document.getElementById('count-2down').innerText = `${combos2Down.length} ชุด`;
@@ -743,6 +774,57 @@
             renderComboBadges('combo-3up-container', combos3Up, 'bg-amber-100 text-amber-800 border-amber-200');
             renderComboBadges('combo-2up-container', combos2Up, 'bg-teal-100 text-teal-800 border-teal-200');
             renderComboBadges('combo-2down-container', combos2Down, 'bg-rose-100 text-rose-800 border-rose-200');
+
+            if (refreshHistory && document.getElementById('history-table-body')) {
+                updateHistoryTable();
+            }
+        }
+
+        function getRecommendationHits(record) {
+            return {
+                up3: currentRecommendedSets.up3.has(record.up3),
+                up2: currentRecommendedSets.up2.has(record.up3.slice(-2)),
+                down2: currentRecommendedSets.down2.has(record.down2)
+            };
+        }
+
+        function isRecommendationHit(record, resultType = 'all') {
+            const hits = getRecommendationHits(record);
+            if (resultType === 'up3') return hits.up3;
+            if (resultType === 'up2') return hits.up2;
+            if (resultType === 'down2') return hits.down2;
+            return hits.up3 || hits.up2 || hits.down2;
+        }
+
+        function getRecommendationResultHtml(record, resultType = 'all') {
+            const hits = getRecommendationHits(record);
+            const hitCount = [hits.up3, hits.up2, hits.down2].filter(Boolean).length;
+            const isHit = resultType === 'all' ? hitCount > 0 : isRecommendationHit(record, resultType);
+            const modeLabels = {
+                up3: '3บน',
+                up2: '2บน',
+                down2: '2ล่าง'
+            };
+            const detailParts = resultType === 'all'
+                ? [
+                    hits.up3 ? '3บน' : '',
+                    hits.up2 ? '2บน' : '',
+                    hits.down2 ? '2ล่าง' : ''
+                ].filter(Boolean)
+                : [modeLabels[resultType]];
+            const detailClass = isHit ? 'text-emerald-600' : 'text-slate-400';
+            const resultText = isHit ? 'ถูก' : 'ไม่ถูก';
+            const detailText = detailParts.length > 0 ? detailParts.join(', ') : '-';
+            const badgeClass = isHit
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : 'bg-slate-50 text-slate-500 border-slate-200';
+
+            return `
+                <div class="flex flex-col items-center gap-1">
+                    <span class="inline-flex items-center justify-center min-w-[64px] px-2 py-1 rounded-full border text-xs font-bold ${badgeClass}">${resultText}</span>
+                    <span class="text-[11px] ${detailClass} whitespace-nowrap">${detailText}</span>
+                </div>
+            `;
         }
 
         function renderComboBadges(containerId, dataArr, styleClasses) {
@@ -1379,14 +1461,24 @@
 
             // อ่าน View Mode ของแต่ละแท็บ
             const historyViewMode = document.getElementById('history-view-mode') ? document.getElementById('history-view-mode').value : 'day';
+            const historyResultType = document.getElementById('history-result-type') ? document.getElementById('history-result-type').value : 'all';
+            const historyHitFilter = document.getElementById('history-hit-filter') ? document.getElementById('history-hit-filter').value : 'all';
             const formulaViewMode = document.getElementById('formula-view-mode') ? document.getElementById('formula-view-mode').value : 'all';
             const formulaTenViewMode = document.getElementById('formula-ten-view-mode') ? document.getElementById('formula-ten-view-mode').value : 'all';
             const formulaUnitViewMode = document.getElementById('formula-unit-view-mode') ? document.getElementById('formula-unit-view-mode').value : 'all';
 
             const allData = globalMockHistory;
-            const dayData = globalMockHistory.filter(r => r.dayName === currentDay);
+            const dayData = currentDay === 'all'
+                ? globalMockHistory
+                : globalMockHistory.filter(r => r.dayName === currentDay);
+            const dayCountLabel = currentDay === 'all' ? 'ทุกวัน' : `วัน${currentDay}`;
 
-            const historyData = historyViewMode === 'all' ? allData : dayData;
+            const baseHistoryData = historyViewMode === 'all' ? allData : dayData;
+            const historyData = baseHistoryData.filter(record => {
+                if (historyHitFilter === 'all') return true;
+                const isHit = isRecommendationHit(record, historyResultType);
+                return historyHitFilter === 'hit' ? isHit : !isHit;
+            });
             const formulaData = formulaViewMode === 'all' ? allData : dayData;
             const formulaTenData = formulaTenViewMode === 'all' ? allData : dayData;
             const formulaUnitData = formulaUnitViewMode === 'all' ? allData : dayData;
@@ -1401,15 +1493,17 @@
             formulaTenTbody.innerHTML = '';
             formulaUnitTbody.innerHTML = '';
             
-            document.getElementById('history-count').innerText = `รวม ${allData.length} งวด (ตรงกับวัน${currentDay} ${dayData.length} งวด)`;
+            const filteredSuffix = historyData.length === baseHistoryData.length ? '' : ` / แสดง ${historyData.length} งวด`;
+            document.getElementById('history-count').innerText = `รวม ${allData.length} งวด (ตรงกับ${dayCountLabel} ${dayData.length} งวด)${filteredSuffix}`;
 
             // --- ประวัติการออกรางวัล ---
             if (historyData.length === 0) {
-                historyTbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-400">ไม่มีข้อมูลย้อนหลัง</td></tr>`;
+                historyTbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">ไม่มีข้อมูลย้อนหลัง</td></tr>`;
             } else {
                 historyData.forEach((record, index) => {
                     const trHist = document.createElement('tr');
                     trHist.className = 'hover:bg-slate-50 transition-colors';
+                    const recommendationResultHtml = getRecommendationResultHtml(record, historyResultType);
                     trHist.innerHTML = `
                         <td class="p-3 text-center text-sm text-slate-400">${index + 1}</td>
                         <td class="p-3 text-sm font-medium text-slate-700">${record.dateStr}</td>
@@ -1419,6 +1513,7 @@
                         <td class="p-3 text-center">
                             <span class="inline-block bg-rose-50 text-rose-700 font-bold tracking-widest px-3 py-1 rounded border border-rose-200 shadow-sm">${record.down2}</span>
                         </td>
+                        <td class="p-3 text-center">${recommendationResultHtml}</td>
                     `;
                     historyTbody.appendChild(trHist);
                 });
