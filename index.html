@@ -281,6 +281,7 @@
                        <th class="px-6 py-3 font-semibold">วันที่</th>
                        <th class="px-6 py-3 font-semibold text-center">3 ตัวบน</th>
                        <th class="px-6 py-3 font-semibold text-center">2 ตัวล่าง</th>
+                       <th class="px-6 py-3 font-semibold text-center" id="top3-result-column-title">ผลชุดจับคู่ 3 ตัวบน</th>
                      </tr>
                    </thead>
                    <tbody id="recent-data-table">
@@ -402,6 +403,7 @@
             autoRefreshIntervalId: null,
             countdownIntervalId: null,
             countdown: REFRESH_INTERVAL_SECONDS,
+            top3Combinations: [],
         };
 
 // --- 2. ฟังก์ชันจำลองข้อมูล (Fallback) ---
@@ -683,19 +685,19 @@
 
         function buildTop3WinNumbers(rawValue) {
             const digits = [...new Set((rawValue.match(/\d/g) || []))];
-            const results = [];
+            const results = new Set();
 
             for (const first of digits) {
                 for (const second of digits) {
                     for (const third of digits) {
-                        if (first !== second && first !== third && second !== third) {
-                            results.push(`${first}${second}${third}`);
+                        if (!(first === second && second === third)) {
+                            results.add(`${first}${second}${third}`);
                         }
                     }
                 }
             }
 
-            return results;
+            return [...results];
         }
 
         window.updateTop3WinNumbers = function() {
@@ -759,6 +761,10 @@
             // อัปเดตจำนวนชุดบนหน้าจอ
             document.getElementById('top3-combo-count-title').innerText = combinations.length;
             document.getElementById('top3-combo-count').innerText = combinations.length;
+            const resultColumnTitle = document.getElementById('top3-result-column-title');
+            if (resultColumnTitle) {
+                resultColumnTitle.innerText = `ผลชุดจับคู่ 3 ตัวบน (${combinations.length} ชุด)`;
+            }
 
             const comboGrid = document.getElementById('combo-grid');
             comboGrid.innerHTML = combinations.map(c => `
@@ -769,6 +775,8 @@
 
             // นำตัวเลขชุดมารวมกัน คั่นด้วยลูกน้ำ (,) สำหรับให้กดปุ่ม Copy
             document.getElementById('combo-hidden-text').value = combinations.join(', ');
+            state.top3Combinations = combinations;
+            renderRecentDataTable();
         };
 
         // --- ฟังก์ชันอัปเดต 2 ตัวบน ---
@@ -974,13 +982,25 @@
                 });
             }, 50);
 
-            // Render Table
+            renderRecentDataTable();
+        }
+
+        function renderRecentDataTable() {
             const tableBody = document.getElementById('recent-data-table');
+            if (!tableBody) return;
+
+            const top3Set = new Set(state.top3Combinations || []);
             tableBody.innerHTML = state.data.map((row, index) => `
                 <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                     <td class="px-6 py-3 whitespace-nowrap">${row.date}</td>
                     <td class="px-6 py-3 text-center font-mono font-bold text-blue-600 tracking-widest text-base">${row.top3}</td>
                     <td class="px-6 py-3 text-center font-mono font-bold text-rose-500 tracking-widest text-base">${row.bot2}</td>
+                    <td class="px-6 py-3 text-center">
+                        ${top3Set.has(row.top3)
+                            ? '<span class="inline-flex items-center justify-center min-w-16 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">ถูก</span>'
+                            : '<span class="inline-flex items-center justify-center min-w-16 px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200 text-xs font-bold">ไม่ถูก</span>'
+                        }
+                    </td>
                 </tr>
             `).join('');
         }
