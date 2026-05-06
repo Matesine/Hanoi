@@ -36,6 +36,15 @@
         .progress-bar-fill {
             transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
+        .lottery-dropdown-menu {
+            display: none;
+        }
+
+        .lottery-dropdown.open .lottery-dropdown-menu,
+        .lottery-dropdown:hover .lottery-dropdown-menu {
+            display: block;
+        }
     </style>
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-800 pb-12">
@@ -77,7 +86,7 @@
 
     <main class="max-w-6xl mx-auto px-4 -mt-4">
         <!-- Sheet Selectors (Tabs) -->
-        <div class="flex flex-wrap justify-center gap-2 md:gap-3 mb-8" id="sheet-selectors">
+        <div class="relative z-30 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8" id="sheet-selectors">
             <!-- แท็บชีตจะถูกแทรกด้วย JS -->
         </div>
 
@@ -260,21 +269,81 @@
 
     <script>
         // --- 1. การตั้งค่าและการจัดการ State ---
-        const SHEETS = [
-            { slug: 'xosohd',         name: 'ฮานอย HD' },
-            { slug: 'minhngocstar',   name: 'ฮานอยสตาร์' },
-            { slug: 'minhngoctv',     name: 'ฮานอยทีวี' },
-            { slug: 'xosoredcross',   name: 'ฮานอยกาชาด' },
-            { slug: 'xsthm',          name: 'ฮานอยพิเศษ' },
-            { slug: 'minhngoc',       name: 'ฮานอยปกติ' },
-            { slug: 'xosodevelop',    name: 'ฮานอยพัฒนา' },
-            { slug: 'mlnhngo',        name: 'ฮานอย VIP' },
-            { slug: 'nikkei-morning', name: 'นิคเคอิเช้า' },
-            { slug: 'szse-morning',   name: 'จีนเช้า' },
-            { slug: 'laoshd',         name: 'ลาว HD' },
-            { slug: 'laostars',       name: 'ลาวสตาร์' },
-            { slug: 'laosdevelops',   name: 'ลาวพัฒนา' },
+        const LOTTERY_GROUPS = [
+            {
+                key: 'hanoi',
+                label: 'สถิติหวยฮานอย ย้อนหลัง',
+                sheets: [
+                    { slug: 'xsktvn',         name: 'ฮานอยเช้า' },
+                    { slug: 'hanoiasean',     name: 'ฮานอยอาเซียน' },
+                    { slug: 'xosohd',         name: 'ฮานอย HD' },
+                    { slug: 'minhngocstar',   name: 'ฮานอยสตาร์' },
+                    { slug: 'minhngoctv',     name: 'ฮานอยทีวี' },
+                    { slug: 'xstachroi',      name: 'ฮานอยเฉพาะกิจ' },
+                    { slug: 'xosoredcross',   name: 'ฮานอยกาชาด' },
+                    { slug: 'xsthm',          name: 'ฮานอยพิเศษ' },
+                    { slug: 'minhngoc',       name: 'ฮานอยปกติ' },
+                    { slug: 'xosodevelop',    name: 'ฮานอยพัฒนา' },
+                    { slug: 'mlnhngo',        name: 'ฮานอย VIP' },
+                    { slug: 'xsdky',          name: 'ฮานอยดึก' },
+                ],
+            },
+            {
+                key: 'lao',
+                label: 'สถิติหวยลาว ย้อนหลัง',
+                sheets: [
+                    { slug: 'laopatuxay',     name: 'ลาวประตูชัย' },
+                    { slug: 'laoshd',         name: 'ลาว HD' },
+                    { slug: 'laostars',       name: 'ลาวสตาร์' },
+                    { slug: 'laosdevelops',   name: 'ลาวพัฒนา' },
+                ],
+            },
+            {
+                key: 'stock-normal',
+                label: 'สถิติหวยหุ้นปกติ ย้อนหลัง',
+                sheets: [
+                    { slug: 'dji',              name: 'หุ้นดาวโจนส์' },
+                    { slug: 'nikkei-morning',   name: 'หุ้นนิคเคอิเช้า' },
+                    { slug: 'szse-morning',     name: 'หุ้นจีนเช้า' },
+                    { slug: 'hsi-morning',      name: 'หุ้นฮั่งเส็งเช้า' },
+                    { slug: 'twse',             name: 'หุ้นไต้หวัน' },
+                    { slug: 'nikkei-afternoon', name: 'หุ้นนิคเคอิบ่าย' },
+                    { slug: 'ktop30',           name: 'หุ้นเกาหลี' },
+                    { slug: 'szse-afternoon',   name: 'หุ้นจีนบ่าย' },
+                    { slug: 'hsi-afternoon',    name: 'หุ้นฮั่งเส็งบ่าย' },
+                    { slug: 'sgx',              name: 'หุ้นสิงคโปร์' },
+                    { slug: 'set',              name: 'หุ้นไทยเย็น' },
+                    { slug: 'bsesn',            name: 'หุ้นอินเดีย' },
+                    { slug: 'egx30',            name: 'หุ้นอียิปต์' },
+                    { slug: 'gdaxi',            name: 'หุ้นเยอรมัน' },
+                    { slug: 'moexbc',           name: 'หุ้นรัสเซีย' },
+                    { slug: 'ftse100',          name: 'หุ้นอังกฤษ' },
+                ],
+            },
+            {
+                key: 'stock-vip',
+                label: 'สถิติหวยหุ้นวีไอพี ย้อนหลัง',
+                sheets: [
+                    { slug: 'dowjones-vip',          name: 'ดาวโจนส์ VIP' },
+                    { slug: 'nikkei-vip-morning',    name: 'นิคเคอิ VIP เช้า' },
+                    { slug: 'szse-vip-morning',      name: 'จีน VIP เช้า' },
+                    { slug: 'hsi-vip-morning',       name: 'ฮั่งเส็ง VIP เช้า' },
+                    { slug: 'twse-vip',              name: 'ไต้หวัน VIP' },
+                    { slug: 'ktop30-vip',            name: 'เกาหลี VIP' },
+                    { slug: 'nikkei-vip-afternoon',  name: 'นิคเคอิ VIP บ่าย' },
+                    { slug: 'szse-vip-afternoon',    name: 'จีน VIP บ่าย' },
+                    { slug: 'hsi-vip-afternoon',     name: 'ฮั่งเส็ง VIP บ่าย' },
+                    { slug: 'sgx-vip',               name: 'สิงคโปร์ VIP' },
+                    { slug: 'england-vip',           name: 'อังกฤษ VIP' },
+                    { slug: 'germany-vip',           name: 'เยอรมัน VIP' },
+                    { slug: 'russia-vip',            name: 'รัสเซีย VIP' },
+                ],
+            },
         ];
+
+        const SHEETS = LOTTERY_GROUPS.flatMap(group =>
+            group.sheets.map(sheet => ({ ...sheet, group: group.key }))
+        );
         
         const REFRESH_INTERVAL_SECONDS = 300; // 5 นาที
         const PERIODS = [30, 60, 90];
@@ -752,13 +821,35 @@
             `).join('');
 
             const sheetContainer = document.getElementById('sheet-selectors');
-            sheetContainer.innerHTML = SHEETS.map((sheet, index) => `
-                <button onclick="changeSheet(${index})" class="px-4 py-2 md:px-5 md:py-2 rounded-full font-bold text-sm shadow-sm transition-all border ${
-                    state.activeSheet.slug === sheet.slug
-                    ? 'bg-blue-600 text-white border-blue-600 ring-2 ring-blue-300 ring-offset-1 z-10' 
-                    : 'bg-white text-slate-600 hover:bg-slate-50 border-slate-200 hover:border-blue-300'
-                }">${sheet.name}</button>
-            `).join('');
+            sheetContainer.innerHTML = LOTTERY_GROUPS.map(group => {
+                const activeInGroup = group.sheets.some(sheet => sheet.slug === state.activeSheet.slug);
+                const currentName = activeInGroup ? state.activeSheet.name : 'เลือกหวย';
+
+                return `
+                    <div class="lottery-dropdown relative">
+                        <button type="button" onclick="toggleLotteryMenu(event, '${group.key}')" class="w-full min-h-[66px] px-4 py-3 rounded-lg border text-left shadow-sm transition-all flex items-center justify-between gap-3 ${
+                            activeInGroup
+                            ? 'bg-blue-600 text-white border-blue-600 ring-2 ring-blue-300 ring-offset-1'
+                            : 'bg-white text-slate-700 hover:border-blue-300 border-slate-200'
+                        }">
+                            <span class="min-w-0">
+                                <span class="block text-sm font-bold leading-5">${group.label}</span>
+                                <span class="block text-xs mt-0.5 truncate ${activeInGroup ? 'text-blue-100' : 'text-slate-500'}">${currentName}</span>
+                            </span>
+                            <i data-lucide="chevron-down" class="w-4 h-4 flex-shrink-0"></i>
+                        </button>
+                        <div id="lottery-menu-${group.key}" class="lottery-dropdown-menu absolute left-0 right-0 top-full mt-2 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden z-50 max-h-80 overflow-y-auto">
+                            ${group.sheets.map(sheet => `
+                                <button type="button" onclick="changeSheetBySlug('${sheet.slug}')" class="w-full px-4 py-2.5 text-left text-sm font-semibold transition-colors ${
+                                    state.activeSheet.slug === sheet.slug
+                                    ? 'bg-blue-50 text-blue-700'
+                                    : 'text-slate-700 hover:bg-slate-50'
+                                }">${sheet.name}</button>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
 
             // Render Day Filter Selectors
             const dayFilterContainer = document.getElementById('day-filter-selectors');
@@ -879,6 +970,32 @@
             fetchSheetData();
         };
 
+        window.changeSheetBySlug = function(slug) {
+            const nextSheet = SHEETS.find(sheet => sheet.slug === slug);
+            if (!nextSheet) return;
+            state.activeSheet = nextSheet;
+            document.querySelectorAll('.lottery-dropdown.open').forEach(dropdown => {
+                dropdown.classList.remove('open');
+            });
+            fetchSheetData();
+        };
+
+        window.toggleLotteryMenu = function(event, groupKey) {
+            event.stopPropagation();
+            const targetMenu = document.getElementById(`lottery-menu-${groupKey}`);
+            if (!targetMenu) return;
+            const targetDropdown = targetMenu.closest('.lottery-dropdown');
+            const isOpen = targetDropdown.classList.contains('open');
+
+            document.querySelectorAll('.lottery-dropdown.open').forEach(dropdown => {
+                dropdown.classList.remove('open');
+            });
+
+            if (!isOpen) {
+                targetDropdown.classList.add('open');
+            }
+        };
+
         window.changePeriod = function(days) {
             state.period = days;
             fetchSheetData();
@@ -969,6 +1086,11 @@
 
 // --- 8. เริ่มทำงานเมื่อเปิดหน้าเว็บ ---
         document.addEventListener('DOMContentLoaded', () => {
+            document.addEventListener('click', () => {
+                document.querySelectorAll('.lottery-dropdown.open').forEach(dropdown => {
+                    dropdown.classList.remove('open');
+                });
+            });
             renderNavigations();
             updateRefreshStatus(); // แสดงสถานะเริ่มต้น "ปิดใช้งาน"
             if(window.lucide) {
