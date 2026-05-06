@@ -289,6 +289,8 @@
                        <th class="px-6 py-3 font-semibold text-center">3 ตัวบน</th>
                        <th class="px-6 py-3 font-semibold text-center">2 ตัวล่าง</th>
                        <th class="px-6 py-3 font-semibold text-center" id="top3-result-column-title">ผลชุดจับคู่ 3 ตัวบน</th>
+                       <th class="px-6 py-3 font-semibold text-center" id="win6-result-column-title">ผลวิน 6 ตัว</th>
+                       <th class="px-6 py-3 font-semibold text-center" id="win7-result-column-title">ผลวิน 7 ตัว</th>
                      </tr>
                    </thead>
                    <tbody id="recent-data-table">
@@ -741,7 +743,8 @@
         function rankTop3WinDigits() {
             const frequencyCounts = Array(10).fill(0);
             const trendCounts = Array(10).fill(0);
-            const recentRecords = state.data.slice(0, 10);
+            const trendWindow = state.period >= 90 ? 20 : state.period >= 60 ? 15 : 10;
+            const recentRecords = state.data.slice(0, trendWindow);
             const derivedDigits = getDerivedDigitsFromLatestTop3();
 
             state.data.forEach(record => {
@@ -753,7 +756,7 @@
 
             recentRecords.forEach((record, index) => {
                 if (!record.top3 || record.top3.length !== 3) return;
-                const weight = Math.max(1, 10 - index);
+                const weight = Math.max(1, trendWindow - index);
                 record.top3.split('').forEach(digit => {
                     trendCounts[parseInt(digit, 10)] += weight;
                 });
@@ -761,10 +764,16 @@
 
             const maxFrequency = Math.max(...frequencyCounts, 1);
             const maxTrend = Math.max(...trendCounts, 1);
+            const hotDigits = frequencyCounts
+                .map((count, digit) => ({ digit, count }))
+                .sort((a, b) => b.count - a.count || a.digit - b.digit);
+            const trendingDigits = trendCounts
+                .map((count, digit) => ({ digit, count }))
+                .sort((a, b) => b.count - a.count || a.digit - b.digit);
 
-            return Array.from({ length: 10 }, (_, digit) => {
-                const frequencyScore = (frequencyCounts[digit] / maxFrequency) * 55;
-                const trendScore = (trendCounts[digit] / maxTrend) * 30;
+            const ranked = Array.from({ length: 10 }, (_, digit) => {
+                const frequencyScore = (frequencyCounts[digit] / maxFrequency) * 65;
+                const trendScore = (trendCounts[digit] / maxTrend) * 25;
                 const formulaScore = derivedDigits.includes(digit) ? 15 : 0;
 
                 return {
@@ -775,6 +784,11 @@
                     score: frequencyScore + trendScore + formulaScore,
                 };
             }).sort((a, b) => b.score - a.score || b.frequency - a.frequency || a.digit - b.digit);
+
+            ranked.hotDigits = hotDigits;
+            ranked.trendingDigits = trendingDigits;
+            ranked.trendWindow = trendWindow;
+            return ranked;
         }
 
         window.analyzeTop3WinDigits = function(limit = 7) {
@@ -786,6 +800,11 @@
             const selectedDigits = rankedDigits.slice(0, limit);
             const coldDigits = rankedDigits.slice(limit).map(item => item.digit);
             const formulaDigits = getDerivedDigitsFromLatestTop3();
+            const hotDigits = rankedDigits.hotDigits.slice(0, limit);
+            const trendingDigits = rankedDigits.trendingDigits.slice(0, Math.min(4, limit));
+            const formatRankedDigits = (items) => items
+                .map(item => `${item.digit}(${item.count})`)
+                .join(' ');
 
             const digits = selectedDigits.map(item => item.digit);
             const dayText = state.dayFilter !== -1
@@ -795,6 +814,8 @@
             input.value = digits.join(' ');
             analysis.innerHTML = `
                 เลขเด่น ${limit} ตัวจากสถิติ 3 ตัวบน (${dayText}): <span class="font-mono text-base">${digits.join(' ')}</span>
+                <span class="block mt-1 text-xs text-indigo-600">Hot Numbers ${state.period} งวด: <span class="font-mono">${formatRankedDigits(hotDigits) || '-'}</span></span>
+                <span class="block mt-1 text-xs text-indigo-600">Trending Numbers ล่าสุด ${rankedDigits.trendWindow} งวด: <span class="font-mono">${formatRankedDigits(trendingDigits) || '-'}</span></span>
                 <span class="block mt-1 text-xs text-indigo-600">ตัดเลขดับ: <span class="font-mono">${coldDigits.join(' ') || '-'}</span> | สูตรงวดล่าสุด: <span class="font-mono">${formulaDigits.join(' ') || '-'}</span></span>
             `;
             analysis.classList.remove('hidden-temp');
@@ -1068,16 +1089,39 @@
             if (!tableBody) return;
 
             const top3Set = new Set(state.top3Combinations || []);
+            const rankedDigits = rankTop3WinDigits().map(item => item.digit);
+            const win6Digits = rankedDigits.slice(0, 6);
+            const win7Digits = rankedDigits.slice(0, 7);
+            const win6Numbers = buildTop3WinNumbers(win6Digits.join(' '));
+            const win7Numbers = buildTop3WinNumbers(win7Digits.join(' '));
+            const win6Set = new Set(win6Numbers);
+            const win7Set = new Set(win7Numbers);
+            const win6ColumnTitle = document.getElementById('win6-result-column-title');
+            const win7ColumnTitle = document.getElementById('win7-result-column-title');
+            if (win6ColumnTitle) {
+                win6ColumnTitle.innerText = `ผลวิน 6 ตัว (${win6Numbers.length} ชุด)`;
+            }
+            if (win7ColumnTitle) {
+                win7ColumnTitle.innerText = `ผลวิน 7 ตัว (${win7Numbers.length} ชุด)`;
+            }
+
+            const renderResultBadge = (isHit) => isHit
+                ? '<span class="inline-flex items-center justify-center min-w-16 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">ถูก</span>'
+                : '<span class="inline-flex items-center justify-center min-w-16 px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200 text-xs font-bold">ไม่ถูก</span>';
+
             tableBody.innerHTML = state.data.map((row, index) => `
                 <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                     <td class="px-6 py-3 whitespace-nowrap">${row.date}</td>
                     <td class="px-6 py-3 text-center font-mono font-bold text-blue-600 tracking-widest text-base">${row.top3}</td>
                     <td class="px-6 py-3 text-center font-mono font-bold text-rose-500 tracking-widest text-base">${row.bot2}</td>
                     <td class="px-6 py-3 text-center">
-                        ${top3Set.has(row.top3)
-                            ? '<span class="inline-flex items-center justify-center min-w-16 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">ถูก</span>'
-                            : '<span class="inline-flex items-center justify-center min-w-16 px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200 text-xs font-bold">ไม่ถูก</span>'
-                        }
+                        ${renderResultBadge(top3Set.has(row.top3))}
+                    </td>
+                    <td class="px-6 py-3 text-center">
+                        ${renderResultBadge(win6Set.has(row.top3))}
+                    </td>
+                    <td class="px-6 py-3 text-center">
+                        ${renderResultBadge(win7Set.has(row.top3))}
                     </td>
                 </tr>
             `).join('');
