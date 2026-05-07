@@ -813,14 +813,31 @@
             return ranked;
         }
 
+        function selectTop3WinDigits(limit = 7) {
+            const rankedDigits = rankTop3WinDigits();
+            const coldDigits = [...rankedDigits]
+                .sort((a, b) => a.frequency - b.frequency || a.trend - b.trend || a.digit - b.digit)
+                .slice(0, Math.max(0, 10 - limit))
+                .map(item => item.digit);
+            const coldSet = new Set(coldDigits);
+            const selectedDigits = rankedDigits
+                .filter(item => !coldSet.has(item.digit))
+                .slice(0, limit);
+
+            return {
+                rankedDigits,
+                selectedDigits,
+                coldDigits,
+                digits: selectedDigits.map(item => item.digit),
+            };
+        }
+
         window.analyzeTop3WinDigits = function(limit = 7) {
             const input = document.getElementById('top3-win-input');
             const analysis = document.getElementById('top3-win-analysis');
             if (!input || !analysis) return;
 
-            const rankedDigits = rankTop3WinDigits();
-            const selectedDigits = rankedDigits.slice(0, limit);
-            const coldDigits = rankedDigits.slice(limit).map(item => item.digit);
+            const { rankedDigits, digits, coldDigits } = selectTop3WinDigits(limit);
             const formulaDigits = getDerivedDigitsFromLatestTop3();
             const hotDigits = rankedDigits.hotDigits.slice(0, limit);
             const trendingDigits = rankedDigits.trendingDigits.slice(0, Math.min(4, limit));
@@ -828,7 +845,6 @@
                 .map(item => `${item.digit}(${item.count})`)
                 .join(' ');
 
-            const digits = selectedDigits.map(item => item.digit);
             const dayText = state.dayFilter !== -1
                 ? `เฉพาะ${DAYS_OF_WEEK.find(day => day.index === state.dayFilter).name}`
                 : 'รวมทุกวัน';
@@ -1111,9 +1127,8 @@
             if (!tableBody) return;
 
             const top3Set = new Set(state.top3Combinations || []);
-            const rankedDigits = rankTop3WinDigits().map(item => item.digit);
-            const win6Digits = rankedDigits.slice(0, 6);
-            const win7Digits = rankedDigits.slice(0, 7);
+            const win6Digits = selectTop3WinDigits(6).digits;
+            const win7Digits = selectTop3WinDigits(7).digits;
             const win6Numbers = buildTop3WinNumbers(win6Digits.join(' '));
             const win7Numbers = buildTop3WinNumbers(win7Digits.join(' '));
             const win6Set = new Set(win6Numbers);
