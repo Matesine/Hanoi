@@ -449,14 +449,15 @@
         };
 
         // แปลงวันที่จาก href เช่น /result/xosohd?date=2026-04-20
+        // ExpHuay บางรายการเก็บ date เป็นวันก่อนหน้าผลจริง จึงขยับ +1 วันให้ตรงกับวันออกรางวัล
         function parseDateFromHref(href) {
             const m = href && href.match(/date=(\d{4}-\d{2}-\d{2})/);
             if (!m) return null;
             const [y, mo, d] = m[1].split('-').map(Number);
-            return new Date(Date.UTC(y, mo - 1, d));
+            return new Date(Date.UTC(y, mo - 1, d + 1));
         }
 
-        // แปลงวันที่แบบไทย เช่น "20 เม.ย. 69" → Date object
+        // แปลงวันที่แบบไทย เช่น "20 เม.ย. 69" → Date object และขยับ +1 วันให้ตรงกับผลจริง
         function parseThaiDateText(text) {
             const m = text && text.match(/(\d{1,2})\s+([^\s]+)\s+(\d{2,4})/);
             if (!m) return null;
@@ -466,7 +467,7 @@
             const yearShort = yearRaw > 2400 ? yearRaw - 2500 : yearRaw;
             if (isNaN(day) || !monthNum || isNaN(yearShort)) return null;
             const ceYear = (2500 + yearShort) - 543;
-            return new Date(Date.UTC(ceYear, monthNum - 1, day));
+            return new Date(Date.UTC(ceYear, monthNum - 1, day + 1));
         }
 
         function createResultRow(dateObject, top3Raw, bot2Raw) {
