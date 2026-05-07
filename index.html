@@ -310,8 +310,6 @@
                 key: 'hanoi',
                 label: 'สถิติหวยฮานอย ย้อนหลัง',
                 sheets: [
-                    { slug: 'xsktvn',         name: 'ฮานอยเช้า' },
-                    { slug: 'hanoiasean',     name: 'ฮานอยอาเซียน' },
                     { slug: 'xosohd',         name: 'ฮานอย HD' },
                     { slug: 'minhngocstar',   name: 'ฮานอยสตาร์' },
                     { slug: 'minhngoctv',     name: 'ฮานอยทีวี' },
@@ -321,23 +319,24 @@
                     { slug: 'minhngoc',       name: 'ฮานอยปกติ' },
                     { slug: 'xosodevelop',    name: 'ฮานอยพัฒนา' },
                     { slug: 'mlnhngo',        name: 'ฮานอย VIP' },
-                    { slug: 'xsdky',          name: 'ฮานอยดึก' },
                 ],
             },
             {
                 key: 'lao',
                 label: 'สถิติหวยลาว ย้อนหลัง',
                 sheets: [
-                    { slug: 'laos-extra',     name: 'ลาว extra' },
-                    { slug: 'laos-tv',        name: 'ลาว TV' },
+                    { slug: 'laoextra',       name: 'ลาว extra' },
+                    { slug: 'laotv',          name: 'ลาว TV' },
                     { slug: 'laopatuxay',     name: 'ลาวประตูชัย' },
+                    { slug: 'laosantipap',    name: 'ผลหวยลาวสันติภาพ' },
+                    { slug: 'laocitizen',     name: 'ผลหวยประชาชนลาว' },
                     { slug: 'laoshd',         name: 'ลาว HD' },
-                    { slug: 'laos-samakkhi',  name: 'ลาว สามัคคี' },
-                    { slug: 'laos-samakkhi-vip', name: 'ลาว สามัคคี VIP' },
+                    { slug: 'laounion',       name: 'ลาว สามัคคี' },
+                    { slug: 'laounionvip',    name: 'ลาว สามัคคี VIP' },
                     { slug: 'laostars',       name: 'ลาวสตาร์' },
-                    { slug: 'laos-stars-vip', name: 'ลาว สตาร์ VIP' },
-                    { slug: 'laos-redcross',  name: 'ลาว กาชาด' },
-                    { slug: 'laos-vip',       name: 'ลาว VIP' },
+                    { slug: 'laostarsvip',    name: 'ลาว สตาร์ VIP' },
+                    { slug: 'laoredcross',    name: 'ลาว กาชาด' },
+                    { slug: 'laosvip',        name: 'ลาว VIP' },
                     { slug: 'laosdevelops',   name: 'ลาวพัฒนา' },
                 ],
             },
@@ -437,8 +436,10 @@
         // --- 3. ฟังก์ชันดึงข้อมูลจาก exphuay.com ---
         const EXPHUAY_BASE = 'https://exphuay.com/backward/';
         const CORS_PROXIES = [
+            url => url,
             url => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`,
             url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+            url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
         ];
 
         const THAI_MONTHS = {
@@ -448,23 +449,39 @@
         };
 
         // แปลงวันที่จาก href เช่น /result/xosohd?date=2026-04-20
-        // exphuay.com บันทึก date ล่วงหน้า 1 วัน → เพิ่ม +1 เพื่อให้ตรงกับวันออกรางวัลจริง
         function parseDateFromHref(href) {
             const m = href && href.match(/date=(\d{4}-\d{2}-\d{2})/);
             if (!m) return null;
             const [y, mo, d] = m[1].split('-').map(Number);
-            return new Date(Date.UTC(y, mo - 1, d + 1));
+            return new Date(Date.UTC(y, mo - 1, d));
         }
 
-        // แปลงวันที่แบบไทย เช่น "20 เม.ย. 69" → Date object (+1 วัน เหมือนกัน)
+        // แปลงวันที่แบบไทย เช่น "20 เม.ย. 69" → Date object
         function parseThaiDateText(text) {
-            const parts = text.trim().split(/\s+/);
-            const day = parseInt(parts[0], 10);
-            const monthNum = THAI_MONTHS[parts[1]];
-            const yearShort = parseInt(parts[2], 10);
+            const m = text && text.match(/(\d{1,2})\s+([^\s]+)\s+(\d{2,4})/);
+            if (!m) return null;
+            const day = parseInt(m[1], 10);
+            const monthNum = THAI_MONTHS[m[2]];
+            const yearRaw = parseInt(m[3], 10);
+            const yearShort = yearRaw > 2400 ? yearRaw - 2500 : yearRaw;
             if (isNaN(day) || !monthNum || isNaN(yearShort)) return null;
             const ceYear = (2500 + yearShort) - 543;
-            return new Date(Date.UTC(ceYear, monthNum - 1, day + 1));
+            return new Date(Date.UTC(ceYear, monthNum - 1, day));
+        }
+
+        function createResultRow(dateObject, top3Raw, bot2Raw) {
+            if (!dateObject || !/^\d{1,3}$/.test(top3Raw) || !/^\d{1,2}$/.test(bot2Raw)) return null;
+
+            const d = dateObject.getUTCDate().toString().padStart(2, '0');
+            const mo = (dateObject.getUTCMonth() + 1).toString().padStart(2, '0');
+            const y = dateObject.getUTCFullYear();
+
+            return {
+                date: `${d}/${mo}/${y}`,
+                top3: top3Raw.padStart(3, '0'),
+                bot2: bot2Raw.padStart(2, '0'),
+                dateObject,
+            };
         }
 
         // ดึง HTML 1 หน้าผ่าน CORS proxy (ลองทีละตัวจนกว่าจะสำเร็จ)
@@ -506,20 +523,24 @@
                 const top3Raw = numSpans[0].textContent.trim();
                 const bot2Raw = numSpans[1].textContent.trim();
 
-                // ตรวจสอบว่าเป็นตัวเลขล้วน และความยาวถูกต้อง (3 ตัวบน / 2 ตัวล่าง)
-                if (!/^\d{1,3}$/.test(top3Raw) || !/^\d{1,2}$/.test(bot2Raw)) return;
-
-                const d = dateObject.getUTCDate().toString().padStart(2, '0');
-                const mo = (dateObject.getUTCMonth() + 1).toString().padStart(2, '0');
-                const y = dateObject.getUTCFullYear();
-
-                results.push({
-                    date: `${d}/${mo}/${y}`,
-                    top3: top3Raw.padStart(3, '0'),
-                    bot2: bot2Raw.padStart(2, '0'),
-                    dateObject,
-                });
+                const row = createResultRow(dateObject, top3Raw, bot2Raw);
+                if (row) results.push(row);
             });
+
+            if (results.length === 0) {
+                const bodyText = doc.body
+                    ? (doc.body.innerText || doc.body.textContent || '')
+                    : html.replace(/<[^>]+>/g, ' ');
+                const resultPattern = /([^\n|]+)\|\s*(\d{1,2}\s+[^\s]+\s+\d{2,4})\s+(\d{1,3})\s+(\d{1,2})(?=\s|$)/g;
+                let match;
+
+                while ((match = resultPattern.exec(bodyText)) !== null) {
+                    const dateObject = parseThaiDateText(match[2]);
+                    const row = createResultRow(dateObject, match[3], match[4]);
+                    if (row) results.push(row);
+                }
+            }
+
             return results;
         }
 
