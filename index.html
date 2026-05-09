@@ -175,7 +175,7 @@
                         class="mt-3 ml-0 sm:ml-4 inline-flex items-center gap-2 text-sm font-semibold text-indigo-800 select-none cursor-pointer">
                         <input id="top3-exclude-hottest" type="checkbox" class="w-4 h-4 accent-indigo-600"
                             onchange="window.reapplyTop3WinAnalysis()">
-                        ตัดเลขที่ออกมากสุด 2 ตัว แล้วเติมเลขอันดับถัดไป
+                        ตัดเลขที่ออกมากสุด 1 ตัว แล้วเติมเลขอันดับถัดไป
                     </label>
                     <div id="top3-win-analysis" class="mt-3 text-sm font-semibold text-indigo-800 hidden-temp"></div>
                     <div id="top3-win-grid"
@@ -931,7 +931,7 @@
         function selectTop3WinDigits(limit = 7) {
             const rankedDigits = rankTop3WinDigits();
             const excludedHotDigits = shouldExcludeHottestWinDigits()
-                ? rankedDigits.hotDigits.slice(0, 2).map(item => item.digit)
+                ? rankedDigits.hotDigits.slice(0, 1).map(item => item.digit)
                 : [];
             const excludedHotSet = new Set(excludedHotDigits);
             const returnDigits = [...rankedDigits]
@@ -1039,7 +1039,7 @@
             analysis.innerHTML = `
                 เลขเด่น ${limit} ตัวจากสถิติ 3 ตัวบน (${dayText}): <span class="font-mono text-base">${digits.join(' ')}</span>
                 <span class="block mt-1 text-xs text-indigo-600">รูปแบบวิน: <span class="font-mono">${shouldIncludeRepeatWinNumbers() ? 'รวมเลขเบิ้ล/หาม' : 'ไม่รวมเลขเบิ้ล/หาม'}</span></span>
-                <span class="block mt-1 text-xs text-indigo-600">ตัดเลขออกมากสุด 2 ตัว: <span class="font-mono">${excludedHotDigits.join(' ') || '-'}</span></span>
+                <span class="block mt-1 text-xs text-indigo-600">ตัดเลขออกมากสุด 1 ตัว: <span class="font-mono">${excludedHotDigits.join(' ') || '-'}</span></span>
                 <span class="block mt-1 text-xs text-rose-600">เลขที่ตัดออกจริง: <span class="font-mono">${omittedDigits.join(' ') || '-'}</span></span>
                 <span class="block mt-1 text-xs text-rose-600">เลขที่ตัดออกจริง แสดงวัน ทั้งหมด: <span class="font-mono">${allDayOmittedDigits.join(' ') || '-'}</span></span>
                 <span class="block mt-1 text-xs text-rose-600">เลขที่ตัดออกจริง ${currentDayContext.label}: <span class="font-mono">${currentDayOmittedDigits.join(' ') || '-'}</span></span>
@@ -1226,7 +1226,6 @@
                 ${createStatPanel('หลักสิบล่าง', stats.bot10, topNumbers.bot10, 'bg-rose-500', 'text-rose-700', 'bg-rose-50')}
                 ${createStatPanel('หลักหน่วยล่าง', stats.bot1, topNumbers.bot1, 'bg-pink-500', 'text-pink-700', 'bg-pink-50')}
             `;
-
             // --- เรียกใช้งานฟังก์ชันอัปเดตชุดจับคู่ตัวเลข ---
             window.updateTop3Combos();
             // Trigger animation for progress bars
