@@ -1016,6 +1016,10 @@
             const allDayOmittedDigits = getTop3OmittedDigitsForData(allDayData.slice(0, state.period), limit);
             const currentDayContext = getTop3CurrentDayContextData();
             const currentDayOmittedDigits = getTop3OmittedDigitsForData(currentDayContext.data, limit);
+            const combinedOmittedSet = new Set([...allDayOmittedDigits, ...currentDayOmittedDigits]);
+            const inputDigits = limit === 9
+                ? digits.filter(digit => !combinedOmittedSet.has(digit))
+                : digits;
 
             let previousOmittedDigits = [];
             if (state.data && state.data.length > 1) {
@@ -1031,7 +1035,7 @@
                 ? `เฉพาะ${DAYS_OF_WEEK.find(day => day.index === state.dayFilter).name}`
                 : 'รวมทุกวัน';
 
-            input.value = digits.join(' ');
+            input.value = inputDigits.join(' ');
             analysis.innerHTML = `
                 เลขเด่น ${limit} ตัวจากสถิติ 3 ตัวบน (${dayText}): <span class="font-mono text-base">${digits.join(' ')}</span>
                 <span class="block mt-1 text-xs text-indigo-600">รูปแบบวิน: <span class="font-mono">${shouldIncludeRepeatWinNumbers() ? 'รวมเลขเบิ้ล/หาม' : 'ไม่รวมเลขเบิ้ล/หาม'}</span></span>
