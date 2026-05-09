@@ -382,6 +382,7 @@
             period: 30,
             dayFilter: -1, // -1 for all days
             data: [],
+            allDayData: [],
             loading: false,
             error: null,
             autoRefreshEnabled: false,
@@ -526,8 +527,7 @@
         // ดึงข้อมูลหวยจาก exphuay.com ตาม slug, period และ dayFilter ปัจจุบัน
         async function fetchExphuayData(slug) {
             // คำนวณจำนวนหน้าที่ต้องดึง (20 ผลต่อหน้า)
-            const multiplier = state.dayFilter !== -1 ? 7 : 1;
-            const pagesNeeded = Math.min(20, Math.ceil((state.period * multiplier) / 20) + 1);
+            const pagesNeeded = Math.min(20, Math.ceil((state.period * 7) / 20) + 1);
 
             // ดึงทุกหน้าพร้อมกัน
             const pageNums = Array.from({ length: pagesNeeded }, (_, i) => i + 1);
@@ -556,6 +556,7 @@
                 ? unique.filter(row => row.dateObject.getUTCDay() === state.dayFilter)
                 : unique;
 
+            state.allDayData = unique;
             return filtered.slice(0, state.period);
         }
 
@@ -575,6 +576,7 @@
                 console.error(err);
                 state.error = `การเชื่อมต่อมีปัญหา: ${err.message} (ระบบสลับมาใช้ข้อมูลจำลองชั่วคราว)`;
                 state.data = generateMockData(state.period);
+                state.allDayData = state.data;
             } finally {
                 setTimeout(() => {
                     state.loading = false;
@@ -949,6 +951,41 @@
             };
         }
 
+        function getTop3OmittedDigitsForData(data, limit) {
+            if (!data || data.length === 0) return [];
+
+            const originalData = state.data;
+            let digits = [];
+            try {
+                state.data = data;
+                digits = selectTop3WinDigits(limit).digits;
+            } finally {
+                state.data = originalData;
+            }
+
+            return Array.from({ length: 10 }, (_, digit) => digit)
+                .filter(digit => !digits.includes(digit));
+        }
+
+        function getTop3CurrentDayContextData() {
+            const allDayData = state.allDayData && state.allDayData.length
+                ? state.allDayData
+                : state.data;
+            const currentDayIndex = new Date().getDay();
+
+            if (isNaN(currentDayIndex)) {
+                return { data: state.data, label: 'แสดงวันปัจจุบัน' };
+            }
+
+            const currentDay = DAYS_OF_WEEK.find(day => day.index === currentDayIndex);
+            return {
+                data: allDayData
+                    .filter(row => row.dateObject && row.dateObject.getUTCDay() === currentDayIndex)
+                    .slice(0, state.period),
+                label: `แสดงวันปัจจุบัน (${currentDay ? currentDay.name : '-'})`,
+            };
+        }
+
         window.analyzeTop3WinDigits = function (limit = 7) {
             const input = document.getElementById('top3-win-input');
             const analysis = document.getElementById('top3-win-analysis');
@@ -973,6 +1010,12 @@
                 .join(' ');
             const omittedDigits = Array.from({ length: 10 }, (_, digit) => digit)
                 .filter(digit => !digits.includes(digit));
+            const allDayData = state.allDayData && state.allDayData.length
+                ? state.allDayData
+                : state.data;
+            const allDayOmittedDigits = getTop3OmittedDigitsForData(allDayData.slice(0, state.period), limit);
+            const currentDayContext = getTop3CurrentDayContextData();
+            const currentDayOmittedDigits = getTop3OmittedDigitsForData(currentDayContext.data, limit);
 
             let previousOmittedDigits = [];
             if (state.data && state.data.length > 1) {
@@ -994,6 +1037,8 @@
                 <span class="block mt-1 text-xs text-indigo-600">รูปแบบวิน: <span class="font-mono">${shouldIncludeRepeatWinNumbers() ? 'รวมเลขเบิ้ล/หาม' : 'ไม่รวมเลขเบิ้ล/หาม'}</span></span>
                 <span class="block mt-1 text-xs text-indigo-600">ตัดเลขออกมากสุด 2 ตัว: <span class="font-mono">${excludedHotDigits.join(' ') || '-'}</span></span>
                 <span class="block mt-1 text-xs text-rose-600">เลขที่ตัดออกจริง: <span class="font-mono">${omittedDigits.join(' ') || '-'}</span></span>
+                <span class="block mt-1 text-xs text-rose-600">เลขที่ตัดออกจริง แสดงวัน ทั้งหมด: <span class="font-mono">${allDayOmittedDigits.join(' ') || '-'}</span></span>
+                <span class="block mt-1 text-xs text-rose-600">เลขที่ตัดออกจริง ${currentDayContext.label}: <span class="font-mono">${currentDayOmittedDigits.join(' ') || '-'}</span></span>
                 <span class="block mt-1 text-xs text-rose-600">งวดก่อนหน้านั้น เลขที่ตัดออกจริง: <span class="font-mono">${previousOmittedDigits.join(' ') || '-'}</span></span>
                 <span class="block mt-1 text-xs text-indigo-600">Hot Numbers ${state.period} งวด: <span class="font-mono">${formatRankedDigits(hotDigits) || '-'}</span></span>
                 <span class="block mt-1 text-xs text-indigo-600">Trending Numbers ล่าสุด ${rankedDigits.trendWindow} งวด: <span class="font-mono">${formatRankedDigits(trendingDigits) || '-'}</span></span>
