@@ -898,6 +898,16 @@
             const omittedDigits = Array.from({ length: 10 }, (_, digit) => digit)
                 .filter(digit => !digits.includes(digit));
 
+            let previousOmittedDigits = [];
+            if (state.data && state.data.length > 1) {
+                const originalData = state.data;
+                state.data = state.data.slice(1);
+                const { digits: prevDigits } = selectTop3WinDigits(limit);
+                state.data = originalData;
+                previousOmittedDigits = Array.from({ length: 10 }, (_, digit) => digit)
+                    .filter(digit => !prevDigits.includes(digit));
+            }
+
             const dayText = state.dayFilter !== -1
                 ? `เฉพาะ${DAYS_OF_WEEK.find(day => day.index === state.dayFilter).name}`
                 : 'รวมทุกวัน';
@@ -908,6 +918,7 @@
                 <span class="block mt-1 text-xs text-indigo-600">รูปแบบวิน: <span class="font-mono">${shouldIncludeRepeatWinNumbers() ? 'รวมเลขเบิ้ล/หาม' : 'ไม่รวมเลขเบิ้ล/หาม'}</span></span>
                 <span class="block mt-1 text-xs text-indigo-600">ตัดเลขออกมากสุด 2 ตัว: <span class="font-mono">${excludedHotDigits.join(' ') || '-'}</span></span>
                 <span class="block mt-1 text-xs text-rose-600">เลขที่ตัดออกจริง: <span class="font-mono">${omittedDigits.join(' ') || '-'}</span></span>
+                <span class="block mt-1 text-xs text-rose-600">งวดก่อนหน้านั้น เลขที่ตัดออกจริง: <span class="font-mono">${previousOmittedDigits.join(' ') || '-'}</span></span>
                 <span class="block mt-1 text-xs text-indigo-600">Hot Numbers ${state.period} งวด: <span class="font-mono">${formatRankedDigits(hotDigits) || '-'}</span></span>
                 <span class="block mt-1 text-xs text-indigo-600">Trending Numbers ล่าสุด ${rankedDigits.trendWindow} งวด: <span class="font-mono">${formatRankedDigits(trendingDigits) || '-'}</span></span>
                 <span class="block mt-1 text-xs text-indigo-600">เลขค้าง/หายไปนาน: <span class="font-mono">${formatRankedDigits(staleDigits) || '-'}</span> | Pattern วันเดียวกัน: <span class="font-mono">${formatRankedDigits(sameDayDigits) || '-'}</span></span>
