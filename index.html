@@ -1,28 +1,36 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบวิเคราะห์สถิติหวย</title>
-    
+
     <!-- Tailwind CSS (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- Lucide Icons (CDN) -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
-        
+
         body {
             font-family: 'Sarabun', sans-serif;
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
-        
+
         .animate-fade-in {
             animation: fadeIn 0.4s ease-out forwards;
         }
@@ -31,7 +39,7 @@
         .hidden-temp {
             display: none !important;
         }
-        
+
         /* Smooth transition สำหรับ Progress Bar */
         .progress-bar-fill {
             transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
@@ -47,6 +55,7 @@
         }
     </style>
 </head>
+
 <body class="min-h-screen bg-slate-50 text-slate-800 pb-12">
 
     <!-- Header -->
@@ -58,10 +67,10 @@
                 </div>
                 <div>
                     <h1 class="text-2xl font-bold">ระบบวิเคราะห์สถิติหวย</h1>
-                    
+
                 </div>
             </div>
-            
+
             <div class="flex flex-col md:flex-row items-center gap-2 w-full md:w-auto justify-center mt-4 md:mt-0">
                 <div class="flex items-center bg-black bg-opacity-20 rounded-lg p-1" id="period-selectors">
                     <!-- ปุ่มเลือกวันจะถูกแทรกด้วย JS -->
@@ -75,9 +84,12 @@
             <div class="flex items-center gap-2 text-white text-sm mt-4 md:mt-0 md:ml-6">
                 <label for="auto-refresh-toggle" class="font-medium cursor-pointer select-none">อัปเดตอัตโนมัติ</label>
                 <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="auto-refresh-toggle" class="sr-only peer" onchange="toggleAutoRefresh(this.checked)">
+                    <input type="checkbox" id="auto-refresh-toggle" class="sr-only peer"
+                        onchange="toggleAutoRefresh(this.checked)">
                     <div class="w-9 h-5 bg-gray-400 rounded-full peer peer-checked:bg-green-500"></div>
-                    <div class="absolute top-0.5 left-[2px] w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-full"></div>
+                    <div
+                        class="absolute top-0.5 left-[2px] w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-full">
+                    </div>
                 </label>
                 <span id="refresh-status" class="text-xs text-blue-200 w-28 text-left ml-2"></span>
             </div>
@@ -91,7 +103,8 @@
         </div>
 
         <!-- Status / Error -->
-        <div id="error-container" class="hidden-temp bg-amber-50 border border-amber-200 text-amber-700 p-4 rounded-lg mb-6 flex items-center space-x-3 shadow-sm">
+        <div id="error-container"
+            class="hidden-temp bg-amber-50 border border-amber-200 text-amber-700 p-4 rounded-lg mb-6 flex items-center space-x-3 shadow-sm">
             <i data-lucide="alert-triangle" class="w-6 h-6 flex-shrink-0 text-amber-500"></i>
             <span id="error-text" class="text-sm font-medium"></span>
         </div>
@@ -108,7 +121,7 @@
             <!-- Detailed Stats Grid -->
             <div>
                 <h2 class="text-xl font-bold mb-4 flex items-center text-slate-700">
-                    <i data-lucide="pie-chart" class="w-6 h-6 mr-2 text-blue-600"></i> 
+                    <i data-lucide="pie-chart" class="w-6 h-6 mr-2 text-blue-600"></i>
                     สถิติการออกรางวัลแยกตามหลัก (0-9)
                 </h2>
                 <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4" id="stats-grid">
@@ -125,33 +138,50 @@
                 <div class="p-6">
                     <div class="flex flex-col lg:flex-row lg:items-end gap-3">
                         <div class="flex-1">
-                            <label for="top3-win-input" class="block text-sm font-bold text-indigo-800 mb-1">ใส่เลขสำหรับวิน 3 ตัวบน</label>
-                            <input id="top3-win-input" type="text" inputmode="numeric" oninput="window.updateTop3WinNumbers()" placeholder="เช่น 1 2 3 4" class="w-full bg-white border border-indigo-200 rounded-md px-3 py-2 text-sm font-bold text-indigo-800 outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
+                            <label for="top3-win-input"
+                                class="block text-sm font-bold text-indigo-800 mb-1">ใส่เลขสำหรับวิน 3 ตัวบน</label>
+                            <input id="top3-win-input" type="text" inputmode="numeric"
+                                oninput="window.updateTop3WinNumbers()" placeholder="เช่น 1 2 3 4"
+                                class="w-full bg-white border border-indigo-200 rounded-md px-3 py-2 text-sm font-bold text-indigo-800 outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
                         </div>
                         <div class="flex items-center justify-between lg:justify-end gap-3">
-                            <div class="text-sm font-semibold text-indigo-800 whitespace-nowrap">ได้ <span id="top3-win-count" class="font-mono text-base">0</span> ชุด</div>
-                            <button type="button" onclick="analyzeTop3WinDigits()" class="text-xs bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-md flex items-center transition font-bold">
+                            <div class="text-sm font-semibold text-indigo-800 whitespace-nowrap">ได้ <span
+                                    id="top3-win-count" class="font-mono text-base">0</span> ชุด</div>
+                            <button type="button" onclick="analyzeTop3WinDigits()"
+                                class="text-xs bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-md flex items-center transition font-bold">
                                 <i data-lucide="sparkles" class="w-3.5 h-3.5 mr-1"></i> วิเคราะห์ 7 ตัว
                             </button>
-                            <button type="button" onclick="analyzeTop3WinDigits(8)" class="text-xs bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-md flex items-center transition font-bold">
+                            <button type="button" onclick="analyzeTop3WinDigits(8)"
+                                class="text-xs bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-md flex items-center transition font-bold">
                                 <i data-lucide="sparkles" class="w-3.5 h-3.5 mr-1"></i> วิเคราะห์ 8 ตัว
                             </button>
-                            <button id="btn-copy-top3-win" type="button" onclick="copyTop3WinNumbers()" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-md flex items-center transition font-bold">
+                            <button type="button" onclick="analyzeTop3WinDigits(9)"
+                                class="text-xs bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-md flex items-center transition font-bold">
+                                <i data-lucide="sparkles" class="w-3.5 h-3.5 mr-1"></i> วิเคราะห์ 9 ตัว
+                            </button>
+                            <button id="btn-copy-top3-win" type="button" onclick="copyTop3WinNumbers()"
+                                class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-md flex items-center transition font-bold">
                                 <i data-lucide="copy" class="w-3.5 h-3.5 mr-1"></i> คัดลอก
                             </button>
                         </div>
                     </div>
-                    <label class="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-indigo-800 select-none cursor-pointer">
-                        <input id="top3-include-repeat" type="checkbox" class="w-4 h-4 accent-indigo-600" checked onchange="window.updateTop3WinNumbers(); renderRecentDataTable();">
+                    <label
+                        class="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-indigo-800 select-none cursor-pointer">
+                        <input id="top3-include-repeat" type="checkbox" class="w-4 h-4 accent-indigo-600" checked
+                            onchange="window.updateTop3WinNumbers(); renderRecentDataTable();">
                         รวมเลขเบิ้ล/หาม
                     </label>
-                    <label class="mt-3 ml-0 sm:ml-4 inline-flex items-center gap-2 text-sm font-semibold text-indigo-800 select-none cursor-pointer">
-                        <input id="top3-exclude-hottest" type="checkbox" class="w-4 h-4 accent-indigo-600" onchange="window.reapplyTop3WinAnalysis()">
+                    <label
+                        class="mt-3 ml-0 sm:ml-4 inline-flex items-center gap-2 text-sm font-semibold text-indigo-800 select-none cursor-pointer">
+                        <input id="top3-exclude-hottest" type="checkbox" class="w-4 h-4 accent-indigo-600"
+                            onchange="window.reapplyTop3WinAnalysis()">
                         ตัดเลขที่ออกมากสุด 2 ตัว แล้วเติมเลขอันดับถัดไป
                     </label>
                     <div id="top3-win-analysis" class="mt-3 text-sm font-semibold text-indigo-800 hidden-temp"></div>
-                    <div id="top3-win-grid" class="mt-3 grid grid-cols-4 sm:grid-cols-6 md:grid-cols-9 lg:grid-cols-12 gap-2 max-h-[180px] overflow-y-auto p-3 bg-slate-50 border border-slate-200 rounded-lg shadow-inner">
-                        <div class="col-span-full text-center text-sm text-slate-400 py-2">ใส่เลขเพื่อสร้างวิน 3 ตัวบน</div>
+                    <div id="top3-win-grid"
+                        class="mt-3 grid grid-cols-4 sm:grid-cols-6 md:grid-cols-9 lg:grid-cols-12 gap-2 max-h-[180px] overflow-y-auto p-3 bg-slate-50 border border-slate-200 rounded-lg shadow-inner">
+                        <div class="col-span-full text-center text-sm text-slate-400 py-2">ใส่เลขเพื่อสร้างวิน 3 ตัวบน
+                        </div>
                     </div>
                     <input type="hidden" id="top3-win-hidden-text">
                 </div>
@@ -159,41 +189,56 @@
 
             <!-- 3-Digit Combinations -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mt-8">
-                <div class="bg-indigo-50 px-6 py-4 border-b border-indigo-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div
+                    class="bg-indigo-50 px-6 py-4 border-b border-indigo-100 flex flex-col sm:flex-row items-center justify-between gap-3">
                     <div class="flex items-center space-x-2 w-full sm:w-auto">
                         <i data-lucide="layers" class="w-5 h-5 text-indigo-600"></i>
-                        <h3 class="font-bold text-indigo-800">ชุดจับคู่ 3 ตัวบน (<span id="top3-combo-count-title">...</span> ชุด)</h3>
+                        <h3 class="font-bold text-indigo-800">ชุดจับคู่ 3 ตัวบน (<span
+                                id="top3-combo-count-title">...</span> ชุด)</h3>
                     </div>
                     <!-- ส่วน Dropdown สำหรับเลือก Top 6 หรือ Top 7 และเรียงลำดับ -->
                     <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-start sm:justify-end">
                         <span class="text-sm font-semibold text-indigo-800">เลือกจำนวน:</span>
-                        <select id="top3-select" onchange="window.updateTop3Combos()" class="bg-white border border-indigo-200 text-indigo-700 text-sm rounded-md focus:ring-indigo-500 focus:border-indigo-500 block p-1.5 font-bold outline-none shadow-sm cursor-pointer">
+                        <select id="top3-select" onchange="window.updateTop3Combos()"
+                            class="bg-white border border-indigo-200 text-indigo-700 text-sm rounded-md focus:ring-indigo-500 focus:border-indigo-500 block p-1.5 font-bold outline-none shadow-sm cursor-pointer">
                             <option value="6">Top 6</option>
                             <option value="7">Top 7</option>
                         </select>
                         <span class="text-sm font-semibold text-indigo-800">เรียงลำดับ:</span>
-                        <select id="top3-sort" onchange="window.updateTop3Combos()" class="bg-white border border-indigo-200 text-indigo-700 text-sm rounded-md focus:ring-indigo-500 focus:border-indigo-500 block p-1.5 font-bold outline-none shadow-sm cursor-pointer">
+                        <select id="top3-sort" onchange="window.updateTop3Combos()"
+                            class="bg-white border border-indigo-200 text-indigo-700 text-sm rounded-md focus:ring-indigo-500 focus:border-indigo-500 block p-1.5 font-bold outline-none shadow-sm cursor-pointer">
                             <option value="asc">น้อยไปมาก</option>
                             <option value="desc">มากไปน้อย</option>
                         </select>
                     </div>
                 </div>
                 <div class="p-6">
-                    <div class="mb-4 text-sm text-slate-600 flex flex-wrap gap-4 md:gap-8 bg-slate-50 p-3 rounded-md border border-slate-100">
-                        <div><span class="font-bold text-slate-700">หลักร้อย <span class="top3-n-label text-indigo-600">6</span> ลำดับแรก:</span> <span id="top-100" class="text-indigo-600 font-mono font-bold text-base ml-1"></span></div>
-                        <div><span class="font-bold text-slate-700">หลักสิบ <span class="top3-n-label text-indigo-600">6</span> ลำดับแรก:</span> <span id="top-10" class="text-indigo-600 font-mono font-bold text-base ml-1"></span></div>
-                        <div><span class="font-bold text-slate-700">หลักหน่วย <span class="top3-n-label text-indigo-600">6</span> ลำดับแรก:</span> <span id="top-1" class="text-indigo-600 font-mono font-bold text-base ml-1"></span></div>
+                    <div
+                        class="mb-4 text-sm text-slate-600 flex flex-wrap gap-4 md:gap-8 bg-slate-50 p-3 rounded-md border border-slate-100">
+                        <div><span class="font-bold text-slate-700">หลักร้อย <span
+                                    class="top3-n-label text-indigo-600">6</span> ลำดับแรก:</span> <span id="top-100"
+                                class="text-indigo-600 font-mono font-bold text-base ml-1"></span></div>
+                        <div><span class="font-bold text-slate-700">หลักสิบ <span
+                                    class="top3-n-label text-indigo-600">6</span> ลำดับแรก:</span> <span id="top-10"
+                                class="text-indigo-600 font-mono font-bold text-base ml-1"></span></div>
+                        <div><span class="font-bold text-slate-700">หลักหน่วย <span
+                                    class="top3-n-label text-indigo-600">6</span> ลำดับแรก:</span> <span id="top-1"
+                                class="text-indigo-600 font-mono font-bold text-base ml-1"></span></div>
                     </div>
-                    
+
                     <div class="flex items-center justify-between mb-3">
-                        <div class="text-sm font-medium text-slate-500">ผลการจับคู่ทั้งหมด <span id="top3-combo-count">...</span> ชุด <span class="text-xs text-rose-500 font-bold ml-1">(ตัดเลขตอง)</span></div>
-                        <button id="btn-copy-combo" onclick="copyCombos()" class="text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1.5 rounded-md flex items-center transition font-bold">
+                        <div class="text-sm font-medium text-slate-500">ผลการจับคู่ทั้งหมด <span
+                                id="top3-combo-count">...</span> ชุด <span
+                                class="text-xs text-rose-500 font-bold ml-1">(ตัดเลขตอง)</span></div>
+                        <button id="btn-copy-combo" onclick="copyCombos()"
+                            class="text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1.5 rounded-md flex items-center transition font-bold">
                             <i data-lucide="copy" class="w-3.5 h-3.5 mr-1"></i> คัดลอกทั้งหมด
                         </button>
                         <input type="hidden" id="combo-hidden-text">
                     </div>
-                    
-                    <div id="combo-grid" class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-9 lg:grid-cols-12 gap-2 max-h-[300px] overflow-y-auto p-3 bg-slate-50 border border-slate-200 rounded-lg shadow-inner">
+
+                    <div id="combo-grid"
+                        class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-9 lg:grid-cols-12 gap-2 max-h-[300px] overflow-y-auto p-3 bg-slate-50 border border-slate-200 rounded-lg shadow-inner">
                         <!-- ตัวเลข ชุดจะถูกแทรกด้วย JS -->
                     </div>
                 </div>
@@ -201,29 +246,34 @@
 
             <!-- Recent Data Table (Preview) -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mt-8">
-               <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-                 <div class="flex items-center space-x-2">
-                    <i data-lucide="calendar-days" class="w-5 h-5 text-slate-500"></i>
-                    <h3 class="font-bold text-slate-700" id="table-title">ข้อมูลที่ใช้คำนวณ</h3>
-                 </div>
-               </div>
-               <div class="overflow-x-auto">
-                 <table class="w-full text-sm text-left text-slate-600">
-                   <thead class="text-xs text-slate-500 uppercase bg-slate-100 border-b border-slate-200">
-                     <tr>
-                       <th class="px-6 py-3 font-semibold">วันที่</th>
-                       <th class="px-6 py-3 font-semibold text-center">3 ตัวบน</th>
-                       <th class="px-6 py-3 font-semibold text-center">2 ตัวล่าง</th>
-                       <th class="px-6 py-3 font-semibold text-center" id="top3-result-column-title">ผลชุดจับคู่ 3 ตัวบน</th>
-                       <th class="px-6 py-3 font-semibold text-center" id="win7-result-column-title">ผลวิน 7 ตัว</th>
-                       <th class="px-6 py-3 font-semibold text-center" id="win8-result-column-title">ผลวิน 8 ตัว</th>
-                     </tr>
-                   </thead>
-                   <tbody id="recent-data-table">
-                     <!-- ข้อมูลตารางจะถูกแทรกด้วย JS -->
-                   </tbody>
-                 </table>
-               </div>
+                <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="calendar-days" class="w-5 h-5 text-slate-500"></i>
+                        <h3 class="font-bold text-slate-700" id="table-title">ข้อมูลที่ใช้คำนวณ</h3>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-slate-600">
+                        <thead class="text-xs text-slate-500 uppercase bg-slate-100 border-b border-slate-200">
+                            <tr>
+                                <th class="px-6 py-3 font-semibold">วันที่</th>
+                                <th class="px-6 py-3 font-semibold text-center">3 ตัวบน</th>
+                                <th class="px-6 py-3 font-semibold text-center">2 ตัวล่าง</th>
+                                <th class="px-6 py-3 font-semibold text-center" id="top3-result-column-title">
+                                    ผลชุดจับคู่ 3 ตัวบน</th>
+                                <th class="px-6 py-3 font-semibold text-center" id="win7-result-column-title">ผลวิน 7
+                                    ตัว</th>
+                                <th class="px-6 py-3 font-semibold text-center" id="win8-result-column-title">ผลวิน 8
+                                    ตัว</th>
+                                <th class="px-6 py-3 font-semibold text-center" id="win9-result-column-title">ผลวิน 9
+                                    ตัว</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-data-table">
+                            <!-- ข้อมูลตารางจะถูกแทรกด้วย JS -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
         </div>
@@ -236,75 +286,76 @@
                 key: 'hanoi',
                 label: 'สถิติหวยฮานอย ย้อนหลัง',
                 sheets: [
-                    { slug: 'xosohd',         name: 'ฮานอย HD' },
-                    { slug: 'minhngocstar',   name: 'ฮานอยสตาร์' },
-                    { slug: 'minhngoctv',     name: 'ฮานอยทีวี' },
-                    { slug: 'xstachroi',      name: 'ฮานอยเฉพาะกิจ' },
-                    { slug: 'xosoredcross',   name: 'ฮานอยกาชาด' },
-                    { slug: 'xsthm',          name: 'ฮานอยพิเศษ' },
-                    { slug: 'minhngoc',       name: 'ฮานอยปกติ' },
-                    { slug: 'xosodevelop',    name: 'ฮานอยพัฒนา' },
-                    { slug: 'mlnhngo',        name: 'ฮานอย VIP' },
+                    { slug: 'xosohd', name: 'ฮานอย HD' },
+                    { slug: 'minhngocstar', name: 'ฮานอยสตาร์' },
+                    { slug: 'minhngoctv', name: 'ฮานอยทีวี' },
+                    { slug: 'xstachroi', name: 'ฮานอยเฉพาะกิจ' },
+                    { slug: 'xosoredcross', name: 'ฮานอยกาชาด' },
+                    { slug: 'xsthm', name: 'ฮานอยพิเศษ' },
+                    { slug: 'minhngoc', name: 'ฮานอยปกติ' },
+                    { slug: 'xosodevelop', name: 'ฮานอยพัฒนา' },
+                    { slug: 'mlnhngo', name: 'ฮานอย VIP' },
                 ],
             },
             {
                 key: 'lao',
                 label: 'สถิติหวยลาว ย้อนหลัง',
                 sheets: [
-                    { slug: 'laoextra',       name: 'ลาว extra' },
-                    { slug: 'laotv',          name: 'ลาว TV' },
-                    { slug: 'laopatuxay',     name: 'ลาวประตูชัย' },
-                    { slug: 'laosantipap',    name: 'ผลหวยลาวสันติภาพ' },
-                    { slug: 'laocitizen',     name: 'ผลหวยประชาชนลาว' },
-                    { slug: 'laoshd',         name: 'ลาว HD' },
-                    { slug: 'laounion',       name: 'ลาว สามัคคี' },
-                    { slug: 'laounionvip',    name: 'ลาว สามัคคี VIP' },
-                    { slug: 'laostars',       name: 'ลาวสตาร์' },
-                    { slug: 'laostarsvip',    name: 'ลาว สตาร์ VIP' },
-                    { slug: 'laoredcross',    name: 'ลาว กาชาด' },
-                    { slug: 'laosvip',        name: 'ลาว VIP' },
-                    { slug: 'laosdevelops',   name: 'ลาวพัฒนา' },
+                    { slug: 'laopatuxay', name: 'ลาวประตูชัย' },
+                    { slug: 'laosantipap', name: 'ผลหวยลาวสันติภาพ' },
+                    { slug: 'laocitizen', name: 'ผลหวยประชาชนลาว' },
+                    { slug: 'laoextra', name: 'ลาว extra' },
+                    { slug: 'laotv', name: 'ลาว TV' },
+                    { slug: 'laosspecial', name: 'ลาว พิเศษ' },
+                    { slug: 'laoshd', name: 'ลาว HD' },
+                    { slug: 'laounion', name: 'ลาว สามัคคี' },
+                    { slug: 'laounionvip', name: 'ลาว สามัคคี VIP' },
+                    { slug: 'laostars', name: 'ลาวสตาร์' },
+                    { slug: 'laostarsvip', name: 'ลาว สตาร์ VIP' },
+                    { slug: 'laoredcross', name: 'ลาว กาชาด' },
+                    { slug: 'laosvip', name: 'ลาว VIP' },
+                    { slug: 'laosdevelops', name: 'ลาวพัฒนา' },
                 ],
             },
             {
                 key: 'stock-normal',
                 label: 'สถิติหวยหุ้นปกติ ย้อนหลัง',
                 sheets: [
-                    { slug: 'dji',              name: 'หุ้นดาวโจนส์' },
-                    { slug: 'nikkei-morning',   name: 'หุ้นนิคเคอิเช้า' },
-                    { slug: 'szse-morning',     name: 'หุ้นจีนเช้า' },
-                    { slug: 'hsi-morning',      name: 'หุ้นฮั่งเส็งเช้า' },
-                    { slug: 'twse',             name: 'หุ้นไต้หวัน' },
+                    { slug: 'dji', name: 'หุ้นดาวโจนส์' },
+                    { slug: 'nikkei-morning', name: 'หุ้นนิคเคอิเช้า' },
+                    { slug: 'szse-morning', name: 'หุ้นจีนเช้า' },
+                    { slug: 'hsi-morning', name: 'หุ้นฮั่งเส็งเช้า' },
+                    { slug: 'twse', name: 'หุ้นไต้หวัน' },
                     { slug: 'nikkei-afternoon', name: 'หุ้นนิคเคอิบ่าย' },
-                    { slug: 'ktop30',           name: 'หุ้นเกาหลี' },
-                    { slug: 'szse-afternoon',   name: 'หุ้นจีนบ่าย' },
-                    { slug: 'hsi-afternoon',    name: 'หุ้นฮั่งเส็งบ่าย' },
-                    { slug: 'sgx',              name: 'หุ้นสิงคโปร์' },
-                    { slug: 'set',              name: 'หุ้นไทยเย็น' },
-                    { slug: 'bsesn',            name: 'หุ้นอินเดีย' },
-                    { slug: 'egx30',            name: 'หุ้นอียิปต์' },
-                    { slug: 'gdaxi',            name: 'หุ้นเยอรมัน' },
-                    { slug: 'moexbc',           name: 'หุ้นรัสเซีย' },
-                    { slug: 'ftse100',          name: 'หุ้นอังกฤษ' },
+                    { slug: 'ktop30', name: 'หุ้นเกาหลี' },
+                    { slug: 'szse-afternoon', name: 'หุ้นจีนบ่าย' },
+                    { slug: 'hsi-afternoon', name: 'หุ้นฮั่งเส็งบ่าย' },
+                    { slug: 'sgx', name: 'หุ้นสิงคโปร์' },
+                    { slug: 'set', name: 'หุ้นไทยเย็น' },
+                    { slug: 'bsesn', name: 'หุ้นอินเดีย' },
+                    { slug: 'egx30', name: 'หุ้นอียิปต์' },
+                    { slug: 'gdaxi', name: 'หุ้นเยอรมัน' },
+                    { slug: 'moexbc', name: 'หุ้นรัสเซีย' },
+                    { slug: 'ftse100', name: 'หุ้นอังกฤษ' },
                 ],
             },
             {
                 key: 'stock-vip',
                 label: 'สถิติหวยหุ้นวีไอพี ย้อนหลัง',
                 sheets: [
-                    { slug: 'dowjones-vip',          name: 'ดาวโจนส์ VIP' },
-                    { slug: 'nikkei-vip-morning',    name: 'นิคเคอิ VIP เช้า' },
-                    { slug: 'szse-vip-morning',      name: 'จีน VIP เช้า' },
-                    { slug: 'hsi-vip-morning',       name: 'ฮั่งเส็ง VIP เช้า' },
-                    { slug: 'twse-vip',              name: 'ไต้หวัน VIP' },
-                    { slug: 'ktop30-vip',            name: 'เกาหลี VIP' },
-                    { slug: 'nikkei-vip-afternoon',  name: 'นิคเคอิ VIP บ่าย' },
-                    { slug: 'szse-vip-afternoon',    name: 'จีน VIP บ่าย' },
-                    { slug: 'hsi-vip-afternoon',     name: 'ฮั่งเส็ง VIP บ่าย' },
-                    { slug: 'sgx-vip',               name: 'สิงคโปร์ VIP' },
-                    { slug: 'england-vip',           name: 'อังกฤษ VIP' },
-                    { slug: 'germany-vip',           name: 'เยอรมัน VIP' },
-                    { slug: 'russia-vip',            name: 'รัสเซีย VIP' },
+                    { slug: 'dowjones-vip', name: 'ดาวโจนส์ VIP' },
+                    { slug: 'nikkei-vip-morning', name: 'นิคเคอิ VIP เช้า' },
+                    { slug: 'szse-vip-morning', name: 'จีน VIP เช้า' },
+                    { slug: 'hsi-vip-morning', name: 'ฮั่งเส็ง VIP เช้า' },
+                    { slug: 'twse-vip', name: 'ไต้หวัน VIP' },
+                    { slug: 'ktop30-vip', name: 'เกาหลี VIP' },
+                    { slug: 'nikkei-vip-afternoon', name: 'นิคเคอิ VIP บ่าย' },
+                    { slug: 'szse-vip-afternoon', name: 'จีน VIP บ่าย' },
+                    { slug: 'hsi-vip-afternoon', name: 'ฮั่งเส็ง VIP บ่าย' },
+                    { slug: 'sgx-vip', name: 'สิงคโปร์ VIP' },
+                    { slug: 'england-vip', name: 'อังกฤษ VIP' },
+                    { slug: 'germany-vip', name: 'เยอรมัน VIP' },
+                    { slug: 'russia-vip', name: 'รัสเซีย VIP' },
                 ],
             },
         ];
@@ -312,7 +363,7 @@
         const SHEETS = LOTTERY_GROUPS.flatMap(group =>
             group.sheets.map(sheet => ({ ...sheet, group: group.key }))
         );
-        
+
         const REFRESH_INTERVAL_SECONDS = 300; // 5 นาที
         const PERIODS = [30, 60, 90];
         const DAYS_OF_WEEK = [
@@ -325,7 +376,7 @@
             { name: 'วันศุกร์', short: 'ศ', index: 5 },
             { name: 'วันเสาร์', short: 'ส', index: 6 },
         ];
-        
+
         let state = {
             activeSheet: SHEETS[0],
             period: 30,
@@ -341,7 +392,7 @@
             lastTop3WinLimit: 7,
         };
 
-// --- 2. ฟังก์ชันจำลองข้อมูล (Fallback) ---
+        // --- 2. ฟังก์ชันจำลองข้อมูล (Fallback) ---
         const generateMockData = (days) => {
             const data = [];
             const today = new Date();
@@ -350,7 +401,7 @@
                 d.setDate(today.getDate() - i);
                 const top3 = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
                 const bot2 = Math.floor(Math.random() * 100).toString().padStart(2, '0');
-                
+
                 data.push({
                     date: d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }),
                     top3,
@@ -419,7 +470,7 @@
                 try {
                     const res = await fetch(proxyFn(targetUrl), { cache: 'no-store' });
                     if (res.ok) return await res.text();
-                } catch (_) {}
+                } catch (_) { }
             }
             throw new Error(`ไม่สามารถดึงข้อมูลหน้า ${page} ของ ${slug} ได้`);
         }
@@ -532,7 +583,7 @@
             }
         }
 
-// --- ฟังก์ชันสำหรับอัปเดตอัตโนมัติ ---
+        // --- ฟังก์ชันสำหรับอัปเดตอัตโนมัติ ---
         function updateRefreshStatus() {
             const statusEl = document.getElementById('refresh-status');
             if (!statusEl) return;
@@ -576,11 +627,11 @@
                 }
                 updateRefreshStatus();
             }, 1000);
-            
+
             updateRefreshStatus();
         }
 
-        window.toggleAutoRefresh = function(isEnabled) {
+        window.toggleAutoRefresh = function (isEnabled) {
             state.autoRefreshEnabled = isEnabled;
             if (isEnabled) {
                 fetchSheetData(); // เริ่มดึงข้อมูลครั้งแรก ซึ่งจะไปกระตุ้นการตั้งเวลา
@@ -670,7 +721,7 @@
             return [...results];
         }
 
-        window.updateTop3WinNumbers = function() {
+        window.updateTop3WinNumbers = function () {
             const input = document.getElementById('top3-win-input');
             const grid = document.getElementById('top3-win-grid');
             const count = document.getElementById('top3-win-count');
@@ -850,6 +901,31 @@
             return ranked;
         }
 
+        function balanceTop3WinOmittedParity(selectedDigits, rankedDigits, limit) {
+            if (limit !== 8 || selectedDigits.length !== 8) return selectedDigits;
+
+            const selectedSet = new Set(selectedDigits.map(item => item.digit));
+            const omittedDigits = rankedDigits.filter(item => !selectedSet.has(item.digit));
+            if (omittedDigits.length !== 2) return selectedDigits;
+
+            const omittedParity = omittedDigits.map(item => item.digit % 2);
+            if (omittedParity[0] !== omittedParity[1]) return selectedDigits;
+
+            const parityToAddBack = omittedParity[0];
+            const parityToOmit = parityToAddBack === 0 ? 1 : 0;
+            const digitToAddBack = omittedDigits.find(item => item.digit % 2 === parityToAddBack);
+            const selectedIndexToOmit = selectedDigits
+                .map((item, index) => ({ item, index }))
+                .reverse()
+                .find(entry => entry.item.digit % 2 === parityToOmit)?.index;
+
+            if (!digitToAddBack || selectedIndexToOmit === undefined) return selectedDigits;
+
+            const balancedDigits = [...selectedDigits];
+            balancedDigits[selectedIndexToOmit] = digitToAddBack;
+            return balancedDigits.sort((a, b) => rankedDigits.indexOf(a) - rankedDigits.indexOf(b));
+        }
+
         function selectTop3WinDigits(limit = 7) {
             const rankedDigits = rankTop3WinDigits();
             const excludedHotDigits = shouldExcludeHottestWinDigits()
@@ -860,9 +936,9 @@
                 .sort((a, b) => a.frequency - b.frequency || a.trend - b.trend || a.digit - b.digit)
                 .slice(0, Math.min(4, 10))
                 .map(item => item.digit);
-            const selectedDigits = rankedDigits
+            const selectedDigits = balanceTop3WinOmittedParity(rankedDigits
                 .filter(item => !excludedHotSet.has(item.digit))
-                .slice(0, limit);
+                .slice(0, limit), rankedDigits, limit);
 
             return {
                 rankedDigits,
@@ -873,7 +949,7 @@
             };
         }
 
-        window.analyzeTop3WinDigits = function(limit = 7) {
+        window.analyzeTop3WinDigits = function (limit = 7) {
             const input = document.getElementById('top3-win-input');
             const analysis = document.getElementById('top3-win-analysis');
             if (!input || !analysis) return;
@@ -929,7 +1005,7 @@
             window.updateTop3WinNumbers();
         };
 
-        window.reapplyTop3WinAnalysis = function() {
+        window.reapplyTop3WinAnalysis = function () {
             const analysis = document.getElementById('top3-win-analysis');
             if (analysis && !analysis.classList.contains('hidden-temp')) {
                 window.analyzeTop3WinDigits(state.lastTop3WinLimit || 7);
@@ -940,7 +1016,7 @@
         };
 
         // --- ฟังก์ชันอัปเดต 3 ตัวบน (รองรับการเลือก Top 6/7 และเรียงลำดับ) ---
-        window.updateTop3Combos = function() {
+        window.updateTop3Combos = function () {
             const stats = calculateStats();
 
             // อ่านค่าตัวเลข (N) จาก Dropdown
@@ -963,9 +1039,9 @@
             document.getElementById('top-1').innerText = topUnits.join(', ');
 
             let combinations = [];
-            for(let h of topHundreds) {
-                for(let t of topTens) {
-                    for(let u of topUnits) {
+            for (let h of topHundreds) {
+                for (let t of topTens) {
+                    for (let u of topUnits) {
                         // ตัดเลขตองออก (ถ้าหลักร้อย หลักสิบ และหลักหน่วย เป็นเลขเดียวกัน จะไม่เก็บเข้า array)
                         if (!(h === t && t === u)) {
                             combinations.push(`${h}${t}${u}`);
@@ -1006,7 +1082,7 @@
                 loadingContainer.classList.remove('hidden-temp');
                 errorContainer.classList.add('hidden-temp');
                 dashboardContent.classList.add('hidden-temp');
-                return; 
+                return;
             }
 
             loadingContainer.classList.add('hidden-temp');
@@ -1022,9 +1098,9 @@
 
             renderNavigations();
             renderDashboard();
-            
+
             // Re-initialize icons
-            if(window.lucide) {
+            if (window.lucide) {
                 lucide.createIcons();
             }
         }
@@ -1032,8 +1108,7 @@
         function renderNavigations() {
             const periodContainer = document.getElementById('period-selectors');
             periodContainer.innerHTML = PERIODS.map(d => `
-                <button onclick="changePeriod(${d})" class="px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    state.period === d ? 'bg-white text-blue-800 shadow-sm' : 'text-white hover:bg-white hover:bg-opacity-20'
+                <button onclick="changePeriod(${d})" class="px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${state.period === d ? 'bg-white text-blue-800 shadow-sm' : 'text-white hover:bg-white hover:bg-opacity-20'
                 }">${d} วัน</button>
             `).join('');
 
@@ -1044,11 +1119,10 @@
 
                 return `
                     <div class="lottery-dropdown relative">
-                        <button type="button" onclick="toggleLotteryMenu(event, '${group.key}')" class="w-full min-h-[66px] px-4 py-3 rounded-lg border text-left shadow-sm transition-all flex items-center justify-between gap-3 ${
-                            activeInGroup
-                            ? 'bg-blue-600 text-white border-blue-600 ring-2 ring-blue-300 ring-offset-1'
-                            : 'bg-white text-slate-700 hover:border-blue-300 border-slate-200'
-                        }">
+                        <button type="button" onclick="toggleLotteryMenu(event, '${group.key}')" class="w-full min-h-[66px] px-4 py-3 rounded-lg border text-left shadow-sm transition-all flex items-center justify-between gap-3 ${activeInGroup
+                        ? 'bg-blue-600 text-white border-blue-600 ring-2 ring-blue-300 ring-offset-1'
+                        : 'bg-white text-slate-700 hover:border-blue-300 border-slate-200'
+                    }">
                             <span class="min-w-0">
                                 <span class="block text-sm font-bold leading-5">${group.label}</span>
                                 <span class="block text-xs mt-0.5 truncate ${activeInGroup ? 'text-blue-100' : 'text-slate-500'}">${currentName}</span>
@@ -1057,11 +1131,10 @@
                         </button>
                         <div id="lottery-menu-${group.key}" class="lottery-dropdown-menu absolute left-0 right-0 top-full mt-2 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden z-50 max-h-80 overflow-y-auto">
                             ${group.sheets.map(sheet => `
-                                <button type="button" onclick="changeSheetBySlug('${sheet.slug}')" class="w-full px-4 py-2.5 text-left text-sm font-semibold transition-colors ${
-                                    state.activeSheet.slug === sheet.slug
-                                    ? 'bg-blue-50 text-blue-700'
-                                    : 'text-slate-700 hover:bg-slate-50'
-                                }">${sheet.name}</button>
+                                <button type="button" onclick="changeSheetBySlug('${sheet.slug}')" class="w-full px-4 py-2.5 text-left text-sm font-semibold transition-colors ${state.activeSheet.slug === sheet.slug
+                            ? 'bg-blue-50 text-blue-700'
+                            : 'text-slate-700 hover:bg-slate-50'
+                        }">${sheet.name}</button>
                             `).join('')}
                         </div>
                     </div>
@@ -1071,8 +1144,7 @@
             // Render Day Filter Selectors
             const dayFilterContainer = document.getElementById('day-filter-selectors');
             dayFilterContainer.innerHTML = DAYS_OF_WEEK.map(day => `
-                <button onclick="changeDayFilter(${day.index})" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    state.dayFilter === day.index ? 'bg-white text-blue-800 shadow-sm' : 'text-white hover:bg-white hover:bg-opacity-20'
+                <button onclick="changeDayFilter(${day.index})" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${state.dayFilter === day.index ? 'bg-white text-blue-800 shadow-sm' : 'text-white hover:bg-white hover:bg-opacity-20'
                 }">${day.short}</button>
             `).join('');
 
@@ -1125,17 +1197,24 @@
             const top3Set = new Set(state.top3Combinations || []);
             const win7Digits = selectTop3WinDigits(7).digits;
             const win8Digits = selectTop3WinDigits(8).digits;
+            const win9Digits = selectTop3WinDigits(9).digits;
             const win7Numbers = buildTop3WinNumbers(win7Digits.join(' '));
             const win8Numbers = buildTop3WinNumbers(win8Digits.join(' '));
+            const win9Numbers = buildTop3WinNumbers(win9Digits.join(' '));
             const win7Set = new Set(win7Numbers);
             const win8Set = new Set(win8Numbers);
+            const win9Set = new Set(win9Numbers);
             const win7ColumnTitle = document.getElementById('win7-result-column-title');
             const win8ColumnTitle = document.getElementById('win8-result-column-title');
+            const win9ColumnTitle = document.getElementById('win9-result-column-title');
             if (win7ColumnTitle) {
                 win7ColumnTitle.innerText = `ผลวิน 7 ตัว (${win7Numbers.length} ชุด)`;
             }
             if (win8ColumnTitle) {
                 win8ColumnTitle.innerText = `ผลวิน 8 ตัว (${win8Numbers.length} ชุด)`;
+            }
+            if (win9ColumnTitle) {
+                win9ColumnTitle.innerText = `ผลวิน 9 ตัว (${win9Numbers.length} ชุด)`;
             }
 
             const renderResultBadge = (isHit) => isHit
@@ -1156,19 +1235,22 @@
                     <td class="px-6 py-3 text-center">
                         ${renderResultBadge(win8Set.has(row.top3))}
                     </td>
+                    <td class="px-6 py-3 text-center">
+                        ${renderResultBadge(win9Set.has(row.top3))}
+                    </td>
                 </tr>
             `).join('');
         }
 
         function createStatPanel(title, dataArr, mostFrequent, barColorClass, textColorClass, headerBgClass) {
             // ปรับ Scale ของกราฟให้แท่งที่เยอะสุดยาว 100% เพื่อให้เห็นความแตกต่างชัดเจน
-            const maxFrequency = mostFrequent.maxCount || 1; 
-            
+            const maxFrequency = mostFrequent.maxCount || 1;
+
             // จับคู่ตัวเลขกับจำนวนครั้ง แล้วจัดเรียงจากมากไปน้อย
             const sortedData = dataArr
                 .map((count, num) => ({ num, count }))
                 .sort((a, b) => b.count - a.count);
-            
+
             let rowsHtml = sortedData.map(item => {
                 const count = item.count;
                 const num = item.num;
@@ -1177,13 +1259,13 @@
                 const relativePercentage = (count / maxFrequency) * 100 || 0;
                 // คำนวณเปอร์เซ็นต์จริงๆ เทียบกับจำนวนงวดทั้งหมด (เอาไว้แสดงเป็นตัวเลข)
                 const absolutePercentage = ((count / (state.data.length || 1)) * 100).toFixed(1);
-                
+
                 const isHighlight = mostFrequent.numbers.includes(num);
-                
+
                 const numColor = isHighlight ? `font-black ${textColorClass}` : 'font-medium text-slate-500';
                 const barColor = isHighlight ? barColorClass : 'bg-slate-300';
                 const bgColor = isHighlight ? headerBgClass : 'bg-transparent';
-                
+
                 return `
                     <div class="flex items-center text-sm p-1.5 rounded-md ${bgColor}">
                         <div class="w-6 text-center ${numColor} text-base">${num}</div>
@@ -1213,12 +1295,12 @@
         }
 
         // --- 6. Event Handlers ---
-        window.changeSheet = function(index) {
+        window.changeSheet = function (index) {
             state.activeSheet = SHEETS[index];
             fetchSheetData();
         };
 
-        window.changeSheetBySlug = function(slug) {
+        window.changeSheetBySlug = function (slug) {
             const nextSheet = SHEETS.find(sheet => sheet.slug === slug);
             if (!nextSheet) return;
             state.activeSheet = nextSheet;
@@ -1228,7 +1310,7 @@
             fetchSheetData();
         };
 
-        window.toggleLotteryMenu = function(event, groupKey) {
+        window.toggleLotteryMenu = function (event, groupKey) {
             event.stopPropagation();
             const targetMenu = document.getElementById(`lottery-menu-${groupKey}`);
             if (!targetMenu) return;
@@ -1244,17 +1326,17 @@
             }
         };
 
-        window.changePeriod = function(days) {
+        window.changePeriod = function (days) {
             state.period = days;
             fetchSheetData();
         };
 
-        window.changeDayFilter = function(dayIndex) {
+        window.changeDayFilter = function (dayIndex) {
             state.dayFilter = dayIndex;
             fetchSheetData();
         };
 
-        window.copyCombos = function() {
+        window.copyCombos = function () {
             const text = document.getElementById('combo-hidden-text').value;
             const tempInput = document.createElement("textarea");
             tempInput.style.position = "absolute";
@@ -1270,17 +1352,17 @@
             btn.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5 mr-1"></i> คัดลอกสำเร็จ!';
             btn.classList.add('bg-emerald-100', 'text-emerald-700');
             btn.classList.remove('bg-indigo-100', 'text-indigo-700');
-            if(window.lucide) lucide.createIcons();
-            
+            if (window.lucide) lucide.createIcons();
+
             setTimeout(() => {
                 btn.innerHTML = originalText;
                 btn.classList.remove('bg-emerald-100', 'text-emerald-700');
                 btn.classList.add('bg-indigo-100', 'text-indigo-700');
-                if(window.lucide) lucide.createIcons();
+                if (window.lucide) lucide.createIcons();
             }, 2000);
         };
 
-        window.copyTop3WinNumbers = function() {
+        window.copyTop3WinNumbers = function () {
             const text = document.getElementById('top3-win-hidden-text').value;
             if (!text) return;
 
@@ -1299,17 +1381,17 @@
             btn.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5 mr-1"></i> คัดลอกแล้ว';
             btn.classList.add('bg-emerald-600');
             btn.classList.remove('bg-indigo-600');
-            if(window.lucide) lucide.createIcons();
+            if (window.lucide) lucide.createIcons();
 
             setTimeout(() => {
                 btn.innerHTML = originalText;
                 btn.classList.remove('bg-emerald-600');
                 btn.classList.add('bg-indigo-600');
-                if(window.lucide) lucide.createIcons();
+                if (window.lucide) lucide.createIcons();
             }, 2000);
         };
 
-// --- 8. เริ่มทำงานเมื่อเปิดหน้าเว็บ ---
+        // --- 8. เริ่มทำงานเมื่อเปิดหน้าเว็บ ---
         document.addEventListener('DOMContentLoaded', () => {
             document.addEventListener('click', () => {
                 document.querySelectorAll('.lottery-dropdown.open').forEach(dropdown => {
@@ -1318,7 +1400,7 @@
             });
             renderNavigations();
             updateRefreshStatus(); // แสดงสถานะเริ่มต้น "ปิดใช้งาน"
-            if(window.lucide) {
+            if (window.lucide) {
                 lucide.createIcons();
             }
             fetchSheetData();
@@ -1326,4 +1408,5 @@
 
     </script>
 </body>
+
 </html>
