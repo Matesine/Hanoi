@@ -262,6 +262,7 @@
                         <i data-lucide="calendar-days" class="w-5 h-5 text-slate-500"></i>
                         <h3 class="font-bold text-slate-700" id="table-title">ข้อมูลที่ใช้คำนวณ</h3>
                     </div>
+                    <div id="cut3-backtest-summary" class="text-xs font-bold text-slate-500 text-right"></div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left text-slate-600">
@@ -270,14 +271,8 @@
                                 <th class="px-6 py-3 font-semibold">วันที่</th>
                                 <th class="px-6 py-3 font-semibold text-center">3 ตัวบน</th>
                                 <th class="px-6 py-3 font-semibold text-center">2 ตัวล่าง</th>
-                                <th class="px-6 py-3 font-semibold text-center" id="top3-result-column-title">
-                                    ผลชุดจับคู่ 3 ตัวบน</th>
-                                <th class="px-6 py-3 font-semibold text-center" id="win7-result-column-title">ผลวิน 7
-                                    ตัว</th>
-                                <th class="px-6 py-3 font-semibold text-center" id="win8-result-column-title">ผลวิน 8
-                                    ตัว</th>
-                                <th class="px-6 py-3 font-semibold text-center" id="win9-result-column-title">ผลวิน 9
-                                    ตัว</th>
+                                <th class="px-6 py-3 font-semibold text-center" id="cut3-result-column-title">
+                                    สูตรแนะนำลบออก 3 ตัวจาก 10 ตัว</th>
                             </tr>
                         </thead>
                         <tbody id="recent-data-table">
@@ -377,6 +372,7 @@
 
         const REFRESH_INTERVAL_SECONDS = 300; // 5 นาที
         const PERIODS = [30, 60, 90];
+        const CUT3_BACKTEST_WINDOW = 14;
         const DAYS_OF_WEEK = [
             { name: 'ทั้งหมด', short: 'ทั้งหมด', index: -1 },
             { name: 'วันอาทิตย์', short: 'อา', index: 0 },
@@ -1011,6 +1007,12 @@
             } = contextDigits;
             const latestTop3 = state.data.find(row => row.top3 && row.top3.length === 3)?.top3 || '';
             const latestDigits = new Set(latestTop3.split('').map(Number).filter(num => !isNaN(num)));
+            const recentDrawDigits = new Set(state.data
+                .slice(0, 3)
+                .flatMap(row => row.top3 && row.top3.length === 3
+                    ? row.top3.split('').map(Number).filter(num => !isNaN(num))
+                    : []));
+            const useRecentGuardMode = recentDrawDigits.size >= 7;
             const allDayOmittedSet = new Set(allDayOmittedDigits);
             const currentDayOmittedSet = new Set(currentDayOmittedDigits);
             const previousAllDayOmittedSet = new Set(previousAllDayOmittedDigits);
@@ -1018,6 +1020,7 @@
             const returnSet = new Set(returnDigits);
             const staleKeepSet = new Set(rankedDigits.staleDigits.slice(0, 4).map(item => item.digit));
             const empiricalKeepSet = new Set([2, 3, 5]);
+            const flowKeepSet = new Set(getPreviousDrawPatternDigits().run);
             const patternKeepSet = new Set(rankedDigits
                 .filter(item => item.formula || item.pattern)
                 .map(item => item.digit));
@@ -1025,11 +1028,204 @@
             const trendRank = new Map(rankedDigits.trendingDigits.map((item, index) => [item.digit, index + 1]));
             const sameDayRank = new Map(rankedDigits.sameDayDigits.map((item, index) => [item.digit, index + 1]));
             const rankedRank = new Map(rankedDigits.map((item, index) => [item.digit, index + 1]));
+            const isLaosPatuxay = state.activeSheet && state.activeSheet.slug === 'laopatuxay';
+
+            if (isLaosPatuxay) {
+                const getCounts = (rows, windowSize) => {
+                    const counts = Array(10).fill(0);
+                    rows.slice(0, windowSize).forEach(row => {
+                        if (!row.top3 || row.top3.length !== 3) return;
+                        row.top3.split('').forEach(digit => counts[parseInt(digit, 10)]++);
+                    });
+                    return counts;
+                };
+                const hot5Counts = getCounts(state.data, 5);
+                const cutDigits = hot5Counts
+                    .map((count, digit) => ({ digit, count }))
+                    .sort((a, b) => b.count - a.count || a.digit - b.digit)
+                    .slice(0, 3)
+                    .map(item => item.digit)
+                    .sort((a, b) => a - b);
+                const cutSet = new Set(cutDigits);
+                const keepDigits = Array.from({ length: 10 }, (_, digit) => digit).filter(digit => !cutSet.has(digit));
+
+                return {
+                    cutDigits,
+                    keepDigits,
+                    scoredDigits: hot5Counts.map((count, digit) => ({ digit, score: count })),
+                    modeName: 'ลาวประตูชัย: ตัดเลขร้อน 5 งวด',
+                };
+            }
+
+            if (state.activeSheet && state.activeSheet.slug === 'laosantipap') {
+                const hot7Counts = Array(10).fill(0);
+                state.data.slice(0, 7).forEach(row => {
+                    if (!row.top3 || row.top3.length !== 3) return;
+                    row.top3.split('').forEach(digit => hot7Counts[parseInt(digit, 10)]++);
+                });
+                const cutDigits = hot7Counts
+                    .map((count, digit) => ({ digit, count }))
+                    .sort((a, b) => b.count - a.count || a.digit - b.digit)
+                    .slice(4, 7)
+                    .map(item => item.digit)
+                    .sort((a, b) => a - b);
+                const cutSet = new Set(cutDigits);
+                const keepDigits = Array.from({ length: 10 }, (_, digit) => digit).filter(digit => !cutSet.has(digit));
+
+                return {
+                    cutDigits,
+                    keepDigits,
+                    scoredDigits: hot7Counts.map((count, digit) => ({ digit, score: count })),
+                    modeName: 'ลาวสันติภาพ: ตัดเลขร้อน 7 งวด อันดับ 5-7',
+                };
+            }
+
+            if (state.activeSheet && state.activeSheet.slug === 'laocitizen') {
+                const hot8Counts = Array(10).fill(0);
+                state.data.slice(0, 8).forEach(row => {
+                    if (!row.top3 || row.top3.length !== 3) return;
+                    row.top3.split('').forEach(digit => hot8Counts[parseInt(digit, 10)]++);
+                });
+                const cutDigits = hot8Counts
+                    .map((count, digit) => ({ digit, count }))
+                    .sort((a, b) => b.count - a.count || a.digit - b.digit)
+                    .slice(3, 6)
+                    .map(item => item.digit)
+                    .sort((a, b) => a - b);
+                const cutSet = new Set(cutDigits);
+                const keepDigits = Array.from({ length: 10 }, (_, digit) => digit).filter(digit => !cutSet.has(digit));
+
+                return {
+                    cutDigits,
+                    keepDigits,
+                    scoredDigits: hot8Counts.map((count, digit) => ({ digit, score: count })),
+                    modeName: 'ประชาชนลาว: ตัดเลขร้อน 8 งวด อันดับ 4-6',
+                };
+            }
+
+            if (state.activeSheet && state.activeSheet.slug === 'laoextra') {
+                const hot6Counts = Array(10).fill(0);
+                state.data.slice(0, 6).forEach(row => {
+                    if (!row.top3 || row.top3.length !== 3) return;
+                    row.top3.split('').forEach(digit => hot6Counts[parseInt(digit, 10)]++);
+                });
+                const cutDigits = hot6Counts
+                    .map((count, digit) => ({ digit, count }))
+                    .sort((a, b) => b.count - a.count || a.digit - b.digit)
+                    .slice(3, 6)
+                    .map(item => item.digit)
+                    .sort((a, b) => a - b);
+                const cutSet = new Set(cutDigits);
+                const keepDigits = Array.from({ length: 10 }, (_, digit) => digit).filter(digit => !cutSet.has(digit));
+
+                return {
+                    cutDigits,
+                    keepDigits,
+                    scoredDigits: hot6Counts.map((count, digit) => ({ digit, score: count })),
+                    modeName: 'ลาว Extra: ตัดเลขร้อน 6 งวด อันดับ 4-6',
+                };
+            }
+
+            if (state.activeSheet && state.activeSheet.slug === 'minhngoc') {
+                const hot6Counts = Array(10).fill(0);
+                state.data.slice(0, 6).forEach(row => {
+                    if (!row.top3 || row.top3.length !== 3) return;
+                    row.top3.split('').forEach(digit => hot6Counts[parseInt(digit, 10)]++);
+                });
+                const cutDigits = hot6Counts
+                    .map((count, digit) => ({ digit, count }))
+                    .sort((a, b) => b.count - a.count || a.digit - b.digit)
+                    .slice(3, 6)
+                    .map(item => item.digit)
+                    .sort((a, b) => a - b);
+                const cutSet = new Set(cutDigits);
+                const keepDigits = Array.from({ length: 10 }, (_, digit) => digit).filter(digit => !cutSet.has(digit));
+
+                return {
+                    cutDigits,
+                    keepDigits,
+                    scoredDigits: hot6Counts.map((count, digit) => ({ digit, score: count })),
+                    modeName: 'ฮานอยปกติ: ตัดเลขร้อน 6 งวด อันดับ 4-6',
+                };
+            }
+
+            if (state.activeSheet && state.activeSheet.slug === 'xosodevelop') {
+                const hot5Counts = Array(10).fill(0);
+                state.data.slice(0, 5).forEach(row => {
+                    if (!row.top3 || row.top3.length !== 3) return;
+                    row.top3.split('').forEach(digit => hot5Counts[parseInt(digit, 10)]++);
+                });
+                const cutDigits = hot5Counts
+                    .map((count, digit) => ({ digit, count }))
+                    .sort((a, b) => b.count - a.count || a.digit - b.digit)
+                    .slice(0, 3)
+                    .map(item => item.digit)
+                    .sort((a, b) => a - b);
+                const cutSet = new Set(cutDigits);
+                const keepDigits = Array.from({ length: 10 }, (_, digit) => digit).filter(digit => !cutSet.has(digit));
+
+                return {
+                    cutDigits,
+                    keepDigits,
+                    scoredDigits: hot5Counts.map((count, digit) => ({ digit, score: count })),
+                    modeName: 'ฮานอยพัฒนา: ตัดเลขร้อน 5 งวด',
+                };
+            }
+
+            if (state.activeSheet && state.activeSheet.slug === 'mlnhngo') {
+                const hot2Counts = Array(10).fill(0);
+                state.data.slice(0, 2).forEach(row => {
+                    if (!row.top3 || row.top3.length !== 3) return;
+                    row.top3.split('').forEach(digit => hot2Counts[parseInt(digit, 10)]++);
+                });
+                const cutDigits = hot2Counts
+                    .map((count, digit) => ({ digit, count }))
+                    .sort((a, b) => b.count - a.count || a.digit - b.digit)
+                    .slice(1, 4)
+                    .map(item => item.digit)
+                    .sort((a, b) => a - b);
+                const cutSet = new Set(cutDigits);
+                const keepDigits = Array.from({ length: 10 }, (_, digit) => digit).filter(digit => !cutSet.has(digit));
+
+                return {
+                    cutDigits,
+                    keepDigits,
+                    scoredDigits: hot2Counts.map((count, digit) => ({ digit, score: count })),
+                    modeName: 'ฮานอย VIP: ตัดเลขร้อน 2 งวด อันดับ 2-4',
+                };
+            }
+
+            if (state.activeSheet && state.activeSheet.slug === 'xsthm') {
+                const hot20Counts = Array(10).fill(0);
+                state.data.slice(0, 20).forEach(row => {
+                    if (!row.top3 || row.top3.length !== 3) return;
+                    row.top3.split('').forEach(digit => hot20Counts[parseInt(digit, 10)]++);
+                });
+                const cutDigits = hot20Counts
+                    .map((count, digit) => ({ digit, count }))
+                    .sort((a, b) => b.count - a.count || a.digit - b.digit)
+                    .slice(2, 5)
+                    .map(item => item.digit)
+                    .sort((a, b) => a - b);
+                const cutSet = new Set(cutDigits);
+                const keepDigits = Array.from({ length: 10 }, (_, digit) => digit).filter(digit => !cutSet.has(digit));
+
+                return {
+                    cutDigits,
+                    keepDigits,
+                    scoredDigits: hot20Counts.map((count, digit) => ({ digit, score: count })),
+                    modeName: 'ฮานอยพิเศษ: ตัดเลขร้อน 20 งวด อันดับ 3-5',
+                };
+            }
 
             const scoredDigits = Array.from({ length: 10 }, (_, digit) => {
-                const protectedDigit = latestDigits.has(digit) || staleKeepSet.has(digit) || returnSet.has(digit) || patternKeepSet.has(digit) || empiricalKeepSet.has(digit);
+                const flowKeepDigit = flowKeepSet.has(digit);
+                const recentGuardDigit = useRecentGuardMode && recentDrawDigits.has(digit);
+                const protectedDigit = latestDigits.has(digit) || flowKeepDigit || recentGuardDigit || staleKeepSet.has(digit) || returnSet.has(digit) || patternKeepSet.has(digit) || empiricalKeepSet.has(digit);
                 const keepSignals = [
                     latestDigits.has(digit),
+                    flowKeepDigit,
+                    recentGuardDigit,
                     patternKeepSet.has(digit),
                     returnSet.has(digit),
                     staleKeepSet.has(digit),
@@ -1045,6 +1241,8 @@
                 const rankedKeepScore = Math.max(0, 9 - (rankedRank.get(digit) || 11)) * 0.85;
                 const baseKeepScore =
                     (latestDigits.has(digit) ? 12 : 0) +
+                    (flowKeepDigit ? 10 : 0) +
+                    (recentGuardDigit ? 9 : 0) +
                     (patternKeepSet.has(digit) ? 10 : 0) +
                     (returnSet.has(digit) ? 10 : 0) +
                     (staleKeepSet.has(digit) ? 8 : 0) +
@@ -1056,7 +1254,13 @@
                 return { digit, score, protectedDigit, keepSignals };
             }).sort((a, b) => b.score - a.score || b.keepSignals - a.keepSignals || a.digit - b.digit);
 
-            const mustKeepDigits = [...new Set([2, 3, 5, ...latestDigits])]
+            const mustKeepDigits = [...new Set([
+                2,
+                3,
+                5,
+                ...latestDigits,
+                ...(useRecentGuardMode ? recentDrawDigits : []),
+            ])]
                 .map(digit => scoredDigits.find(item => item.digit === digit))
                 .filter(Boolean)
                 .slice(0, 7);
@@ -1077,7 +1281,12 @@
                 .sort((a, b) => a - b);
             const keepSet = new Set(keepDigits);
             const cutDigits = Array.from({ length: 10 }, (_, digit) => digit).filter(digit => !keepSet.has(digit));
-            return { cutDigits, keepDigits, scoredDigits };
+            return {
+                cutDigits,
+                keepDigits,
+                scoredDigits,
+                modeName: useRecentGuardMode ? 'สูตรกันเลข 3 งวดย้อนหลัง' : 'สูตรเก็บเลขแกน',
+            };
         }
 
         window.toggleTop3CutKeepDigits = function (checked) {
@@ -1091,6 +1300,59 @@
             window.updateTop3WinNumbers();
             renderRecentDataTable();
         };
+
+        function getTop3CutBacktestResult(row, rowIndex, limit = state.lastTop3WinLimit || 9) {
+            if (!row || !row.top3 || row.top3.length !== 3) return null;
+
+            const originalData = state.data;
+            const originalAllDayData = state.allDayData;
+            const allDayData = originalAllDayData && originalAllDayData.length ? originalAllDayData : originalData;
+            const allDayRowIndex = allDayData.findIndex(item => item.date === row.date && item.top3 === row.top3);
+            const historyData = originalData.slice(rowIndex + 1, rowIndex + 1 + state.period);
+            const historyAllDayData = allDayRowIndex >= 0
+                ? allDayData.slice(allDayRowIndex + 1, allDayRowIndex + 1 + state.period)
+                : historyData;
+
+            if (historyData.length < 3) return null;
+
+            try {
+                state.data = historyData;
+                state.allDayData = historyAllDayData;
+
+                const rankedDigits = rankTop3WinDigits();
+                const { returnDigits, excludedHotDigits } = selectTop3WinDigits(limit);
+                const allDayOmittedDigits = getTop3OmittedDigitsForData(historyAllDayData, limit);
+                const targetDayIndex = row.dateObject ? row.dateObject.getUTCDay() : new Date().getDay();
+                const currentDayOmittedDigits = getTop3OmittedDigitsForData(
+                    historyAllDayData.filter(item => item.dateObject && item.dateObject.getUTCDay() === targetDayIndex),
+                    limit
+                );
+                const previousAllDayOmittedDigits = getTop3OmittedDigitsForData(
+                    historyAllDayData.slice(1, state.period + 1),
+                    limit
+                );
+                const recommendation = getTop3CutRecommendation(rankedDigits, {
+                    allDayOmittedDigits,
+                    currentDayOmittedDigits,
+                    previousAllDayOmittedDigits,
+                    excludedHotDigits,
+                    returnDigits,
+                });
+                const resultDigits = [...new Set(row.top3.split('').map(Number))];
+                const cutSet = new Set(recommendation.cutDigits);
+                const hitCutDigits = resultDigits.filter(digit => cutSet.has(digit));
+
+                return {
+                    cutDigits: recommendation.cutDigits,
+                    modeName: recommendation.modeName,
+                    isPass: hitCutDigits.length === 0,
+                    hitCutDigits,
+                };
+            } finally {
+                state.data = originalData;
+                state.allDayData = originalAllDayData;
+            }
+        }
 
         window.analyzeTop3WinDigits = function (limit = 7) {
             const input = document.getElementById('top3-win-input');
@@ -1164,6 +1426,7 @@
                 <span class="block mt-1 text-xs text-rose-600">เลขที่ตัดออกจริง ${currentDayContext.label}: <span class="font-mono">${currentDayOmittedDigits.join(' ') || '-'}</span></span>
                 <span class="block mt-1 text-xs text-rose-600">งวดก่อนหน้านั้น เลขที่ตัดออกจริง ของ แสดงวัน ทั้งหมด: <span class="font-mono">${previousAllDayOmittedDigits.join(' ') || '-'}</span></span>
                 <span class="block mt-1 text-xs text-rose-600">ย้อนหลัง 1 วัน เลขที่ตัดออกจริง ของ ${currentDayContext.label}: <span class="font-mono">${previousCurrentDayOmittedDigits.join(' ') || '-'}</span></span>
+                <span class="block mt-2 text-xs text-amber-700 font-bold">สูตรที่ระบบเลือกใช้: <span class="font-mono">${cutRecommendation.modeName || '-'}</span></span>
                 <span class="block mt-2 text-xs text-rose-700 font-bold">สูตรแนะนำลบออก 3 ตัวจาก 10 ตัว: <span class="font-mono text-sm">${cutRecommendation.cutDigits.join(' ') || '-'}</span></span>
                 <label class="mt-1 inline-flex items-center gap-2 text-xs text-emerald-700 font-bold cursor-pointer select-none">
                     <input id="top3-use-cut-keep-digits" type="checkbox" class="w-4 h-4 accent-emerald-600"
@@ -1369,32 +1632,55 @@
             const tableBody = document.getElementById('recent-data-table');
             if (!tableBody) return;
 
-            const top3Set = new Set(state.top3Combinations || []);
-            const win7Digits = selectTop3WinDigits(7).digits;
-            const win8Digits = selectTop3WinDigits(8).digits;
-            const win9Digits = selectTop3WinDigits(9).digits;
-            const win7Numbers = buildTop3WinNumbers(win7Digits.join(' '));
-            const win8Numbers = buildTop3WinNumbers(win8Digits.join(' '));
-            const win9Numbers = buildTop3WinNumbers(win9Digits.join(' '));
-            const win7Set = new Set(win7Numbers);
-            const win8Set = new Set(win8Numbers);
-            const win9Set = new Set(win9Numbers);
-            const win7ColumnTitle = document.getElementById('win7-result-column-title');
-            const win8ColumnTitle = document.getElementById('win8-result-column-title');
-            const win9ColumnTitle = document.getElementById('win9-result-column-title');
-            if (win7ColumnTitle) {
-                win7ColumnTitle.innerText = `ผลวิน 7 ตัว (${win7Numbers.length} ชุด)`;
-            }
-            if (win8ColumnTitle) {
-                win8ColumnTitle.innerText = `ผลวิน 8 ตัว (${win8Numbers.length} ชุด)`;
-            }
-            if (win9ColumnTitle) {
-                win9ColumnTitle.innerText = `ผลวิน 9 ตัว (${win9Numbers.length} ชุด)`;
+            const cut3ColumnTitle = document.getElementById('cut3-result-column-title');
+            if (cut3ColumnTitle) {
+                cut3ColumnTitle.innerText = 'สูตรแนะนำลบออก 3 ตัว';
             }
 
             const renderResultBadge = (isHit) => isHit
                 ? '<span class="inline-flex items-center justify-center min-w-16 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">ถูก</span>'
                 : '<span class="inline-flex items-center justify-center min-w-16 px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200 text-xs font-bold">ไม่ถูก</span>';
+            const renderCut3Backtest = (result) => {
+                if (!result) {
+                    return '<span class="inline-flex items-center justify-center min-w-16 px-2.5 py-1 rounded-full bg-slate-100 text-slate-400 border border-slate-200 text-xs font-bold">-</span>';
+                }
+
+                return `
+                    <div class="flex flex-col items-center gap-1">
+                        <span class="font-mono text-xs font-bold text-slate-600">${result.cutDigits.join(' ')}</span>
+                        <span class="text-[10px] font-semibold text-slate-400">${result.modeName || ''}</span>
+                        ${renderResultBadge(result.isPass)}
+                    </div>
+                `;
+            };
+            const cut3Results = state.data.map((row, index) => getTop3CutBacktestResult(row, index));
+            const validCut3Results = cut3Results.filter(Boolean);
+            const recentCut3Results = validCut3Results.slice(0, CUT3_BACKTEST_WINDOW);
+            const cut3PassCount = recentCut3Results.filter(result => result.isPass).length;
+            const cut3Rate = recentCut3Results.length
+                ? Math.round((cut3PassCount / recentCut3Results.length) * 100)
+                : 0;
+            const cut3AlternatingCount = recentCut3Results
+                .slice(1)
+                .filter((result, index) => result.isPass !== recentCut3Results[index].isPass)
+                .length;
+            const isCut3Alternating = recentCut3Results.length >= 6 && cut3AlternatingCount >= Math.ceil(recentCut3Results.length * 0.65);
+            const cut3Status = !recentCut3Results.length
+                ? { text: 'รอสถิติสูตรลบ 3 ตัว', className: 'text-slate-500' }
+                : isCut3Alternating
+                    ? { text: 'สูตรลบ 3 ตัว: ระวัง ถูก/ผิดสลับ', className: 'text-amber-600' }
+                    : cut3Rate >= 80
+                        ? { text: 'สูตรลบ 3 ตัว: ใช้ได้', className: 'text-emerald-600' }
+                        : cut3Rate >= 60
+                            ? { text: 'สูตรลบ 3 ตัว: ระวัง', className: 'text-amber-600' }
+                            : { text: 'สูตรลบ 3 ตัว: พักสูตร', className: 'text-rose-600' };
+            const cut3Summary = document.getElementById('cut3-backtest-summary');
+            if (cut3Summary) {
+                cut3Summary.className = `text-xs font-bold text-right ${cut3Status.className}`;
+                cut3Summary.innerText = recentCut3Results.length
+                    ? `${cut3Status.text} | ถูก ${cut3PassCount}/${recentCut3Results.length} งวดล่าสุด (${cut3Rate}%) | โฟกัส ${CUT3_BACKTEST_WINDOW} งวด | เป้าหมาย 80%`
+                    : cut3Status.text;
+            }
 
             tableBody.innerHTML = state.data.map((row, index) => `
                 <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
@@ -1402,16 +1688,7 @@
                     <td class="px-6 py-3 text-center font-mono font-bold text-blue-600 tracking-widest text-base">${row.top3}</td>
                     <td class="px-6 py-3 text-center font-mono font-bold text-rose-500 tracking-widest text-base">${row.bot2}</td>
                     <td class="px-6 py-3 text-center">
-                        ${renderResultBadge(top3Set.has(row.top3))}
-                    </td>
-                    <td class="px-6 py-3 text-center">
-                        ${renderResultBadge(win7Set.has(row.top3))}
-                    </td>
-                    <td class="px-6 py-3 text-center">
-                        ${renderResultBadge(win8Set.has(row.top3))}
-                    </td>
-                    <td class="px-6 py-3 text-center">
-                        ${renderResultBadge(win9Set.has(row.top3))}
+                        ${renderCut3Backtest(cut3Results[index])}
                     </td>
                 </tr>
             `).join('');
