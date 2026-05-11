@@ -1017,52 +1017,65 @@
             const excludedHotSet = new Set(excludedHotDigits);
             const returnSet = new Set(returnDigits);
             const staleKeepSet = new Set(rankedDigits.staleDigits.slice(0, 4).map(item => item.digit));
+            const empiricalKeepSet = new Set([2, 3, 5]);
             const patternKeepSet = new Set(rankedDigits
                 .filter(item => item.formula || item.pattern)
                 .map(item => item.digit));
             const hotRank = new Map(rankedDigits.hotDigits.map((item, index) => [item.digit, index + 1]));
             const trendRank = new Map(rankedDigits.trendingDigits.map((item, index) => [item.digit, index + 1]));
-            const keepPriorityDigits = [
-                ...latestDigits,
-                ...patternKeepSet,
-                ...returnSet,
-                ...staleKeepSet,
-                ...rankedDigits.trendingDigits.slice(0, 3).map(item => item.digit),
-                ...rankedDigits.hotDigits.slice(0, 3).map(item => item.digit),
-                ...rankedDigits.map(item => item.digit),
-            ];
-            const keepDigits = [...new Set(keepPriorityDigits)].slice(0, 7).sort((a, b) => a - b);
-            const keepSet = new Set(keepDigits);
+            const sameDayRank = new Map(rankedDigits.sameDayDigits.map((item, index) => [item.digit, index + 1]));
+            const rankedRank = new Map(rankedDigits.map((item, index) => [item.digit, index + 1]));
 
             const scoredDigits = Array.from({ length: 10 }, (_, digit) => {
-                const signals = [
-                    allDayOmittedSet.has(digit),
-                    currentDayOmittedSet.has(digit),
-                    previousAllDayOmittedSet.has(digit),
-                    excludedHotSet.has(digit),
-                    (hotRank.get(digit) || 11) <= 4,
-                    (trendRank.get(digit) || 11) <= 4,
+                const protectedDigit = latestDigits.has(digit) || staleKeepSet.has(digit) || returnSet.has(digit) || patternKeepSet.has(digit) || empiricalKeepSet.has(digit);
+                const keepSignals = [
+                    latestDigits.has(digit),
+                    patternKeepSet.has(digit),
+                    returnSet.has(digit),
+                    staleKeepSet.has(digit),
+                    empiricalKeepSet.has(digit),
+                    (hotRank.get(digit) || 11) <= 6,
+                    (trendRank.get(digit) || 11) <= 6,
+                    (sameDayRank.get(digit) || 11) <= 6,
+                    (rankedRank.get(digit) || 11) <= 8,
                 ].filter(Boolean).length;
-                const hotScore = Math.max(0, 11 - (hotRank.get(digit) || 11)) * 0.65;
-                const trendScore = Math.max(0, 11 - (trendRank.get(digit) || 11)) * 0.65;
-                const latestPenalty = latestDigits.has(digit) ? 5 : 0;
-                const omittedScore =
-                    (allDayOmittedSet.has(digit) ? 7 : 0) +
-                    (currentDayOmittedSet.has(digit) ? 7 : 0) +
-                    (previousAllDayOmittedSet.has(digit) ? 2 : 0);
-                const manualHotScore = excludedHotSet.has(digit) ? 2 : 0;
-                const consensusScore = signals >= 3 ? 7 : signals === 2 ? 3 : 0;
-                const keepSignalPenalty =
-                    (staleKeepSet.has(digit) ? 7 : 0) +
-                    (returnSet.has(digit) ? 8 : 0) +
-                    (patternKeepSet.has(digit) ? 4 : 0) +
-                    latestPenalty;
-                const protectedDigit = latestDigits.has(digit) || staleKeepSet.has(digit) || returnSet.has(digit) || patternKeepSet.has(digit);
-                const score = hotScore + trendScore + omittedScore + manualHotScore + consensusScore - keepSignalPenalty;
+                const hotKeepScore = Math.max(0, 7 - (hotRank.get(digit) || 11)) * 1.1;
+                const trendKeepScore = Math.max(0, 7 - (trendRank.get(digit) || 11)) * 1.35;
+                const sameDayKeepScore = Math.max(0, 7 - (sameDayRank.get(digit) || 11)) * 1.25;
+                const rankedKeepScore = Math.max(0, 9 - (rankedRank.get(digit) || 11)) * 0.85;
+                const baseKeepScore =
+                    (latestDigits.has(digit) ? 12 : 0) +
+                    (patternKeepSet.has(digit) ? 10 : 0) +
+                    (returnSet.has(digit) ? 10 : 0) +
+                    (staleKeepSet.has(digit) ? 8 : 0) +
+                    (empiricalKeepSet.has(digit) ? 9 : 0) +
+                    ((rankedRank.get(digit) || 11) <= 8 ? 5 : 0);
+                const consensusKeepScore = keepSignals >= 3 ? 6 : keepSignals === 2 ? 3 : 0;
+                const score = baseKeepScore + hotKeepScore + trendKeepScore + sameDayKeepScore + rankedKeepScore + consensusKeepScore;
 
-                return { digit, score, protectedDigit };
-            }).sort((a, b) => b.score - a.score || a.digit - b.digit);
+                return { digit, score, protectedDigit, keepSignals };
+            }).sort((a, b) => b.score - a.score || b.keepSignals - a.keepSignals || a.digit - b.digit);
 
+            const mustKeepDigits = [...new Set([2, 3, 5, ...latestDigits])]
+                .map(digit => scoredDigits.find(item => item.digit === digit))
+                .filter(Boolean)
+                .slice(0, 7);
+            const mustKeepSet = new Set(mustKeepDigits.map(item => item.digit));
+            const priorityKeepDigitsRaw = [
+                ...mustKeepDigits,
+                ...scoredDigits
+                    .filter(item => !mustKeepSet.has(item.digit) && (item.protectedDigit || item.keepSignals >= 2))
+                    .slice(0, Math.max(0, 7 - mustKeepDigits.length)),
+            ];
+            const priorityKeepDigits = [...new Map(priorityKeepDigitsRaw.map(item => [item.digit, item])).values()];
+            const priorityKeepSet = new Set(priorityKeepDigits.map(item => item.digit));
+            const fillKeepDigits = scoredDigits
+                .filter(item => !priorityKeepSet.has(item.digit))
+                .slice(0, Math.max(0, 7 - priorityKeepDigits.length));
+            const keepDigits = [...priorityKeepDigits, ...fillKeepDigits]
+                .map(item => item.digit)
+                .sort((a, b) => a - b);
+            const keepSet = new Set(keepDigits);
             const cutDigits = Array.from({ length: 10 }, (_, digit) => digit).filter(digit => !keepSet.has(digit));
             return { cutDigits, keepDigits, scoredDigits };
         }
