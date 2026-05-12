@@ -1459,8 +1459,8 @@
 
             const { rankedDigits, digits, returnDigits, excludedHotDigits } = selectTop3WinDigits(limit);
             const formulaDigits = getDerivedDigitsFromLatestTop3();
-            const hotDigits = rankedDigits.hotDigits.slice(0, limit);
-            const trendingDigits = rankedDigits.trendingDigits.slice(0, Math.min(4, limit));
+            const hotDigits = rankedDigits.hotDigits;
+            const trendingDigits = rankedDigits.trendingDigits;
             const staleDigits = rankedDigits.staleDigits;
             const sameDayDigits = rankedDigits.sameDayDigits;
             const patternDigits = [...new Set([
@@ -1533,7 +1533,8 @@
                 </label>
                 <span class="block mt-1 text-xs text-indigo-600">Hot Numbers ${state.period} งวด: <span class="font-mono">${formatRankedDigits(hotDigits) || '-'}</span></span>
                 <span class="block mt-1 text-xs text-indigo-600">Trending Numbers ล่าสุด ${rankedDigits.trendWindow} งวด: <span class="font-mono">${formatRankedDigits(trendingDigits) || '-'}</span></span>
-                <span class="block mt-1 text-xs text-indigo-600">เลขค้าง/หายไปนาน: <span class="font-mono">${formatRankedDigits(staleDigits) || '-'}</span> | Pattern วันเดียวกัน: <span class="font-mono">${formatRankedDigits(sameDayDigits) || '-'}</span></span>
+                <span class="block mt-1 text-xs text-indigo-600">เลขค้าง/หายไปนาน: <span class="font-mono">${formatRankedDigits(staleDigits) || '-'}</span></span>
+                <span class="block mt-1 text-xs text-indigo-600">Pattern วันเดียวกัน: <span class="font-mono">${formatRankedDigits(sameDayDigits) || '-'}</span></span>
                 <span class="block mt-1 text-xs text-indigo-600">Pattern งวดก่อน: <span class="font-mono">${patternDigits.join(' ') || '-'}</span> | สูตรงวดล่าสุด: <span class="font-mono">${formulaDigits.join(' ') || '-'}</span></span>
                 <span class="block mt-1 text-xs text-indigo-600">เลขค้าง/รอกลับที่นำมาพิจารณา: <span class="font-mono">${returnDigits.join(' ') || '-'}</span></span>
             `;
