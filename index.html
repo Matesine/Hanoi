@@ -262,7 +262,6 @@
                         <i data-lucide="calendar-days" class="w-5 h-5 text-slate-500"></i>
                         <h3 class="font-bold text-slate-700" id="table-title">ข้อมูลที่ใช้คำนวณ</h3>
                     </div>
-                    <div id="cut3-backtest-summary" class="text-xs font-bold text-slate-500 text-right"></div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left text-slate-600">
@@ -372,7 +371,6 @@
 
         const REFRESH_INTERVAL_SECONDS = 300; // 5 นาที
         const PERIODS = [30, 60, 90];
-        const CUT3_BACKTEST_WINDOW = 14;
         const DAYS_OF_WEEK = [
             { name: 'ทั้งหมด', short: 'ทั้งหมด', index: -1 },
             { name: 'วันอาทิตย์', short: 'อา', index: 0 },
@@ -1752,34 +1750,6 @@
                 `;
             };
             const cut3Results = state.data.map((row, index) => getTop3CutBacktestResult(row, index));
-            const validCut3Results = cut3Results.filter(Boolean);
-            const recentCut3Results = validCut3Results.slice(0, CUT3_BACKTEST_WINDOW);
-            const cut3PassCount = recentCut3Results.filter(result => result.isPass).length;
-            const cut3Rate = recentCut3Results.length
-                ? Math.round((cut3PassCount / recentCut3Results.length) * 100)
-                : 0;
-            const cut3AlternatingCount = recentCut3Results
-                .slice(1)
-                .filter((result, index) => result.isPass !== recentCut3Results[index].isPass)
-                .length;
-            const isCut3Alternating = recentCut3Results.length >= 6 && cut3AlternatingCount >= Math.ceil(recentCut3Results.length * 0.65);
-            const cut3Status = !recentCut3Results.length
-                ? { text: 'รอสถิติสูตรลบ 3 ตัว', className: 'text-slate-500' }
-                : isCut3Alternating
-                    ? { text: 'สูตรลบ 3 ตัว: ระวัง ถูก/ผิดสลับ', className: 'text-amber-600' }
-                    : cut3Rate >= 80
-                        ? { text: 'สูตรลบ 3 ตัว: ใช้ได้', className: 'text-emerald-600' }
-                        : cut3Rate >= 60
-                            ? { text: 'สูตรลบ 3 ตัว: ระวัง', className: 'text-amber-600' }
-                            : { text: 'สูตรลบ 3 ตัว: พักสูตร', className: 'text-rose-600' };
-            const cut3Summary = document.getElementById('cut3-backtest-summary');
-            if (cut3Summary) {
-                cut3Summary.className = `text-xs font-bold text-right ${cut3Status.className}`;
-                cut3Summary.innerText = recentCut3Results.length
-                    ? `${cut3Status.text} | ถูก ${cut3PassCount}/${recentCut3Results.length} งวดล่าสุด (${cut3Rate}%) | โฟกัส ${CUT3_BACKTEST_WINDOW} งวด | เป้าหมาย 80%`
-                    : cut3Status.text;
-            }
-
             tableBody.innerHTML = state.data.map((row, index) => `
                 <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                     <td class="px-6 py-3 whitespace-nowrap">${row.date}</td>
