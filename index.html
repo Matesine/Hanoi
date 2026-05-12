@@ -1037,16 +1037,25 @@
                             digit: forcedDigits[0],
                         },
                     ];
-                    const sortedStaleDigits = rankedDigits.staleDigits
-                        .sort((a, b) => a.count - b.count || a.digit - b.digit);
-                    const firstStaleDigit = sortedStaleDigits.map(item => item.digit)[0];
+                    const selectedHotRank = getExcludedHottestWinRank();
+                    const useRankedStaleDigit = selectedHotRank >= 1;
+                    const sortedStaleDigits = [...rankedDigits.staleDigits]
+                        .sort((a, b) => useRankedStaleDigit
+                            ? b.count - a.count || a.digit - b.digit
+                            : a.count - b.count || a.digit - b.digit);
+                    const staleFormulaLabel = useRankedStaleDigit
+                        ? `ตัวที่ 2 จากเลขค้าง/หายไปนานค่าจำนวนครั้งมากที่สุดอันดับ ${selectedHotRank}`
+                        : 'ตัวที่ 2 จากเลขค้าง/หายไปนานค่าจำนวนครั้งน้อยที่สุด';
+                    const rankedStaleDigits = sortedStaleDigits.map(item => item.digit);
+                    const firstStaleDigit = rankedStaleDigits[Math.max(0, selectedHotRank - 1)] ?? rankedStaleDigits[0];
                     const staleDigit = firstStaleDigit === forcedDigits[0]
-                        ? sortedStaleDigits.map(item => item.digit).find(digit => digit !== forcedDigits[0])
+                        ? rankedStaleDigits.slice(Math.max(0, selectedHotRank)).find(digit => digit !== forcedDigits[0])
+                            ?? rankedStaleDigits.find(digit => digit !== forcedDigits[0])
                         : firstStaleDigit;
                     if (staleDigit !== undefined) {
                         selectedDigits.push(staleDigit);
                         formulaParts.push({
-                            label: 'ตัวที่ 2 จากเลขค้าง/หายไปนานค่าจำนวนครั้งน้อยที่สุด',
+                            label: staleFormulaLabel,
                             digit: staleDigit,
                         });
                     }
@@ -1499,7 +1508,10 @@
             const dayText = state.dayFilter !== -1
                 ? `เฉพาะ${DAYS_OF_WEEK.find(day => day.index === state.dayFilter).name}`
                 : 'รวมทุกวัน';
-            const fixedCutFormulaText = 'ตัวที่ 1 จากเลขที่ตัดออกจริง แสดงวันทั้งหมด, ตัวที่ 2 จากเลขค้าง/หายไปนานค่าจำนวนครั้งน้อยที่สุด, ตัวที่ 3 จากเลขนอก 5 งวดล่าสุด';
+            const staleFormulaText = excludedHotRank >= 1
+                ? `ตัวที่ 2 จากเลขค้าง/หายไปนานค่าจำนวนครั้งมากที่สุดอันดับ ${excludedHotRank}`
+                : 'ตัวที่ 2 จากเลขค้าง/หายไปนานค่าจำนวนครั้งน้อยที่สุด';
+            const fixedCutFormulaText = `ตัวที่ 1 จากเลขที่ตัดออกจริง แสดงวันทั้งหมด, ${staleFormulaText}, ตัวที่ 3 จากเลขนอก 5 งวดล่าสุด`;
             const fixedCutFormulaDetail = lastTop3CutFormulaParts.length
                 ? lastTop3CutFormulaParts.map(part => `${part.label}: ${part.digit}`).join(' | ')
                 : fixedCutFormulaText;
