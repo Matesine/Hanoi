@@ -714,6 +714,8 @@
             return Number.isInteger(rank) && rank >= 1 && rank <= 10 ? rank : 0;
         }
 
+        let lastTop3CutFormulaParts = [];
+
         function buildTop3WinNumbers(rawValue, includeRepeats = shouldIncludeRepeatWinNumbers()) {
             const digits = [...new Set((rawValue.match(/\d/g) || []))];
             const results = new Set();
@@ -1021,6 +1023,76 @@
             const staleKeepSet = new Set(rankedDigits.staleDigits.slice(0, 4).map(item => item.digit));
             const empiricalKeepSet = new Set([2, 3, 5]);
             const flowKeepSet = new Set(getPreviousDrawPatternDigits().run);
+            const forceCutFromAllDayOmitted = (cutDigits) => {
+                const forcedDigits = [...new Set(allDayOmittedDigits)].slice(0, 3);
+                const getFallbackDigits = (usedDigits = []) => [
+                    ...cutDigits,
+                    ...Array.from({ length: 10 }, (_, digit) => digit),
+                ].filter(digit => !usedDigits.includes(digit));
+                if (forcedDigits.length) {
+                    const selectedDigits = [forcedDigits[0]];
+                    const formulaParts = [
+                        {
+                            label: 'ตัวที่ 1 จากเลขที่ตัดออกจริง แสดงวันทั้งหมด',
+                            digit: forcedDigits[0],
+                        },
+                    ];
+                    const sortedStaleDigits = rankedDigits.staleDigits
+                        .sort((a, b) => a.count - b.count || a.digit - b.digit);
+                    const firstStaleDigit = sortedStaleDigits.map(item => item.digit)[0];
+                    const staleDigit = firstStaleDigit === forcedDigits[0]
+                        ? sortedStaleDigits.map(item => item.digit).find(digit => digit !== forcedDigits[0])
+                        : firstStaleDigit;
+                    if (staleDigit !== undefined) {
+                        selectedDigits.push(staleDigit);
+                        formulaParts.push({
+                            label: 'ตัวที่ 2 จากเลขค้าง/หายไปนานค่าจำนวนครั้งน้อยที่สุด',
+                            digit: staleDigit,
+                        });
+                    }
+
+                    const recent5Set = new Set(state.data.slice(0, 5).flatMap(row =>
+                        row.top3 && row.top3.length === 3 ? row.top3.split('').map(Number) : []
+                    ));
+                    const outside5Digit = Array.from({ length: 10 }, (_, digit) => digit)
+                        .filter(digit => !recent5Set.has(digit))[0];
+                    if (outside5Digit !== undefined) {
+                        selectedDigits.push(outside5Digit);
+                        formulaParts.push({
+                            label: 'ตัวที่ 3 จากเลขนอก 5 งวดล่าสุด',
+                            digit: outside5Digit,
+                        });
+                    } else {
+                        const fallbackDigit = getFallbackDigits(selectedDigits).find(digit => !selectedDigits.includes(digit));
+                        if (fallbackDigit !== undefined) {
+                            selectedDigits.push(fallbackDigit);
+                            formulaParts.push({
+                                label: 'ตัวที่ 3 จากเลขนอก 5 งวดล่าสุด',
+                                digit: `${fallbackDigit} (ใช้เลขสำรอง เพราะเลขนอก 5 งวดล่าสุดไม่มี/ซ้ำ)`,
+                            });
+                        } else {
+                            formulaParts.push({
+                                label: 'ตัวที่ 3 จากเลขนอก 5 งวดล่าสุด',
+                                digit: '-',
+                            });
+                        }
+                    }
+                    const uniqueSelectedDigits = [...new Set(selectedDigits)];
+                    if (uniqueSelectedDigits.length < 3) {
+                        selectedDigits.push(...getFallbackDigits(uniqueSelectedDigits));
+                    }
+                    const completedDigits = [...new Set(selectedDigits)].slice(0, 3).sort((a, b) => a - b);
+                    lastTop3CutFormulaParts = formulaParts;
+                    return completedDigits;
+                }
+                const combinedDigits = [
+                    ...forcedDigits,
+                    ...cutDigits.filter(digit => !forcedDigits.includes(digit)),
+                    ...Array.from({ length: 10 }, (_, digit) => digit)
+                        .filter(digit => !forcedDigits.includes(digit) && !cutDigits.includes(digit)),
+                ];
+                return [...new Set(combinedDigits)].slice(0, 3).sort((a, b) => a - b);
+            };
             const patternKeepSet = new Set(rankedDigits
                 .filter(item => item.formula || item.pattern)
                 .map(item => item.digit));
@@ -1046,11 +1118,12 @@
                     .slice(0, 3)
                     .map(item => item.digit)
                     .sort((a, b) => a - b);
-                const cutSet = new Set(cutDigits);
+                const finalCutDigits = forceCutFromAllDayOmitted(cutDigits);
+                const cutSet = new Set(finalCutDigits);
                 const keepDigits = Array.from({ length: 10 }, (_, digit) => digit).filter(digit => !cutSet.has(digit));
 
                 return {
-                    cutDigits,
+                    cutDigits: finalCutDigits,
                     keepDigits,
                     scoredDigits: hot5Counts.map((count, digit) => ({ digit, score: count })),
                     modeName: 'ลาวประตูชัย: ตัดเลขร้อน 5 งวด',
@@ -1069,11 +1142,12 @@
                     .slice(4, 7)
                     .map(item => item.digit)
                     .sort((a, b) => a - b);
-                const cutSet = new Set(cutDigits);
+                const finalCutDigits = forceCutFromAllDayOmitted(cutDigits);
+                const cutSet = new Set(finalCutDigits);
                 const keepDigits = Array.from({ length: 10 }, (_, digit) => digit).filter(digit => !cutSet.has(digit));
 
                 return {
-                    cutDigits,
+                    cutDigits: finalCutDigits,
                     keepDigits,
                     scoredDigits: hot7Counts.map((count, digit) => ({ digit, score: count })),
                     modeName: 'ลาวสันติภาพ: ตัดเลขร้อน 7 งวด อันดับ 5-7',
@@ -1092,11 +1166,12 @@
                     .slice(3, 6)
                     .map(item => item.digit)
                     .sort((a, b) => a - b);
-                const cutSet = new Set(cutDigits);
+                const finalCutDigits = forceCutFromAllDayOmitted(cutDigits);
+                const cutSet = new Set(finalCutDigits);
                 const keepDigits = Array.from({ length: 10 }, (_, digit) => digit).filter(digit => !cutSet.has(digit));
 
                 return {
-                    cutDigits,
+                    cutDigits: finalCutDigits,
                     keepDigits,
                     scoredDigits: hot8Counts.map((count, digit) => ({ digit, score: count })),
                     modeName: 'ประชาชนลาว: ตัดเลขร้อน 8 งวด อันดับ 4-6',
@@ -1115,11 +1190,12 @@
                     .slice(3, 6)
                     .map(item => item.digit)
                     .sort((a, b) => a - b);
-                const cutSet = new Set(cutDigits);
+                const finalCutDigits = forceCutFromAllDayOmitted(cutDigits);
+                const cutSet = new Set(finalCutDigits);
                 const keepDigits = Array.from({ length: 10 }, (_, digit) => digit).filter(digit => !cutSet.has(digit));
 
                 return {
-                    cutDigits,
+                    cutDigits: finalCutDigits,
                     keepDigits,
                     scoredDigits: hot6Counts.map((count, digit) => ({ digit, score: count })),
                     modeName: 'ลาว Extra: ตัดเลขร้อน 6 งวด อันดับ 4-6',
@@ -1138,11 +1214,12 @@
                     .slice(3, 6)
                     .map(item => item.digit)
                     .sort((a, b) => a - b);
-                const cutSet = new Set(cutDigits);
+                const finalCutDigits = forceCutFromAllDayOmitted(cutDigits);
+                const cutSet = new Set(finalCutDigits);
                 const keepDigits = Array.from({ length: 10 }, (_, digit) => digit).filter(digit => !cutSet.has(digit));
 
                 return {
-                    cutDigits,
+                    cutDigits: finalCutDigits,
                     keepDigits,
                     scoredDigits: hot6Counts.map((count, digit) => ({ digit, score: count })),
                     modeName: 'ฮานอยปกติ: ตัดเลขร้อน 6 งวด อันดับ 4-6',
@@ -1161,11 +1238,12 @@
                     .slice(0, 3)
                     .map(item => item.digit)
                     .sort((a, b) => a - b);
-                const cutSet = new Set(cutDigits);
+                const finalCutDigits = forceCutFromAllDayOmitted(cutDigits);
+                const cutSet = new Set(finalCutDigits);
                 const keepDigits = Array.from({ length: 10 }, (_, digit) => digit).filter(digit => !cutSet.has(digit));
 
                 return {
-                    cutDigits,
+                    cutDigits: finalCutDigits,
                     keepDigits,
                     scoredDigits: hot5Counts.map((count, digit) => ({ digit, score: count })),
                     modeName: 'ฮานอยพัฒนา: ตัดเลขร้อน 5 งวด',
@@ -1184,11 +1262,12 @@
                     .slice(1, 4)
                     .map(item => item.digit)
                     .sort((a, b) => a - b);
-                const cutSet = new Set(cutDigits);
+                const finalCutDigits = forceCutFromAllDayOmitted(cutDigits);
+                const cutSet = new Set(finalCutDigits);
                 const keepDigits = Array.from({ length: 10 }, (_, digit) => digit).filter(digit => !cutSet.has(digit));
 
                 return {
-                    cutDigits,
+                    cutDigits: finalCutDigits,
                     keepDigits,
                     scoredDigits: hot2Counts.map((count, digit) => ({ digit, score: count })),
                     modeName: 'ฮานอย VIP: ตัดเลขร้อน 2 งวด อันดับ 2-4',
@@ -1207,11 +1286,12 @@
                     .slice(2, 5)
                     .map(item => item.digit)
                     .sort((a, b) => a - b);
-                const cutSet = new Set(cutDigits);
+                const finalCutDigits = forceCutFromAllDayOmitted(cutDigits);
+                const cutSet = new Set(finalCutDigits);
                 const keepDigits = Array.from({ length: 10 }, (_, digit) => digit).filter(digit => !cutSet.has(digit));
 
                 return {
-                    cutDigits,
+                    cutDigits: finalCutDigits,
                     keepDigits,
                     scoredDigits: hot20Counts.map((count, digit) => ({ digit, score: count })),
                     modeName: 'ฮานอยพิเศษ: ตัดเลขร้อน 20 งวด อันดับ 3-5',
@@ -1281,9 +1361,12 @@
                 .sort((a, b) => a - b);
             const keepSet = new Set(keepDigits);
             const cutDigits = Array.from({ length: 10 }, (_, digit) => digit).filter(digit => !keepSet.has(digit));
+            const finalCutDigits = forceCutFromAllDayOmitted(cutDigits);
+            const finalCutSet = new Set(finalCutDigits);
+            const finalKeepDigits = Array.from({ length: 10 }, (_, digit) => digit).filter(digit => !finalCutSet.has(digit));
             return {
-                cutDigits,
-                keepDigits,
+                cutDigits: finalCutDigits,
+                keepDigits: finalKeepDigits,
                 scoredDigits,
                 modeName: useRecentGuardMode ? 'สูตรกันเลข 3 งวดย้อนหลัง' : 'สูตรเก็บเลขแกน',
             };
@@ -1369,8 +1452,8 @@
             const formulaDigits = getDerivedDigitsFromLatestTop3();
             const hotDigits = rankedDigits.hotDigits.slice(0, limit);
             const trendingDigits = rankedDigits.trendingDigits.slice(0, Math.min(4, limit));
-            const staleDigits = rankedDigits.staleDigits.slice(0, Math.min(4, limit));
-            const sameDayDigits = rankedDigits.sameDayDigits.slice(0, Math.min(4, limit));
+            const staleDigits = rankedDigits.staleDigits;
+            const sameDayDigits = rankedDigits.sameDayDigits;
             const patternDigits = [...new Set([
                 ...rankedDigits.previousPatterns.follow,
                 ...rankedDigits.previousPatterns.shuffle,
@@ -1416,17 +1499,19 @@
             const dayText = state.dayFilter !== -1
                 ? `เฉพาะ${DAYS_OF_WEEK.find(day => day.index === state.dayFilter).name}`
                 : 'รวมทุกวัน';
+            const fixedCutFormulaText = 'ตัวที่ 1 จากเลขที่ตัดออกจริง แสดงวันทั้งหมด, ตัวที่ 2 จากเลขค้าง/หายไปนานค่าจำนวนครั้งน้อยที่สุด, ตัวที่ 3 จากเลขนอก 5 งวดล่าสุด';
+            const fixedCutFormulaDetail = lastTop3CutFormulaParts.length
+                ? lastTop3CutFormulaParts.map(part => `${part.label}: ${part.digit}`).join(' | ')
+                : fixedCutFormulaText;
 
             input.value = inputDigits.join(' ');
             analysis.innerHTML = `
-                เลขเด่น ${limit} ตัวจากสถิติ 3 ตัวบน (${dayText}): <span class="font-mono text-base">${digits.join(' ')}</span>
-                <span class="block mt-1 text-xs text-indigo-600">รูปแบบวิน: <span class="font-mono">${shouldIncludeRepeatWinNumbers() ? 'รวมเลขเบิ้ล/หาม' : 'ไม่รวมเลขเบิ้ล/หาม'}</span></span>
                 <span class="block mt-1 text-xs text-indigo-600">ตัดเลขออกมากสุด${excludedHotRank ? `อันดับ ${excludedHotRank} จำนวน 1 ตัว` : ''}: <span class="font-mono">${excludedHotDigits.join(' ') || '-'}</span></span>
                 <span class="block mt-1 text-xs text-rose-600">เลขที่ตัดออกจริง แสดงวัน ทั้งหมด: <span class="font-mono">${allDayOmittedDigits.join(' ') || '-'}</span></span>
                 <span class="block mt-1 text-xs text-rose-600">เลขที่ตัดออกจริง ${currentDayContext.label}: <span class="font-mono">${currentDayOmittedDigits.join(' ') || '-'}</span></span>
-                <span class="block mt-1 text-xs text-rose-600">งวดก่อนหน้านั้น เลขที่ตัดออกจริง ของ แสดงวัน ทั้งหมด: <span class="font-mono">${previousAllDayOmittedDigits.join(' ') || '-'}</span></span>
-                <span class="block mt-1 text-xs text-rose-600">ย้อนหลัง 1 วัน เลขที่ตัดออกจริง ของ ${currentDayContext.label}: <span class="font-mono">${previousCurrentDayOmittedDigits.join(' ') || '-'}</span></span>
                 <span class="block mt-2 text-xs text-amber-700 font-bold">สูตรที่ระบบเลือกใช้: <span class="font-mono">${cutRecommendation.modeName || '-'}</span></span>
+                <span class="block mt-1 text-xs text-amber-700 font-bold">สูตรลบ 3 ตัวที่ใช้: <span class="font-normal text-amber-600">${fixedCutFormulaText}</span></span>
+                <span class="block mt-1 text-xs text-amber-700 font-bold">รายละเอียดสูตรลบ 3 ตัว: <span class="font-normal text-amber-600">${fixedCutFormulaDetail}</span></span>
                 <span class="block mt-2 text-xs text-rose-700 font-bold">สูตรแนะนำลบออก 3 ตัวจาก 10 ตัว: <span class="font-mono text-sm">${cutRecommendation.cutDigits.join(' ') || '-'}</span></span>
                 <label class="mt-1 inline-flex items-center gap-2 text-xs text-emerald-700 font-bold cursor-pointer select-none">
                     <input id="top3-use-cut-keep-digits" type="checkbox" class="w-4 h-4 accent-emerald-600"
