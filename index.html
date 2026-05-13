@@ -395,7 +395,7 @@
             countdownIntervalId: null,
             countdown: REFRESH_INTERVAL_SECONDS,
             top3Combinations: [],
-            lastTop3WinLimit: 7,
+            lastTop3WinLimit: 9,
             useTop3CutKeepDigits: false,
             lastTop3CutKeepDigits: [],
         };
@@ -1028,61 +1028,62 @@
                     ...Array.from({ length: 10 }, (_, digit) => digit),
                 ].filter(digit => !usedDigits.includes(digit));
                 if (forcedDigits.length) {
-                    const selectedDigits = [forcedDigits[0]];
+                    const topStaleDigits = [...rankedDigits.staleDigits]
+                        .sort((a, b) => b.count - a.count || a.digit - b.digit)
+                        .slice(0, 3)
+                        .map(item => item.digit);
+                    const staleReturnSet = new Set(topStaleDigits);
+                    const firstCutDigit = forcedDigits.find(digit => !staleReturnSet.has(digit)) ?? forcedDigits[0];
+                    const selectedDigits = [firstCutDigit];
                     const formulaParts = [
                         {
-                            label: 'ตัวที่ 1 จากเลขที่ตัดออกจริง แสดงวันทั้งหมด',
-                            digit: forcedDigits[0],
+                            label: 'ตัวที่ 1 จากเลขที่ตัดออกจริง แสดงวันทั้งหมด (ข้ามเลขค้างสูง/รอกลับ)',
+                            digit: firstCutDigit,
                         },
                     ];
-                    const selectedHotRank = getExcludedHottestWinRank();
-                    const useRankedStaleDigit = selectedHotRank >= 1;
-                    const sortedStaleDigits = [...rankedDigits.staleDigits]
-                        .sort((a, b) => useRankedStaleDigit
-                            ? b.count - a.count || a.digit - b.digit
-                            : a.count - b.count || a.digit - b.digit);
-                    const staleFormulaLabel = useRankedStaleDigit
-                        ? `ตัวที่ 2 จากเลขค้าง/หายไปนานค่าจำนวนครั้งมากที่สุดอันดับ ${selectedHotRank}`
-                        : 'ตัวที่ 2 จากเลขค้าง/หายไปนานค่าจำนวนครั้งน้อยที่สุด';
-                    const rankedStaleDigits = sortedStaleDigits.map(item => item.digit);
-                    const firstStaleDigit = rankedStaleDigits[Math.max(0, selectedHotRank - 1)] ?? rankedStaleDigits[0];
-                    const staleDigit = firstStaleDigit === forcedDigits[0]
-                        ? rankedStaleDigits.slice(Math.max(0, selectedHotRank)).find(digit => digit !== forcedDigits[0])
-                            ?? rankedStaleDigits.find(digit => digit !== forcedDigits[0])
-                        : firstStaleDigit;
-                    if (staleDigit !== undefined) {
-                        selectedDigits.push(staleDigit);
+
+                    const toCountMap = (items) => new Map(items.map(item => [item.digit, item.count]));
+                    const hotCountMap = toCountMap(rankedDigits.hotDigits);
+                    const trendCountMap = toCountMap(rankedDigits.trendingDigits);
+                    const staleCountMap = toCountMap(rankedDigits.staleDigits);
+                    const sameDayCountMap = toCountMap(rankedDigits.sameDayDigits);
+                    const maxOfMap = (map) => Math.max(...Array.from(map.values()), 1);
+                    const maxHot = maxOfMap(hotCountMap);
+                    const maxTrend = maxOfMap(trendCountMap);
+                    const maxStale = maxOfMap(staleCountMap);
+                    const maxSameDay = maxOfMap(sameDayCountMap);
+                    const weakDigits = Array.from({ length: 10 }, (_, digit) => {
+                        const hot = hotCountMap.get(digit) || 0;
+                        const trend = trendCountMap.get(digit) || 0;
+                        const stale = staleCountMap.get(digit) || 0;
+                        const sameDay = sameDayCountMap.get(digit) || 0;
+                        const score =
+                            (hot / maxHot) * 30 +
+                            (trend / maxTrend) * 30 +
+                            (sameDay / maxSameDay) * 25 +
+                            (stale / maxStale) * 15;
+
+                        return { digit, score };
+                    }).sort((a, b) => a.score - b.score || a.digit - b.digit);
+
+                    const weakCutDigits = weakDigits
+                        .map(item => item.digit)
+                        .filter(digit => digit !== firstCutDigit)
+                        .slice(0, 2);
+
+                    if (weakCutDigits[0] !== undefined) {
+                        selectedDigits.push(weakCutDigits[0]);
                         formulaParts.push({
-                            label: staleFormulaLabel,
-                            digit: staleDigit,
+                            label: 'ตัวที่ 2 จากคะแนนอ่อนรวมหลายมุม (Hot ต่ำ + Trend ต่ำ + Pattern ต่ำ + ไม่ค้างนาน)',
+                            digit: weakCutDigits[0],
                         });
                     }
-
-                    const recent5Set = new Set(state.data.slice(0, 5).flatMap(row =>
-                        row.top3 && row.top3.length === 3 ? row.top3.split('').map(Number) : []
-                    ));
-                    const outside5Digit = Array.from({ length: 10 }, (_, digit) => digit)
-                        .filter(digit => !recent5Set.has(digit))[0];
-                    if (outside5Digit !== undefined) {
-                        selectedDigits.push(outside5Digit);
+                    if (weakCutDigits[1] !== undefined) {
+                        selectedDigits.push(weakCutDigits[1]);
                         formulaParts.push({
-                            label: 'ตัวที่ 3 จากเลขนอก 5 งวดล่าสุด',
-                            digit: outside5Digit,
+                            label: 'ตัวที่ 3 จากคะแนนอ่อนรวมหลายมุม (Hot ต่ำ + Trend ต่ำ + Pattern ต่ำ + ไม่ค้างนาน)',
+                            digit: weakCutDigits[1],
                         });
-                    } else {
-                        const fallbackDigit = getFallbackDigits(selectedDigits).find(digit => !selectedDigits.includes(digit));
-                        if (fallbackDigit !== undefined) {
-                            selectedDigits.push(fallbackDigit);
-                            formulaParts.push({
-                                label: 'ตัวที่ 3 จากเลขนอก 5 งวดล่าสุด',
-                                digit: `${fallbackDigit} (ใช้เลขสำรอง เพราะเลขนอก 5 งวดล่าสุดไม่มี/ซ้ำ)`,
-                            });
-                        } else {
-                            formulaParts.push({
-                                label: 'ตัวที่ 3 จากเลขนอก 5 งวดล่าสุด',
-                                digit: '-',
-                            });
-                        }
                     }
                     const uniqueSelectedDigits = [...new Set(selectedDigits)];
                     if (uniqueSelectedDigits.length < 3) {
@@ -1506,10 +1507,7 @@
             const dayText = state.dayFilter !== -1
                 ? `เฉพาะ${DAYS_OF_WEEK.find(day => day.index === state.dayFilter).name}`
                 : 'รวมทุกวัน';
-            const staleFormulaText = excludedHotRank >= 1
-                ? `ตัวที่ 2 จากเลขค้าง/หายไปนานค่าจำนวนครั้งมากที่สุดอันดับ ${excludedHotRank}`
-                : 'ตัวที่ 2 จากเลขค้าง/หายไปนานค่าจำนวนครั้งน้อยที่สุด';
-            const fixedCutFormulaText = `ตัวที่ 1 จากเลขที่ตัดออกจริง แสดงวันทั้งหมด, ${staleFormulaText}, ตัวที่ 3 จากเลขนอก 5 งวดล่าสุด`;
+            const fixedCutFormulaText = 'ตัวที่ 1 จากเลขที่ตัดออกจริง แสดงวันทั้งหมด แต่ข้ามเลขค้างสูง/รอกลับ, ตัวที่ 2-3 จากคะแนนอ่อนรวมหลายมุม (Hot ต่ำ + Trend ต่ำ + Pattern ต่ำ + ไม่ค้างนาน)';
             const fixedCutFormulaDetail = lastTop3CutFormulaParts.length
                 ? lastTop3CutFormulaParts.map(part => `${part.label}: ${part.digit}`).join(' | ')
                 : fixedCutFormulaText;
@@ -1518,9 +1516,6 @@
             analysis.innerHTML = `
                 <span class="block mt-1 text-xs text-indigo-600">ตัดเลขออกมากสุด${excludedHotRank ? `อันดับ ${excludedHotRank} จำนวน 1 ตัว` : ''}: <span class="font-mono">${excludedHotDigits.join(' ') || '-'}</span></span>
                 <span class="block mt-1 text-xs text-rose-600">เลขที่ตัดออกจริง แสดงวัน ทั้งหมด: <span class="font-mono">${allDayOmittedDigits.join(' ') || '-'}</span></span>
-                <span class="block mt-1 text-xs text-rose-600">เลขที่ตัดออกจริง ${currentDayContext.label}: <span class="font-mono">${currentDayOmittedDigits.join(' ') || '-'}</span></span>
-                <span class="block mt-2 text-xs text-amber-700 font-bold">สูตรที่ระบบเลือกใช้: <span class="font-mono">${cutRecommendation.modeName || '-'}</span></span>
-                <span class="block mt-1 text-xs text-amber-700 font-bold">สูตรลบ 3 ตัวที่ใช้: <span class="font-normal text-amber-600">${fixedCutFormulaText}</span></span>
                 <span class="block mt-1 text-xs text-amber-700 font-bold">รายละเอียดสูตรลบ 3 ตัว: <span class="font-normal text-amber-600">${fixedCutFormulaDetail}</span></span>
                 <span class="block mt-2 text-xs text-rose-700 font-bold">สูตรแนะนำลบออก 3 ตัวจาก 10 ตัว: <span class="font-mono text-sm">${cutRecommendation.cutDigits.join(' ') || '-'}</span></span>
                 <label class="mt-1 inline-flex items-center gap-2 text-xs text-emerald-700 font-bold cursor-pointer select-none">
@@ -1531,22 +1526,15 @@
                 </label>
                 <span class="block mt-1 text-xs text-indigo-600">Hot Numbers ${state.period} งวด: <span class="font-mono">${formatRankedDigits(hotDigits) || '-'}</span></span>
                 <span class="block mt-1 text-xs text-indigo-600">Trending Numbers ล่าสุด ${rankedDigits.trendWindow} งวด: <span class="font-mono">${formatRankedDigits(trendingDigits) || '-'}</span></span>
-                <span class="block mt-1 text-xs text-indigo-600">เลขค้าง/หายไปนาน: <span class="font-mono">${formatRankedDigits(staleDigits) || '-'}</span></span>
-                <span class="block mt-1 text-xs text-indigo-600">Pattern วันเดียวกัน: <span class="font-mono">${formatRankedDigits(sameDayDigits) || '-'}</span></span>
-                <span class="block mt-1 text-xs text-indigo-600">Pattern งวดก่อน: <span class="font-mono">${patternDigits.join(' ') || '-'}</span> | สูตรงวดล่าสุด: <span class="font-mono">${formulaDigits.join(' ') || '-'}</span></span>
-                <span class="block mt-1 text-xs text-indigo-600">เลขค้าง/รอกลับที่นำมาพิจารณา: <span class="font-mono">${returnDigits.join(' ') || '-'}</span></span>
+                <span class="block mt-1 text-xs text-indigo-600">เลขค้าง/หายไปนาน (${state.period} งวดล่าสุด): <span class="font-mono">${formatRankedDigits(staleDigits) || '-'}</span></span>
+                <span class="block mt-1 text-xs text-indigo-600">Pattern วันเดียวกัน (${state.period} งวดล่าสุด): <span class="font-mono">${formatRankedDigits(sameDayDigits) || '-'}</span></span>
             `;
             analysis.classList.remove('hidden-temp');
             window.updateTop3WinNumbers();
         };
 
         window.reapplyTop3WinAnalysis = function () {
-            const analysis = document.getElementById('top3-win-analysis');
-            if (analysis && !analysis.classList.contains('hidden-temp')) {
-                window.analyzeTop3WinDigits(state.lastTop3WinLimit || 7);
-            } else {
-                window.updateTop3WinNumbers();
-            }
+            window.analyzeTop3WinDigits(state.lastTop3WinLimit || 9);
             renderRecentDataTable();
         };
 
