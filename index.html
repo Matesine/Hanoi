@@ -1029,7 +1029,7 @@
                 ].filter(digit => !usedDigits.includes(digit));
                 if (forcedDigits.length) {
                     const trendingCutDigits = [...rankedDigits.trendingDigits]
-                        .sort((a, b) => a.count - b.count || a.digit - b.digit)
+                        .reverse()
                         .map(item => item.digit);
                     const staleCutDigits = [...rankedDigits.staleDigits]
                         .sort((a, b) => b.count - a.count || a.digit - b.digit)
@@ -1044,7 +1044,7 @@
                     const selectedDigits = [firstCutDigit];
                     const formulaParts = [
                         {
-                            label: 'ตัวที่ 1 จาก Trending Numbers ล่าสุด 10 งวดที่มีค่าน้อยที่สุด',
+                            label: 'ตัวที่ 1 จาก Trending Numbers ล่าสุด 10 งวดตัวสุดท้ายที่แสดง',
                             digit: firstCutDigit,
                         },
                     ];
@@ -1485,7 +1485,7 @@
             const dayText = state.dayFilter !== -1
                 ? `เฉพาะ${DAYS_OF_WEEK.find(day => day.index === state.dayFilter).name}`
                 : 'รวมทุกวัน';
-            const fixedCutFormulaText = 'ตัวที่ 1 จาก Trending Numbers ล่าสุด 10 งวดที่มีค่าน้อยที่สุด, ตัวที่ 2 จากเลขค้าง/หายไปนานที่ห่างจากงวดล่าสุดมากที่สุด ถ้าชนกับตัวที่ 1 ให้เลื่อนลำดับ, ตัวที่ 3 จาก Pattern วันเดียวกันตัวสุดท้ายที่แสดง';
+            const fixedCutFormulaText = 'ตัวที่ 1 จาก Trending Numbers ล่าสุด 10 งวดตัวสุดท้ายที่แสดง, ตัวที่ 2 จากเลขค้าง/หายไปนานที่ห่างจากงวดล่าสุดมากที่สุด ถ้าชนกับตัวที่ 1 ให้เลื่อนลำดับ, ตัวที่ 3 จาก Pattern วันเดียวกันตัวสุดท้ายที่แสดง';
             const fixedCutFormulaDetail = lastTop3CutFormulaParts.length
                 ? lastTop3CutFormulaParts.map(part => `${part.label}: ${part.digit}`).join(' | ')
                 : fixedCutFormulaText;
