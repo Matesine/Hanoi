@@ -1337,6 +1337,18 @@
                     const sameDayZeroDigits = rankedDigits.sameDayDigits
                         .filter(item => item.count === 0)
                         .map(item => item.digit);
+                    const latestActivePatternDigits = Array.from(latestDigits)
+                        .filter(digit => {
+                            const trend = trendCountMap.get(digit) || 0;
+                            const sameDay = sameDayCountMap.get(digit) || 0;
+                            return trend >= 10 && sameDay > 0;
+                        });
+                    const activeTrendPatternDigits = Array.from({ length: 10 }, (_, digit) => digit)
+                        .filter(digit => {
+                            const trend = trendCountMap.get(digit) || 0;
+                            const sameDay = sameDayCountMap.get(digit) || 0;
+                            return trend >= 10 && sameDay > 0;
+                        });
                     const trendingGuardDigits = rankedDigits.trendingDigits
                         .slice(0, 4)
                         .map(item => item.digit);
@@ -1345,6 +1357,8 @@
                         .map(item => item.digit);
                     const hardGuardDigits = new Set([
                         ...sameDayZeroDigits,
+                        ...activeTrendPatternDigits,
+                        ...latestActivePatternDigits,
                     ]);
                     const trendingGuardSet = new Set(trendingGuardDigits);
                     const hotGuardSet = new Set(hotGuardDigits);
@@ -1374,7 +1388,7 @@
                         .slice(0, 3)
                         .map(item => item.digit);
                     const formulaParts = selectedDigits.map((digit, index) => ({
-                        label: `ตัวที่ ${index + 1} จากคะแนนตัดหลังกันเลขแรง/เลขกลับ (กัน Pattern 0, ให้คะแนนเสี่ยงกับ Trending Top 4 + Hot Top 3 + Trend >= 10 ที่มี Pattern)`,
+                        label: `ตัวที่ ${index + 1} จากคะแนนตัดหลังกันเลขแรง/เลขกลับ (กัน Pattern 0 + Trend >= 10 ที่มี Pattern + เลขงวดล่าสุดที่ยังมี Trend/Pattern, ให้คะแนนเสี่ยงกับ Trending Top 4 + Hot Top 3)`,
                         digit,
                     }));
                     const uniqueSelectedDigits = [...new Set(selectedDigits)];
@@ -1812,13 +1826,16 @@
             const fixedCutFormulaDetail = lastTop3CutFormulaParts.length
                 ? lastTop3CutFormulaParts.map(part => `${part.label}: ${part.digit}`).join(' | ')
                 : fixedCutFormulaText;
+            const activeLotteryName = state.activeSheet && state.activeSheet.name
+                ? state.activeSheet.name
+                : 'หวย';
 
             input.value = inputDigits.join(' ');
             analysis.innerHTML = `
                 <span class="block mt-1 text-xs text-indigo-600">ตัดเลขออกมากสุด${excludedHotRank ? `อันดับ ${excludedHotRank} จำนวน 1 ตัว` : ''}: <span class="font-mono">${excludedHotDigits.join(' ') || '-'}</span></span>
                 <span class="block mt-1 text-xs text-rose-600">เลขที่ตัดออกจริง แสดงวัน ทั้งหมด: <span class="font-mono">${allDayOmittedDigits.join(' ') || '-'}</span></span>
                 <span class="block mt-1 text-xs text-amber-700 font-bold">รายละเอียดสูตรลบ 3 ตัว: <span class="font-normal text-amber-600">${fixedCutFormulaDetail}</span></span>
-                <span class="block mt-2 text-xs text-rose-700 font-bold">สูตรแนะนำลบออก 3 ตัวจาก 10 ตัว: <span class="font-mono text-sm">${cutRecommendation.cutDigits.join(' ') || '-'}</span></span>
+                <span class="block mt-2 text-xs text-rose-700 font-bold">${activeLotteryName} สูตรแนะนำลบออก 3 ตัวจาก 10 ตัว: <span class="font-mono text-sm">${cutRecommendation.cutDigits.join(' ') || '-'}</span></span>
                 <label class="mt-1 inline-flex items-center gap-2 text-xs text-emerald-700 font-bold cursor-pointer select-none">
                     <input id="top3-use-cut-keep-digits" type="checkbox" class="w-4 h-4 accent-emerald-600"
                         ${state.useTop3CutKeepDigits ? 'checked' : ''}
@@ -2067,7 +2084,10 @@
 
             const cut3ColumnTitle = document.getElementById('cut3-result-column-title');
             if (cut3ColumnTitle) {
-                cut3ColumnTitle.innerText = 'สูตรแนะนำลบออก 3 ตัว';
+                const activeLotteryName = state.activeSheet && state.activeSheet.name
+                    ? state.activeSheet.name
+                    : 'หวย';
+                cut3ColumnTitle.innerText = `${activeLotteryName} สูตรแนะนำลบออก 3 ตัว`;
             }
 
             const renderResultBadge = (isHit) => isHit
