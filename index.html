@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th">
 
 <head>
@@ -117,6 +117,30 @@
 
         <!-- Dashboard Content -->
         <div id="dashboard-content" class="hidden-temp space-y-8 animate-fade-in">
+            <div id="exphuay-catalog-panel" style="display: none !important;"
+                class="hidden-temp bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-emerald-50 px-6 py-4 border-b border-emerald-100 flex items-center justify-between gap-3">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="database" class="w-5 h-5 text-emerald-600"></i>
+                        <h3 class="font-bold text-emerald-800">รายการหวยที่ระบบจะลองดึงจาก LottoTH</h3>
+                    </div>
+                    <span id="exphuay-catalog-count" class="text-xs font-bold text-emerald-700"></span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-slate-600">
+                        <thead class="text-xs text-slate-500 uppercase bg-slate-100 border-b border-slate-200">
+                            <tr>
+                                <th class="px-4 py-3 font-semibold">ชื่อหวย</th>
+                                <th class="px-4 py-3 font-semibold">Slug</th>
+                                <th class="px-4 py-3 font-semibold">ประเภท</th>
+                                <th class="px-4 py-3 font-semibold">เวลา</th>
+                                <th class="px-4 py-3 font-semibold text-center">สถานะ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="exphuay-catalog-table"></tbody>
+                    </table>
+                </div>
+            </div>
 
             <!-- Detailed Stats Grid -->
             <div>
@@ -398,6 +422,7 @@
             lastTop3WinLimit: 9,
             useTop3CutKeepDigits: false,
             lastTop3CutKeepDigits: [],
+            exphuayCatalog: [],
         };
 
         // --- 2. ฟังก์ชันจำลองข้อมูล (Fallback) ---
@@ -419,8 +444,137 @@
             return data;
         };
 
-        // --- 3. ฟังก์ชันดึงข้อมูลจาก exphuay.com ---
+        function getCachedDataKey(slug) {
+            return `hanoi-exphuay-cache:${slug}`;
+        }
+
+        function saveCachedData(slug, rows) {
+            try {
+                const payload = rows.map(row => ({
+                    date: row.date,
+                    top3: row.top3,
+                    bot2: row.bot2,
+                    dateISO: row.dateObject ? row.dateObject.toISOString() : null,
+                }));
+                localStorage.setItem(getCachedDataKey(slug), JSON.stringify(payload));
+            } catch (_) { }
+        }
+
+        function loadCachedData(slug) {
+            try {
+                const raw = localStorage.getItem(getCachedDataKey(slug));
+                if (!raw) return [];
+                const parsed = JSON.parse(raw);
+                return parsed
+                    .map(row => ({
+                        date: row.date,
+                        top3: row.top3,
+                        bot2: row.bot2,
+                        dateObject: row.dateISO ? new Date(row.dateISO) : null,
+                    }))
+                    .filter(row => row.date && row.top3 && row.bot2 && row.dateObject && !isNaN(row.dateObject));
+            } catch (_) {
+                return [];
+            }
+        }
+
+        function serializeRowsForCache(rows) {
+            return rows.map(row => ({
+                date: row.date,
+                top3: row.top3,
+                bot2: row.bot2,
+                dateISO: row.dateObject ? row.dateObject.toISOString() : null,
+            }));
+        }
+
+        function deserializeRowsFromCache(rows) {
+            return (rows || [])
+                .map(row => ({
+                    date: row.date,
+                    top3: row.top3,
+                    bot2: row.bot2,
+                    dateObject: row.dateISO ? new Date(row.dateISO) : null,
+                }))
+                .filter(row => row.date && row.top3 && row.bot2 && row.dateObject && !isNaN(row.dateObject));
+        }
+
+        async function saveGoogleSheetCache(slug, rows) {
+            if (!GOOGLE_SHEET_CACHE_API) return false;
+            try {
+                const res = await fetch(GOOGLE_SHEET_CACHE_API, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        token: GOOGLE_SHEET_CACHE_TOKEN,
+                        action: 'save',
+                        slug,
+                        rows: serializeRowsForCache(rows),
+                    }),
+                });
+                if (!res.ok) return false;
+                const payload = await res.json();
+                return payload.ok !== false;
+            } catch (err) {
+                console.warn('Google Sheet cache save failed', err);
+                return false;
+            }
+        }
+
+        async function loadGoogleSheetCache(slug) {
+            if (!GOOGLE_SHEET_CACHE_API) return [];
+            try {
+                const url = `${GOOGLE_SHEET_CACHE_API}?action=load&token=${encodeURIComponent(GOOGLE_SHEET_CACHE_TOKEN)}&slug=${encodeURIComponent(slug)}`;
+                const res = await fetch(url, { cache: 'no-store' });
+                if (!res.ok) return [];
+                const payload = await res.json();
+                return deserializeRowsFromCache(payload.rows);
+            } catch (err) {
+                console.warn('Google Sheet cache load failed', err);
+                return [];
+            }
+        }
+
+        async function refreshGoogleSheetCache(slug) {
+            if (!GOOGLE_SHEET_CACHE_API) return [];
+            try {
+                const exphuaySlug = getExphuaySlug(slug);
+                const pages = getExphuayPagesToFetch();
+                const url = `${GOOGLE_SHEET_CACHE_API}?action=refresh&token=${encodeURIComponent(GOOGLE_SHEET_CACHE_TOKEN)}&slug=${encodeURIComponent(slug)}&exphuaySlug=${encodeURIComponent(exphuaySlug)}&pages=${encodeURIComponent(pages)}`;
+                const res = await fetch(url, { cache: 'no-store' });
+                if (!res.ok) return [];
+                const payload = await res.json();
+                if (payload.ok === false) {
+                    throw new Error(payload.error || 'Google Sheet cache refresh failed');
+                }
+                return deserializeRowsFromCache(payload.rows);
+            } catch (err) {
+                console.warn('Google Sheet cache refresh failed', err);
+                return [];
+            }
+        }
+
+        function getExphuaySlug(slug) {
+            const exphuaySlug = EXPHUAY_SLUGS[slug] || slug;
+            if (!exphuaySlug) throw new Error(`ยังไม่ได้ตั้งค่า slug ของ exphuay สำหรับ ${slug}`);
+            return exphuaySlug;
+        }
+
+        function getExphuayPagesToFetch() {
+            return Math.max(2, Math.min(20, Math.ceil((state.period || 30) / 20) + 2));
+        }
+        // --- 3. Fetch lottery results from readable lottery sources ---
+        const LOTTOTH_BASE = 'https://lottoth.co/';
+        const LOTTOTH_PATHS = {
+            gdaxi: 'ผลหวยหุ้นเยอรมัน',
+        };
+        const RAAKAADEE_BASE = 'https://www.raakaadee.com/ตรวจหวย-หุ้น/';
+        const RAAKAADEE_PATHS = {
+            laoextra: 'หวยลาว Extra',
+        };
         const EXPHUAY_BASE = 'https://exphuay.com/backward/';
+        const EXPHUAY_SLUGS = Object.fromEntries(SHEETS.map(sheet => [sheet.slug, sheet.slug]));
+        const GOOGLE_SHEET_CACHE_API = 'https://script.google.com/macros/s/AKfycbwWVOU34_3nX83FVA08xCQaqs963HZkSIqI9x9t8C56ZAsevrFYzoN9oZJ_pSAW7ayS/exec';
+        const GOOGLE_SHEET_CACHE_TOKEN = 'hanoi-cache-2026'; // ต้องตรงกับ CACHE_TOKEN ใน Apps Script
         const CORS_PROXIES = [
             url => url,
             url => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`,
@@ -428,22 +582,35 @@
             url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
         ];
 
+        async function fetchTextWithProxies(targetUrl, errorMessage) {
+            for (const proxyFn of CORS_PROXIES) {
+                try {
+                    const res = await fetch(proxyFn(targetUrl), { cache: 'no-store' });
+                    if (res.ok) return await res.text();
+                } catch (_) { }
+            }
+            throw new Error(errorMessage);
+        }
+
         const THAI_MONTHS = {
             'ม.ค.': 1, 'ก.พ.': 2, 'มี.ค.': 3, 'เม.ย.': 4,
             'พ.ค.': 5, 'มิ.ย.': 6, 'ก.ค.': 7, 'ส.ค.': 8,
-            'ก.ย.': 9, 'ต.ค.': 10, 'พ.ย.': 11, 'ธ.ค.': 12
+            'ก.ย.': 9, 'ต.ค.': 10, 'พ.ย.': 11, 'ธ.ค.': 12,
+            'มกราคม': 1, 'กุมภาพันธ์': 2, 'มีนาคม': 3, 'เมษายน': 4,
+            'พฤษภาคม': 5, 'มิถุนายน': 6, 'กรกฎาคม': 7, 'สิงหาคม': 8,
+            'กันยายน': 9, 'ตุลาคม': 10, 'พฤศจิกายน': 11, 'ธันวาคม': 12
         };
 
         // แปลงวันที่จาก href เช่น /result/xosohd?date=2026-04-20
-        // ExpHuay บางรายการเก็บ date เป็นวันก่อนหน้าผลจริง จึงขยับ +1 วันให้ตรงกับวันออกรางวัล
+        // ExpHuay backward uses the displayed result date directly.
         function parseDateFromHref(href) {
             const m = href && href.match(/date=(\d{4}-\d{2}-\d{2})/);
             if (!m) return null;
             const [y, mo, d] = m[1].split('-').map(Number);
-            return new Date(Date.UTC(y, mo - 1, d + 1));
+            return new Date(Date.UTC(y, mo - 1, d));
         }
 
-        // แปลงวันที่แบบไทย เช่น "20 เม.ย. 69" → Date object และขยับ +1 วันให้ตรงกับผลจริง
+        // แปลงวันที่แบบไทย เช่น "20 เม.ย. 69" → Date object ตามวันที่ที่เว็บแสดง
         function parseThaiDateText(text) {
             const m = text && text.match(/(\d{1,2})\s+([^\s]+)\s+(\d{2,4})/);
             if (!m) return null;
@@ -453,7 +620,7 @@
             const yearShort = yearRaw > 2400 ? yearRaw - 2500 : yearRaw;
             if (isNaN(day) || !monthNum || isNaN(yearShort)) return null;
             const ceYear = (2500 + yearShort) - 543;
-            return new Date(Date.UTC(ceYear, monthNum - 1, day + 1));
+            return new Date(Date.UTC(ceYear, monthNum - 1, day));
         }
 
         function createResultRow(dateObject, top3Raw, bot2Raw) {
@@ -471,83 +638,122 @@
             };
         }
 
-        // ดึง HTML 1 หน้าผ่าน CORS proxy (ลองทีละตัวจนกว่าจะสำเร็จ)
-        async function fetchPageHTML(slug, page) {
-            const targetUrl = `${EXPHUAY_BASE}${slug}?page=${page}`;
-            for (const proxyFn of CORS_PROXIES) {
-                try {
-                    const res = await fetch(proxyFn(targetUrl), { cache: 'no-store' });
-                    if (res.ok) return await res.text();
-                } catch (_) { }
-            }
-            throw new Error(`ไม่สามารถดึงข้อมูลหน้า ${page} ของ ${slug} ได้`);
+        function decodeSvelteKitData(data) {
+            const seen = new Map();
+            const hydrate = (value) => {
+                if (typeof value === 'number') return hydrate(data[value]);
+                if (Array.isArray(value)) return value.map(hydrate);
+                if (value && typeof value === 'object') {
+                    if (seen.has(value)) return seen.get(value);
+                    const decoded = {};
+                    seen.set(value, decoded);
+                    Object.entries(value).forEach(([key, child]) => {
+                        decoded[key] = hydrate(child);
+                    });
+                    return decoded;
+                }
+                return value;
+            };
+            return hydrate(data[0]);
         }
 
-        // แยกข้อมูลหวยจาก HTML ของ exphuay.com
-        function parseExphuayHTML(html) {
+        async function fetchExphuayCatalog() {
+            return SHEETS.map(sheet => ({
+                name: sheet.name,
+                slug: sheet.slug,
+                fn: sheet.slug,
+                type: sheet.group || '-',
+                time: '-',
+                status: true,
+            }));
+        }
+
+        function getLottoThUrl(slug) {
+            return `${LOTTOTH_BASE}${encodeURIComponent(LOTTOTH_PATHS[slug] || slug)}`;
+        }
+
+        function getRaakaadeeUrl(slug) {
+            const path = RAAKAADEE_PATHS[slug];
+            if (!path) return null;
+            return `${RAAKAADEE_BASE}${encodeURIComponent(path.trim().replace(/\s+/g, '-'))}/`;
+        }
+
+        // ดึง HTML 1 หน้าผ่าน CORS proxy (ลองทีละตัวจนกว่าจะสำเร็จ)
+        async function fetchLottoThHTML(slug) {
+            const targetUrl = getLottoThUrl(slug);
+            return fetchTextWithProxies(targetUrl, `ไม่สามารถดึงข้อมูลจาก LottoTH ของ ${slug} ได้`);
+        }
+
+        // แยกข้อมูลหวยจาก HTML ของ LottoTH
+        function parseLottoThHTML(html) {
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
             const results = [];
 
-            // ใช้ a[href*="/result/"] เพื่อระบุเฉพาะแถวผลหวยจริง
-            // ป้องกันการดึง span จากส่วน stats หรือ header ที่ไม่ใช่ผลรางวัล
-            doc.querySelectorAll('a[href*="/result/"]').forEach(anchor => {
-                const li = anchor.closest('li.grid');
-                if (!li) return;
+            const currentDateText = (doc.querySelector('h1')?.textContent || '').match(/วันที่\s+(\d{1,2}\s+[^\s]+\s+\d{2,4})/)?.[1];
+            const currentNumbers = Array.from(doc.querySelectorAll('.lotto-card .card-body .result-number'))
+                .map(node => (node.textContent || '').replace(/\D/g, ''))
+                .filter(Boolean);
+            if (currentDateText && currentNumbers.length >= 3) {
+                const row = createResultRow(parseThaiDateText(currentDateText), currentNumbers[1], currentNumbers[2]);
+                if (row) results.push(row);
+            }
 
-                // ดึงวันที่จาก href (e.g. /result/xosohd?date=2026-04-20)
-                let dateObject = parseDateFromHref(anchor.getAttribute('href'));
-                if (!dateObject) {
-                    const textParts = anchor.textContent.split('|');
-                    dateObject = parseThaiDateText(textParts[textParts.length - 1].trim());
-                }
-                if (!dateObject) return;
-
-                // ตัวเลขอยู่ใน span.text-center ภายใน li เดียวกัน
-                const numSpans = li.querySelectorAll('span.text-center');
-                if (numSpans.length < 2) return;
-
-                const top3Raw = numSpans[0].textContent.trim();
-                const bot2Raw = numSpans[1].textContent.trim();
-
-                const row = createResultRow(dateObject, top3Raw, bot2Raw);
+            doc.querySelectorAll('tbody tr').forEach(tr => {
+                const cells = Array.from(tr.querySelectorAll('td')).map(cell => (cell.textContent || '').replace(/\s+/g, ' ').trim());
+                if (cells.length < 3) return;
+                const dateText = (cells[0].match(/วันที่\s+(\d{1,2}\s+[^\s]+\s+\d{2,4})/) || [])[1];
+                const top3 = (cells[1].match(/\d{1,3}/) || [])[0];
+                const bot2 = (cells[2].match(/\d{1,2}/) || [])[0];
+                const row = createResultRow(parseThaiDateText(dateText), top3, bot2);
                 if (row) results.push(row);
             });
-
-            if (results.length === 0) {
-                const bodyText = doc.body
-                    ? (doc.body.innerText || doc.body.textContent || '')
-                    : html.replace(/<[^>]+>/g, ' ');
-                const resultPattern = /([^\n|]+)\|\s*(\d{1,2}\s+[^\s]+\s+\d{2,4})\s+(\d{1,3})\s+(\d{1,2})(?=\s|$)/g;
-                let match;
-
-                while ((match = resultPattern.exec(bodyText)) !== null) {
-                    const dateObject = parseThaiDateText(match[2]);
-                    const row = createResultRow(dateObject, match[3], match[4]);
-                    if (row) results.push(row);
-                }
-            }
 
             return results;
         }
 
-        // ดึงข้อมูลหวยจาก exphuay.com ตาม slug, period และ dayFilter ปัจจุบัน
-        async function fetchExphuayData(slug) {
-            // คำนวณจำนวนหน้าที่ต้องดึง (20 ผลต่อหน้า)
-            const pagesNeeded = Math.min(20, Math.ceil((state.period * 7) / 20) + 1);
+        function parseRaakaadeeHTML(html) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const bodyText = doc.body
+                ? (doc.body.innerText || doc.body.textContent || '').replace(/\s+/g, ' ')
+                : html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+            const resultPattern = /ตรวจผล\s+.*?(?:ปิด\s+)?(?:จ\.|อ\.|พ\.|พฤ\.|ศ\.|ส\.|อา\.)?\s*(\d{1,2}\s+[^\s]+\s+\d{2,4}).*?3\s*ตัวบน\s*(?:\|\s*)?(\d{1,3}).*?2\s*ตัวล่าง\s*(?:\|\s*)?(\d{1,2})/g;
+            const results = [];
+            let match;
+            while ((match = resultPattern.exec(bodyText)) !== null) {
+                const row = createResultRow(parseThaiDateText(match[1]), match[2], match[3]);
+                if (row) results.push(row);
+            }
+            return results;
+        }
 
-            // ดึงทุกหน้าพร้อมกัน
-            const pageNums = Array.from({ length: pagesNeeded }, (_, i) => i + 1);
-            const htmlResults = await Promise.allSettled(pageNums.map(p => fetchPageHTML(slug, p)));
+        // ดึงข้อมูลหวยจาก LottoTH ตาม slug, period และ dayFilter ปัจจุบัน
+        async function fetchLotterySourceData(slug) {
+            let allData = [];
+            const errors = [];
+            try {
+                const html = await fetchLottoThHTML(slug);
+                allData = parseLottoThHTML(html);
+                if (!allData.length) errors.push(`LottoTH ไม่พบข้อมูลของ ${slug}`);
+            } catch (err) {
+                errors.push(err.message);
+            }
 
-            const allData = [];
-            for (const r of htmlResults) {
-                if (r.status === 'fulfilled') {
-                    allData.push(...parseExphuayHTML(r.value));
+            if (!allData.length) {
+                const fallbackUrl = getRaakaadeeUrl(slug);
+                if (fallbackUrl) {
+                    try {
+                        const html = await fetchTextWithProxies(fallbackUrl, `ไม่สามารถดึงข้อมูลสำรองจาก raakaadee ของ ${slug} ได้`);
+                        allData = parseRaakaadeeHTML(html);
+                        if (!allData.length) errors.push(`raakaadee ไม่พบข้อมูลของ ${slug}`);
+                    } catch (err) {
+                        errors.push(err.message);
+                    }
                 }
             }
 
-            if (allData.length === 0) throw new Error('ไม่พบข้อมูลจาก exphuay.com');
+            if (allData.length === 0) throw new Error(`ไม่พบข้อมูลผลหวยของ ${slug} จากแหล่งที่อ่านได้ (${errors.join(' | ')})`);
 
             // เรียงจากล่าสุด → เก่าสุด และกำจัดซ้ำ
             allData.sort((a, b) => b.dateObject - a.dateObject);
@@ -564,7 +770,40 @@
                 : unique;
 
             state.allDayData = unique;
+            saveCachedData(slug, unique);
             return filtered.slice(0, state.period);
+        }
+
+        function sortUniqueRows(rows) {
+            const seen = new Set();
+            return (rows || [])
+                .filter(row => row && row.date && row.top3 && row.bot2 && row.dateObject && !isNaN(row.dateObject))
+                .sort((a, b) => b.dateObject - a.dateObject)
+                .filter(row => {
+                    if (seen.has(row.date)) return false;
+                    seen.add(row.date);
+                    return true;
+                });
+        }
+
+        function filterRowsForCurrentView(rows) {
+            const sortedRows = sortUniqueRows(rows);
+            return state.dayFilter !== -1
+                ? sortedRows.filter(row => row.dateObject.getUTCDay() === state.dayFilter)
+                : sortedRows;
+        }
+
+        function applyRowsToState(rows, slug) {
+            const sortedRows = sortUniqueRows(rows);
+            const filteredRows = filterRowsForCurrentView(sortedRows);
+            state.allDayData = sortedRows;
+            state.data = filteredRows.slice(0, state.period);
+            saveCachedData(slug, sortedRows);
+        }
+
+        function getRowsMissingFromBase(candidateRows, baseRows) {
+            const existingDates = new Set((baseRows || []).map(row => row.date));
+            return sortUniqueRows(candidateRows).filter(row => !existingDates.has(row.date));
         }
 
         async function fetchSheetData() {
@@ -577,13 +816,70 @@
             renderUI();
 
             try {
-                const results = await fetchExphuayData(state.activeSheet.slug);
-                state.data = results;
+                const slug = state.activeSheet.slug;
+                try {
+                    state.exphuayCatalog = await fetchExphuayCatalog();
+                } catch (catalogErr) {
+                    console.warn('Lottery catalog build failed', catalogErr);
+                    state.exphuayCatalog = [];
+                }
+
+                let sheetRows = await loadGoogleSheetCache(slug);
+                if (sheetRows.length) {
+                    applyRowsToState(sheetRows, slug);
+                } else {
+                    const cachedData = loadCachedData(slug);
+                    if (cachedData.length) {
+                        applyRowsToState(cachedData, slug);
+                        state.error = 'ยังไม่มีข้อมูลจาก Google Sheet สำหรับหวยนี้ จึงแสดงข้อมูลจริงล่าสุดที่บันทึกไว้ในเครื่องชั่วคราว';
+                    } else {
+                        state.data = [];
+                        state.allDayData = [];
+                    }
+                }
+
+                try {
+                    const sourceRows = await fetchLotterySourceData(slug);
+                    const allSourceRows = state.allDayData.length ? state.allDayData : sourceRows;
+                    const missingRows = getRowsMissingFromBase(allSourceRows, sheetRows);
+                    if (missingRows.length) {
+                        const savedToSheet = await saveGoogleSheetCache(slug, missingRows);
+                        sheetRows = await loadGoogleSheetCache(slug);
+                        if (sheetRows.length) {
+                            applyRowsToState(sheetRows, slug);
+                            state.error = savedToSheet
+                                ? `พบผลใหม่จากแหล่งผลหวย ${missingRows.length} งวด และบันทึกลง Google Sheet แล้ว`
+                                : `พบผลใหม่จากแหล่งผลหวย ${missingRows.length} งวด แต่บันทึกลง Google Sheet ไม่สำเร็จ จึงยังแสดงข้อมูลจาก Sheet ล่าสุด`;
+                        } else if (allSourceRows.length) {
+                            applyRowsToState(allSourceRows, slug);
+                            state.error = savedToSheet
+                                ? `พบผลใหม่จากแหล่งผลหวย ${missingRows.length} งวด และบันทึกลง Google Sheet แล้ว แต่ยังโหลด Sheet กลับมาไม่ได้ จึงแสดงข้อมูลที่ดึงได้ชั่วคราว`
+                                : `พบผลจากแหล่งผลหวย แต่บันทึกลง Google Sheet ไม่สำเร็จ จึงแสดงข้อมูลที่ดึงได้ชั่วคราว`;
+                        }
+                    }
+                } catch (sourceErr) {
+                    console.warn('Lottery source fetch failed', sourceErr);
+                    if (sheetRows.length) {
+                        state.error = `แสดงข้อมูลจาก Google Sheet แล้ว แต่ยังอ่านผลใหม่จากแหล่งผลหวยไม่ได้: ${sourceErr.message}`;
+                    } else if (!state.error) {
+                        throw sourceErr;
+                    }
+                }
             } catch (err) {
                 console.error(err);
-                state.error = `การเชื่อมต่อมีปัญหา: ${err.message} (ระบบสลับมาใช้ข้อมูลจำลองชั่วคราว)`;
-                state.data = generateMockData(state.period);
-                state.allDayData = state.data;
+                const cachedData = loadCachedData(state.activeSheet.slug);
+                if (cachedData.length) {
+                    const filteredCachedData = state.dayFilter !== -1
+                        ? cachedData.filter(row => row.dateObject.getUTCDay() === state.dayFilter)
+                        : cachedData;
+                    state.error = `การเชื่อมต่อมีปัญหา: ${err.message} (ใช้ข้อมูลจริงล่าสุดที่บันทึกไว้ชั่วคราว)`;
+                    state.allDayData = cachedData;
+                    state.data = filteredCachedData.slice(0, state.period);
+                } else {
+                    state.error = `การเชื่อมต่อมีปัญหา: ${err.message} (ยังไม่มีข้อมูลจริงใน Google Sheet หรือข้อมูลสำรองในเครื่อง)`;
+                    state.data = [];
+                    state.allDayData = [];
+                }
             } finally {
                 setTimeout(() => {
                     state.loading = false;
@@ -1679,6 +1975,7 @@
         }
 
         function renderDashboard() {
+            renderExphuayCatalogPanel();
             const stats = calculateStats();
             const topNumbers = {
                 top100: getMostFrequent(stats.top100),
@@ -1702,8 +1999,6 @@
                 ${createStatPanel('หลักร้อยบน', stats.top100, topNumbers.top100, 'bg-amber-400', 'text-amber-600', 'bg-amber-50')}
                 ${createStatPanel('หลักสิบบน', stats.top10, topNumbers.top10, 'bg-blue-500', 'text-blue-700', 'bg-blue-50')}
                 ${createStatPanel('หลักหน่วยบน', stats.top1, topNumbers.top1, 'bg-cyan-500', 'text-cyan-700', 'bg-cyan-50')}
-                ${createStatPanel('หลักสิบล่าง', stats.bot10, topNumbers.bot10, 'bg-rose-500', 'text-rose-700', 'bg-rose-50')}
-                ${createStatPanel('หลักหน่วยล่าง', stats.bot1, topNumbers.bot1, 'bg-pink-500', 'text-pink-700', 'bg-pink-50')}
             `;
             // --- เรียกใช้งานฟังก์ชันอัปเดตชุดจับคู่ตัวเลข ---
             window.updateTop3Combos();
@@ -1715,6 +2010,55 @@
             }, 50);
 
             window.reapplyTop3WinAnalysis();
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function renderExphuayCatalogPanel() {
+            const panel = document.getElementById('exphuay-catalog-panel');
+            const tableBody = document.getElementById('exphuay-catalog-table');
+            const countEl = document.getElementById('exphuay-catalog-count');
+            if (!panel || !tableBody || !countEl) return;
+
+            const catalog = Array.isArray(state.exphuayCatalog) ? state.exphuayCatalog : [];
+            if (!catalog.length) {
+                panel.classList.add('hidden-temp');
+                panel.style.display = 'none';
+                tableBody.innerHTML = '';
+                countEl.innerText = '';
+                return;
+            }
+
+            const activeSlug = state.activeSheet && state.activeSheet.slug;
+            const activeFirst = catalog.slice().sort((a, b) => {
+                if (a.slug === activeSlug) return -1;
+                if (b.slug === activeSlug) return 1;
+                return String(a.type).localeCompare(String(b.type)) || String(a.time).localeCompare(String(b.time));
+            });
+
+            panel.classList.add('hidden-temp');
+            panel.style.display = 'none';
+            countEl.innerText = `อ่านได้ ${catalog.length} รายการ`;
+            tableBody.innerHTML = activeFirst.slice(0, 80).map(item => `
+                <tr class="border-b border-slate-100 ${item.slug === activeSlug ? 'bg-emerald-50' : 'hover:bg-slate-50'}">
+                    <td class="px-4 py-2 font-bold text-slate-700">${escapeHtml(item.name)}</td>
+                    <td class="px-4 py-2 font-mono text-xs text-blue-700">${escapeHtml(item.slug)}</td>
+                    <td class="px-4 py-2 text-xs font-semibold text-slate-500">${escapeHtml(item.type)}</td>
+                    <td class="px-4 py-2 font-mono text-xs text-slate-600">${escapeHtml(item.time)}</td>
+                    <td class="px-4 py-2 text-center">
+                        <span class="inline-flex items-center justify-center min-w-14 px-2 py-1 rounded-full text-xs font-bold ${item.status ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500 border border-slate-200'}">
+                            ${item.status ? 'เปิด' : 'ปิด'}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
         }
 
         function renderRecentDataTable() {
@@ -1932,3 +2276,5 @@
 </body>
 
 </html>
+
+
