@@ -1028,41 +1028,59 @@
                     ...Array.from({ length: 10 }, (_, digit) => digit),
                 ].filter(digit => !usedDigits.includes(digit));
                 if (forcedDigits.length) {
-                    const trendingCutDigits = [...rankedDigits.trendingDigits]
-                        .reverse()
+                    const toCountMap = (items) => new Map(items.map(item => [item.digit, item.count]));
+                    const hotCountMap = toCountMap(rankedDigits.hotDigits);
+                    const trendCountMap = toCountMap(rankedDigits.trendingDigits);
+                    const staleCountMap = toCountMap(rankedDigits.staleDigits);
+                    const sameDayCountMap = toCountMap(rankedDigits.sameDayDigits);
+                    const maxOfMap = (map) => Math.max(...Array.from(map.values()), 1);
+                    const maxHot = maxOfMap(hotCountMap);
+                    const maxTrend = maxOfMap(trendCountMap);
+                    const maxStale = maxOfMap(staleCountMap);
+                    const maxSameDay = maxOfMap(sameDayCountMap);
+                    const sameDayZeroDigits = rankedDigits.sameDayDigits
+                        .filter(item => item.count === 0)
                         .map(item => item.digit);
-                    const staleCutDigits = [...rankedDigits.staleDigits]
-                        .sort((a, b) => b.count - a.count || a.digit - b.digit)
+                    const trendingGuardDigits = rankedDigits.trendingDigits
+                        .slice(0, 4)
                         .map(item => item.digit);
-                    const sameDayCutDigits = [...rankedDigits.sameDayDigits].reverse();
+                    const hotGuardDigits = rankedDigits.hotDigits
+                        .slice(0, 3)
+                        .map(item => item.digit);
+                    const hardGuardDigits = new Set([
+                        ...sameDayZeroDigits,
+                    ]);
+                    const trendingGuardSet = new Set(trendingGuardDigits);
+                    const hotGuardSet = new Set(hotGuardDigits);
+                    const cutCandidates = Array.from({ length: 10 }, (_, digit) => {
+                        const hot = hotCountMap.get(digit) || 0;
+                        const trend = trendCountMap.get(digit) || 0;
+                        const stale = staleCountMap.get(digit) || 0;
+                        const sameDay = sameDayCountMap.get(digit) || 0;
+                        const hasActiveTrendAndPattern = trend >= 10 && sameDay > 0;
+                        const score =
+                            (hot / maxHot) * 30 +
+                            (trend / maxTrend) * 35 +
+                            (stale / maxStale) * 20 +
+                            (sameDay / maxSameDay) * 15 +
+                            (trendingGuardSet.has(digit) ? 30 : 0) +
+                            (hotGuardSet.has(digit) ? 25 : 0) +
+                            (hasActiveTrendAndPattern ? 20 : 0);
 
-                    const firstCutDigit = trendingCutDigits[0];
-                    const secondCutDigit = staleCutDigits.find(digit => digit !== firstCutDigit);
-                    const thirdCutDigit = sameDayCutDigits
-                        .map(item => item.digit)
-                        .find(digit => digit !== firstCutDigit && digit !== secondCutDigit);
-                    const selectedDigits = [firstCutDigit];
-                    const formulaParts = [
-                        {
-                            label: 'ตัวที่ 1 จาก Trending Numbers ล่าสุด 10 งวดตัวสุดท้ายที่แสดง',
-                            digit: firstCutDigit,
-                        },
-                    ];
-
-                    if (secondCutDigit !== undefined) {
-                        selectedDigits.push(secondCutDigit);
-                        formulaParts.push({
-                            label: 'ตัวที่ 2 จากเลขค้าง/หายไปนานที่ห่างจากงวดล่าสุดมากที่สุด (ถ้าชนกับ Trending ให้เลื่อนลำดับ)',
-                            digit: secondCutDigit,
-                        });
-                    }
-                    if (thirdCutDigit !== undefined) {
-                        selectedDigits.push(thirdCutDigit);
-                        formulaParts.push({
-                            label: 'ตัวที่ 3 จาก Pattern วันเดียวกันตัวสุดท้ายที่แสดง',
-                            digit: thirdCutDigit,
-                        });
-                    }
+                        return { digit, score, hardGuard: hardGuardDigits.has(digit) };
+                    }).sort((a, b) =>
+                        Number(a.hardGuard) - Number(b.hardGuard) ||
+                        a.score - b.score ||
+                        a.digit - b.digit
+                    );
+                    const safeCutCandidates = cutCandidates.filter(item => !item.hardGuard);
+                    const selectedDigits = (safeCutCandidates.length >= 3 ? safeCutCandidates : cutCandidates)
+                        .slice(0, 3)
+                        .map(item => item.digit);
+                    const formulaParts = selectedDigits.map((digit, index) => ({
+                        label: `ตัวที่ ${index + 1} จากคะแนนตัดหลังกันเลขแรง/เลขกลับ (กัน Pattern 0, ให้คะแนนเสี่ยงกับ Trending Top 4 + Hot Top 3 + Trend >= 10 ที่มี Pattern)`,
+                        digit,
+                    }));
                     const uniqueSelectedDigits = [...new Set(selectedDigits)];
                     if (uniqueSelectedDigits.length < 3) {
                         selectedDigits.push(...getFallbackDigits(uniqueSelectedDigits));
@@ -1408,6 +1426,15 @@
                     returnDigits,
                 });
                 const resultDigits = [...new Set(row.top3.split('').map(Number))];
+                if (recommendation.cutDigits.length < 3) {
+                    return {
+                        cutDigits: recommendation.cutDigits,
+                        modeName: 'พักสูตร/งดตัด',
+                        isPass: null,
+                        isPaused: true,
+                        hitCutDigits: [],
+                    };
+                }
                 const cutSet = new Set(recommendation.cutDigits);
                 const hitCutDigits = resultDigits.filter(digit => cutSet.has(digit));
 
@@ -1485,7 +1512,7 @@
             const dayText = state.dayFilter !== -1
                 ? `เฉพาะ${DAYS_OF_WEEK.find(day => day.index === state.dayFilter).name}`
                 : 'รวมทุกวัน';
-            const fixedCutFormulaText = 'ตัวที่ 1 จาก Trending Numbers ล่าสุด 10 งวดตัวสุดท้ายที่แสดง, ตัวที่ 2 จากเลขค้าง/หายไปนานที่ห่างจากงวดล่าสุดมากที่สุด ถ้าชนกับตัวที่ 1 ให้เลื่อนลำดับ, ตัวที่ 3 จาก Pattern วันเดียวกันตัวสุดท้ายที่แสดง';
+            const fixedCutFormulaText = 'กันเลขแรง/เลขกลับก่อนตัด: กัน Pattern วันเดียวกันที่เป็น 0 เป็นหลัก ส่วน Trending Top 4, Hot Top 3 และ Trend >= 10 พร้อมมี Pattern วันเดียวกัน จะเป็นคะแนนเสี่ยง จากนั้นตัด 3 ตัวจากคะแนนอ่อนรวม Hot/Trend/ค้าง/Pattern';
             const fixedCutFormulaDetail = lastTop3CutFormulaParts.length
                 ? lastTop3CutFormulaParts.map(part => `${part.label}: ${part.digit}`).join(' | ')
                 : fixedCutFormulaText;
@@ -1705,6 +1732,15 @@
             const renderCut3Backtest = (result) => {
                 if (!result) {
                     return '<span class="inline-flex items-center justify-center min-w-16 px-2.5 py-1 rounded-full bg-slate-100 text-slate-400 border border-slate-200 text-xs font-bold">-</span>';
+                }
+                if (result.isPaused) {
+                    return `
+                    <div class="flex flex-col items-center gap-1">
+                        <span class="font-mono text-xs font-bold text-amber-600">พักสูตร</span>
+                        <span class="text-[10px] font-semibold text-slate-400">${result.modeName || ''}</span>
+                        <span class="inline-flex items-center justify-center min-w-16 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold">งดตัด</span>
+                    </div>
+                `;
                 }
 
                 return `
