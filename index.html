@@ -212,6 +212,12 @@
                         </select>
                         จำนวน 1 ตัว แล้วเติมเลขอันดับถัดไป
                     </label>
+                    <div class="mt-3 flex justify-start">
+                        <button id="btn-copy-top3-ai-summary" type="button" onclick="copyTop3AISummary()"
+                            class="text-xs bg-rose-600 hover:bg-rose-700 text-white px-3 py-2 rounded-md inline-flex items-center transition font-bold">
+                            <i data-lucide="bot" class="w-3.5 h-3.5 mr-1"></i> คัดลอกถาม AI
+                        </button>
+                    </div>
                     <div id="top3-win-analysis" class="mt-3 text-sm font-semibold text-indigo-800 hidden-temp"></div>
                     <div id="top3-win-grid"
                         class="mt-3 grid grid-cols-4 sm:grid-cols-6 md:grid-cols-9 lg:grid-cols-12 gap-2 max-h-[180px] overflow-y-auto p-3 bg-slate-50 border border-slate-200 rounded-lg shadow-inner">
@@ -219,6 +225,7 @@
                         </div>
                     </div>
                     <input type="hidden" id="top3-win-hidden-text">
+                    <textarea id="top3-ai-summary-text" class="hidden-temp" aria-hidden="true"></textarea>
                 </div>
             </div>
 
@@ -1829,6 +1836,17 @@
             const activeLotteryName = state.activeSheet && state.activeSheet.name
                 ? state.activeSheet.name
                 : 'หวย';
+            const aiSummaryText = [
+                `${activeLotteryName} สูตรแนะนำลบออก 3 ตัวจาก 10 ตัว: ${cutRecommendation.cutDigits.join(' ') || '-'}`,
+                `Hot Numbers ${state.period} งวด: ${formatRankedDigits(hotDigits) || '-'}`,
+                `Trending Numbers ล่าสุด ${rankedDigits.trendWindow} งวด: ${formatRankedDigits(trendingDigits) || '-'}`,
+                `เลขค้าง/หายไปนาน (${state.period} งวดล่าสุด): ${formatRankedDigits(staleDigits) || '-'}`,
+                `Pattern วันเดียวกัน (${state.period} งวดล่าสุด): ${formatRankedDigits(sameDayDigits) || '-'}`,
+            ].join('\n');
+            const aiSummaryTextArea = document.getElementById('top3-ai-summary-text');
+            if (aiSummaryTextArea) {
+                aiSummaryTextArea.value = aiSummaryText;
+            }
 
             input.value = inputDigits.join(' ');
             analysis.innerHTML = `
@@ -2273,6 +2291,36 @@
                 btn.innerHTML = originalText;
                 btn.classList.remove('bg-emerald-600');
                 btn.classList.add('bg-indigo-600');
+                if (window.lucide) lucide.createIcons();
+            }, 2000);
+        };
+
+        window.copyTop3AISummary = function () {
+            const summary = document.getElementById('top3-ai-summary-text');
+            const text = summary ? summary.value : '';
+            if (!text) return;
+
+            const tempInput = document.createElement("textarea");
+            tempInput.style.position = "absolute";
+            tempInput.style.left = "-9999px";
+            tempInput.value = text;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempInput);
+
+            const btn = document.getElementById('btn-copy-top3-ai-summary');
+            if (!btn) return;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5 mr-1"></i> คัดลอกแล้ว';
+            btn.classList.add('bg-emerald-600');
+            btn.classList.remove('bg-rose-600');
+            if (window.lucide) lucide.createIcons();
+
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.classList.remove('bg-emerald-600');
+                btn.classList.add('bg-rose-600');
                 if (window.lucide) lucide.createIcons();
             }, 2000);
         };
