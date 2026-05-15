@@ -221,6 +221,29 @@
                             <option value="2">2 ตัว</option>
                         </select>
                     </label>
+                    <label
+                        class="mt-3 ml-0 sm:ml-4 inline-flex items-center gap-2 text-sm font-semibold text-indigo-800 select-none cursor-pointer">
+                        ลำดับสูตร
+                        <select id="top3-cut-rank-mode" onchange="window.changeTop3CutRankMode(this.value)"
+                            class="bg-white border border-indigo-200 text-indigo-700 text-sm rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-1.5 font-bold outline-none shadow-sm cursor-pointer">
+                            <option value="avoid-strong" selected>หลบเลขแรงหน้าแรก</option>
+                            <option value="day-rotate">ขยับตามวัน</option>
+                            <option value="score">เรียงคะแนน</option>
+                        </select>
+                    </label>
+                    <label
+                        class="mt-3 ml-0 sm:ml-4 inline-flex items-center gap-2 text-sm font-semibold text-indigo-800 select-none cursor-pointer">
+                        เริ่มที่
+                        <select id="top3-cut-rank-start" onchange="window.changeTop3CutRankStart(this.value)"
+                            class="bg-white border border-indigo-200 text-indigo-700 text-sm rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-1.5 font-bold outline-none shadow-sm cursor-pointer">
+                            <option value="auto" selected>ตามวัน</option>
+                            <option value="1">อันดับ 1</option>
+                            <option value="2">อันดับ 2</option>
+                            <option value="3">อันดับ 3</option>
+                            <option value="4">อันดับ 4</option>
+                            <option value="5">อันดับ 5</option>
+                        </select>
+                    </label>
                     <div class="mt-3 flex justify-start">
                         <button id="btn-copy-top3-ai-summary" type="button" onclick="copyTop3AISummary()"
                             class="text-xs bg-rose-600 hover:bg-rose-700 text-white px-3 py-2 rounded-md inline-flex items-center transition font-bold">
@@ -437,6 +460,8 @@
             top3Combinations: [],
             lastTop3WinLimit: 9,
             top3CutCount: 3,
+            top3CutRankMode: 'avoid-strong',
+            top3CutRankStart: 'auto',
             useTop3CutKeepDigits: false,
             lastTop3CutKeepDigits: [],
             exphuayCatalog: [],
@@ -1031,7 +1056,83 @@
             return count === 2 ? 2 : 3;
         }
 
+        function getTop3CutRankMode() {
+            const select = document.getElementById('top3-cut-rank-mode');
+            const mode = select ? select.value : state.top3CutRankMode;
+            if (mode === 'score') return 'score';
+            if (mode === 'day-rotate') return 'day-rotate';
+            return 'avoid-strong';
+        }
+
+        function getTop3CutRankStart() {
+            const select = document.getElementById('top3-cut-rank-start');
+            const value = select ? select.value : state.top3CutRankStart;
+            const rank = Number(value);
+            return Number.isInteger(rank) && rank >= 1 ? rank - 1 : null;
+        }
+
+        function getTop3CutRotationStart(candidateCount, cutCount) {
+            const maxStart = Math.max(0, candidateCount - cutCount);
+            if (maxStart === 0) return 0;
+
+            const currentDayIndex = new Date().getDay();
+            const activeSheetOffset = state.activeSheet && state.activeSheet.slug
+                ? state.activeSheet.slug.split('').reduce((total, char) => total + char.charCodeAt(0), 0)
+                : 0;
+            return (currentDayIndex + activeSheetOffset) % (maxStart + 1);
+        }
+
+        function getTop3CutRankModeName() {
+            const mode = getTop3CutRankMode();
+            if (mode === 'score') return 'เรียงคะแนน';
+            if (mode === 'day-rotate') return 'ขยับตามวัน';
+            return 'หลบเลขแรงหน้าแรก';
+        }
+
+        function getTop3CutRankStartName() {
+            const rankStart = getTop3CutRankStart();
+            if (rankStart !== null) return `อันดับ ${rankStart + 1}`;
+            return Number.isInteger(lastTop3CutRankStartIndex)
+                ? `อันดับ ${lastTop3CutRankStartIndex + 1} (ตามวัน)`
+                : 'อันดับตามวัน';
+        }
+
+        function selectTop3CutCandidateDigits(candidates, cutCount, avoidDigits = new Set()) {
+            const mode = getTop3CutRankMode();
+            if (mode === 'score') {
+                return candidates.slice(0, cutCount).map(item => item.digit);
+            }
+
+            const manualStart = getTop3CutRankStart();
+            const maxStart = Math.max(0, candidates.length - cutCount);
+            if (mode === 'avoid-strong' && manualStart === null) {
+                const maxScanStart = Math.min(4, maxStart);
+                const rankedWindows = Array.from({ length: maxScanStart + 1 }, (_, start) => {
+                    const windowDigits = candidates.slice(start, start + cutCount).map(item => item.digit);
+                    const riskCount = windowDigits.filter(digit => avoidDigits.has(digit)).length;
+                    const scoreTotal = candidates
+                        .slice(start, start + cutCount)
+                        .reduce((total, item) => total + item.score, 0);
+                    return { start, windowDigits, riskCount, scoreTotal };
+                }).sort((a, b) =>
+                    a.riskCount - b.riskCount ||
+                    a.scoreTotal - b.scoreTotal ||
+                    a.start - b.start
+                );
+                const selectedWindow = rankedWindows[0] || { start: 0, windowDigits: [] };
+                lastTop3CutRankStartIndex = selectedWindow.start;
+                return selectedWindow.windowDigits;
+            }
+
+            const start = manualStart === null
+                ? getTop3CutRotationStart(candidates.length, cutCount)
+                : Math.min(manualStart, maxStart);
+            lastTop3CutRankStartIndex = start;
+            return candidates.slice(start, start + cutCount).map(item => item.digit);
+        }
+
         let lastTop3CutFormulaParts = [];
+        let lastTop3CutRankStartIndex = null;
 
         function buildTop3WinNumbers(rawValue, includeRepeats = shouldIncludeRepeatWinNumbers()) {
             const digits = [...new Set((rawValue.match(/\d/g) || []))];
@@ -1380,6 +1481,11 @@
                     const hotGuardDigits = rankedDigits.hotDigits
                         .slice(0, 3)
                         .map(item => item.digit);
+                    const avoidStrongDigits = new Set([
+                        ...hotGuardDigits,
+                        ...rankedDigits.trendingDigits.slice(0, 5).map(item => item.digit),
+                        ...latestDigits,
+                    ]);
                     const hardGuardDigits = new Set([
                         ...sameDayZeroDigits,
                         ...activeTrendPatternDigits,
@@ -1409,11 +1515,13 @@
                         a.digit - b.digit
                     );
                     const safeCutCandidates = cutCandidates.filter(item => !item.hardGuard);
-                    const selectedDigits = (safeCutCandidates.length >= cutCount ? safeCutCandidates : cutCandidates)
-                        .slice(0, cutCount)
-                        .map(item => item.digit);
+                    const useShiftedRank = getTop3CutRankMode() !== 'score' || getTop3CutRankStart() !== null;
+                    const selectedSource = safeCutCandidates.length >= cutCount && (!useShiftedRank || safeCutCandidates.length > cutCount)
+                        ? safeCutCandidates
+                        : cutCandidates;
+                    const selectedDigits = selectTop3CutCandidateDigits(selectedSource, cutCount, avoidStrongDigits);
                     const formulaParts = selectedDigits.map((digit, index) => ({
-                        label: `ตัวที่ ${index + 1} จากคะแนนตัดหลังกันเลขแรง/เลขกลับ (กัน Pattern 0 + Trend >= 10 ที่มี Pattern + เลขงวดล่าสุดที่ยังมี Trend/Pattern, ให้คะแนนเสี่ยงกับ Trending Top 4 + Hot Top 3)`,
+                        label: `ตัวที่ ${index + 1} จากคะแนนตัดหลังกันเลขแรง/เลขกลับ (กัน Pattern 0 + Trend >= 10 ที่มี Pattern + เลขงวดล่าสุดที่ยังมี Trend/Pattern, โหมด${getTop3CutRankModeName()} หลบ Hot Top 3 + Trending Top 5 + เลขงวดล่าสุด)`,
                         digit,
                     }));
                     const uniqueSelectedDigits = [...new Set(selectedDigits)];
@@ -1728,6 +1836,18 @@
             window.reapplyTop3WinAnalysis();
         };
 
+        window.changeTop3CutRankMode = function (mode) {
+            state.top3CutRankMode = ['score', 'day-rotate', 'avoid-strong'].includes(mode)
+                ? mode
+                : 'avoid-strong';
+            window.reapplyTop3WinAnalysis();
+        };
+
+        window.changeTop3CutRankStart = function (value) {
+            state.top3CutRankStart = value === 'auto' ? 'auto' : String(value);
+            window.reapplyTop3WinAnalysis();
+        };
+
         function getTop3CutBacktestResult(row, rowIndex, limit = state.lastTop3WinLimit || 9) {
             if (!row || !row.top3 || row.top3.length !== 3) return null;
 
@@ -1799,7 +1919,23 @@
             if (analysisLimitSelect) {
                 analysisLimitSelect.value = String(limit);
             }
+            const cutCountSelect = document.getElementById('top3-cut-count');
+            if (cutCountSelect) {
+                cutCountSelect.value = String(state.top3CutCount || 3);
+            }
+            const rankModeSelect = document.getElementById('top3-cut-rank-mode');
+            if (rankModeSelect) {
+                rankModeSelect.value = state.top3CutRankMode || 'avoid-strong';
+            }
+            const rankStartSelect = document.getElementById('top3-cut-rank-start');
+            if (rankStartSelect) {
+                rankStartSelect.value = state.top3CutRankStart || 'auto';
+            }
             state.top3CutCount = getTop3CutCount();
+            state.top3CutRankMode = getTop3CutRankMode();
+            if (rankStartSelect) {
+                state.top3CutRankStart = rankStartSelect.value || 'auto';
+            }
             const excludedHotRank = getExcludedHottestWinRank();
 
             const { rankedDigits, digits, returnDigits, excludedHotDigits } = selectTop3WinDigits(limit);
@@ -1862,8 +1998,12 @@
                 : 'หวย';
             const cutCount = getTop3CutCount();
             const keepCount = 10 - cutCount;
+            const cutRankModeName = getTop3CutRankModeName();
+            const cutRankStartName = getTop3CutRankStartName();
             const aiSummaryText = [
                 `${activeLotteryName} สูตรแนะนำลบออก ${cutCount} ตัวจาก 10 ตัว: ${cutRecommendation.cutDigits.join(' ') || '-'}`,
+                `ลำดับสูตร: ${cutRankModeName}`,
+                `เริ่มที่: ${cutRankStartName}`,
                 `Hot Numbers ${state.period} งวด: ${formatRankedDigits(hotDigits) || '-'}`,
                 `Trending Numbers ล่าสุด ${rankedDigits.trendWindow} งวด: ${formatRankedDigits(trendingDigits) || '-'}`,
                 `เลขค้าง/หายไปนาน (${state.period} งวดล่าสุด): ${formatRankedDigits(staleDigits) || '-'}`,
@@ -1880,11 +2020,17 @@
                 <span class="block mt-1 text-xs text-rose-600">เลขที่ตัดออกจริง แสดงวัน ทั้งหมด: <span class="font-mono">${allDayOmittedDigits.join(' ') || '-'}</span></span>
                 <span class="block mt-1 text-xs text-amber-700 font-bold">รายละเอียดสูตรลบ ${cutCount} ตัว: <span class="font-normal text-amber-600">${fixedCutFormulaDetail}</span></span>
                 <span class="block mt-2 text-xs text-rose-700 font-bold">${activeLotteryName} สูตรแนะนำลบออก ${cutCount} ตัวจาก 10 ตัว: <span class="font-mono text-sm">${cutRecommendation.cutDigits.join(' ') || '-'}</span></span>
-                <label class="mt-1 inline-flex items-center gap-2 text-xs text-emerald-700 font-bold cursor-pointer select-none">
+                <span class="inline-flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-xs text-sky-700 bg-sky-50 border border-sky-100 rounded-md px-2 py-1">
+                    <span class="font-bold">ลำดับสูตรที่ใช้ตอนนี้:</span>
+                    <span>ลำดับสูตร: <span class="font-bold text-sky-900">${cutRankModeName}</span></span>
+                    <span>|</span>
+                    <span>เริ่มที่: <span class="font-bold text-sky-900">${cutRankStartName}</span></span>
+                </span>
+                <label class="block mt-2 w-fit text-xs text-emerald-700 font-bold cursor-pointer select-none">
                     <input id="top3-use-cut-keep-digits" type="checkbox" class="w-4 h-4 accent-emerald-600"
                         ${state.useTop3CutKeepDigits ? 'checked' : ''}
                         onchange="window.toggleTop3CutKeepDigits(this.checked)">
-                    เลขที่เหลือ ${keepCount} ตัว: <span class="font-mono text-sm">${cutRecommendation.keepDigits.join(' ') || '-'}</span>
+                    <span class="inline-flex items-center gap-2 ml-1">เลขที่เหลือ ${keepCount} ตัว: <span class="font-mono text-sm">${cutRecommendation.keepDigits.join(' ') || '-'}</span></span>
                 </label>
                 <span class="block mt-1 text-xs text-indigo-600">Hot Numbers ${state.period} งวด: <span class="font-mono">${formatRankedDigits(hotDigits) || '-'}</span></span>
                 <span class="block mt-1 text-xs text-indigo-600">Trending Numbers ล่าสุด ${rankedDigits.trendWindow} งวด: <span class="font-mono">${formatRankedDigits(trendingDigits) || '-'}</span></span>
