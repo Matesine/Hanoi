@@ -212,6 +212,15 @@
                         </select>
                         จำนวน 1 ตัว แล้วเติมเลขอันดับถัดไป
                     </label>
+                    <label
+                        class="mt-3 ml-0 sm:ml-4 inline-flex items-center gap-2 text-sm font-semibold text-indigo-800 select-none cursor-pointer">
+                        สูตรแนะนำลบ
+                        <select id="top3-cut-count" onchange="window.changeTop3CutCount(Number(this.value))"
+                            class="bg-white border border-indigo-200 text-indigo-700 text-sm rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-1.5 font-bold outline-none shadow-sm cursor-pointer">
+                            <option value="3">3 ตัว</option>
+                            <option value="2">2 ตัว</option>
+                        </select>
+                    </label>
                     <div class="mt-3 flex justify-start">
                         <button id="btn-copy-top3-ai-summary" type="button" onclick="copyTop3AISummary()"
                             class="text-xs bg-rose-600 hover:bg-rose-700 text-white px-3 py-2 rounded-md inline-flex items-center transition font-bold">
@@ -302,7 +311,7 @@
                                 <th class="px-6 py-3 font-semibold text-center">3 ตัวบน</th>
                                 <th class="px-6 py-3 font-semibold text-center">2 ตัวล่าง</th>
                                 <th class="px-6 py-3 font-semibold text-center" id="cut3-result-column-title">
-                                    สูตรแนะนำลบออก 3 ตัวจาก 10 ตัว</th>
+                                    สูตรแนะนำลบออก 2/3 ตัวจาก 10 ตัว</th>
                             </tr>
                         </thead>
                         <tbody id="recent-data-table">
@@ -427,6 +436,7 @@
             countdown: REFRESH_INTERVAL_SECONDS,
             top3Combinations: [],
             lastTop3WinLimit: 9,
+            top3CutCount: 3,
             useTop3CutKeepDigits: false,
             lastTop3CutKeepDigits: [],
             exphuayCatalog: [],
@@ -1015,6 +1025,12 @@
             return Number.isInteger(rank) && rank >= 1 && rank <= 10 ? rank : 0;
         }
 
+        function getTop3CutCount() {
+            const select = document.getElementById('top3-cut-count');
+            const count = select ? Number(select.value) : state.top3CutCount;
+            return count === 2 ? 2 : 3;
+        }
+
         let lastTop3CutFormulaParts = [];
 
         function buildTop3WinNumbers(rawValue, includeRepeats = shouldIncludeRepeatWinNumbers()) {
@@ -1324,8 +1340,10 @@
             const staleKeepSet = new Set(rankedDigits.staleDigits.slice(0, 4).map(item => item.digit));
             const empiricalKeepSet = new Set([2, 3, 5]);
             const flowKeepSet = new Set(getPreviousDrawPatternDigits().run);
+            const cutCount = getTop3CutCount();
+            const keepCount = 10 - cutCount;
             const forceCutFromAllDayOmitted = (cutDigits) => {
-                const forcedDigits = [...new Set(allDayOmittedDigits)].slice(0, 3);
+                const forcedDigits = [...new Set(allDayOmittedDigits)].slice(0, cutCount);
                 const getFallbackDigits = (usedDigits = []) => [
                     ...cutDigits,
                     ...Array.from({ length: 10 }, (_, digit) => digit),
@@ -1391,18 +1409,18 @@
                         a.digit - b.digit
                     );
                     const safeCutCandidates = cutCandidates.filter(item => !item.hardGuard);
-                    const selectedDigits = (safeCutCandidates.length >= 3 ? safeCutCandidates : cutCandidates)
-                        .slice(0, 3)
+                    const selectedDigits = (safeCutCandidates.length >= cutCount ? safeCutCandidates : cutCandidates)
+                        .slice(0, cutCount)
                         .map(item => item.digit);
                     const formulaParts = selectedDigits.map((digit, index) => ({
                         label: `ตัวที่ ${index + 1} จากคะแนนตัดหลังกันเลขแรง/เลขกลับ (กัน Pattern 0 + Trend >= 10 ที่มี Pattern + เลขงวดล่าสุดที่ยังมี Trend/Pattern, ให้คะแนนเสี่ยงกับ Trending Top 4 + Hot Top 3)`,
                         digit,
                     }));
                     const uniqueSelectedDigits = [...new Set(selectedDigits)];
-                    if (uniqueSelectedDigits.length < 3) {
+                    if (uniqueSelectedDigits.length < cutCount) {
                         selectedDigits.push(...getFallbackDigits(uniqueSelectedDigits));
                     }
-                    const completedDigits = [...new Set(selectedDigits)].slice(0, 3).sort((a, b) => a - b);
+                    const completedDigits = [...new Set(selectedDigits)].slice(0, cutCount).sort((a, b) => a - b);
                     lastTop3CutFormulaParts = formulaParts;
                     return completedDigits;
                 }
@@ -1412,7 +1430,7 @@
                     ...Array.from({ length: 10 }, (_, digit) => digit)
                         .filter(digit => !forcedDigits.includes(digit) && !cutDigits.includes(digit)),
                 ];
-                return [...new Set(combinedDigits)].slice(0, 3).sort((a, b) => a - b);
+                return [...new Set(combinedDigits)].slice(0, cutCount).sort((a, b) => a - b);
             };
             const patternKeepSet = new Set(rankedDigits
                 .filter(item => item.formula || item.pattern)
@@ -1664,19 +1682,19 @@
             ])]
                 .map(digit => scoredDigits.find(item => item.digit === digit))
                 .filter(Boolean)
-                .slice(0, 7);
+                .slice(0, keepCount);
             const mustKeepSet = new Set(mustKeepDigits.map(item => item.digit));
             const priorityKeepDigitsRaw = [
                 ...mustKeepDigits,
                 ...scoredDigits
                     .filter(item => !mustKeepSet.has(item.digit) && (item.protectedDigit || item.keepSignals >= 2))
-                    .slice(0, Math.max(0, 7 - mustKeepDigits.length)),
+                    .slice(0, Math.max(0, keepCount - mustKeepDigits.length)),
             ];
             const priorityKeepDigits = [...new Map(priorityKeepDigitsRaw.map(item => [item.digit, item])).values()];
             const priorityKeepSet = new Set(priorityKeepDigits.map(item => item.digit));
             const fillKeepDigits = scoredDigits
                 .filter(item => !priorityKeepSet.has(item.digit))
-                .slice(0, Math.max(0, 7 - priorityKeepDigits.length));
+                .slice(0, Math.max(0, keepCount - priorityKeepDigits.length));
             const keepDigits = [...priorityKeepDigits, ...fillKeepDigits]
                 .map(item => item.digit)
                 .sort((a, b) => a - b);
@@ -1703,6 +1721,11 @@
             input.value = state.lastTop3CutKeepDigits.join(' ');
             window.updateTop3WinNumbers();
             renderRecentDataTable();
+        };
+
+        window.changeTop3CutCount = function (count) {
+            state.top3CutCount = count === 2 ? 2 : 3;
+            window.reapplyTop3WinAnalysis();
         };
 
         function getTop3CutBacktestResult(row, rowIndex, limit = state.lastTop3WinLimit || 9) {
@@ -1743,7 +1766,7 @@
                     returnDigits,
                 });
                 const resultDigits = [...new Set(row.top3.split('').map(Number))];
-                if (recommendation.cutDigits.length < 3) {
+                if (recommendation.cutDigits.length < getTop3CutCount()) {
                     return {
                         cutDigits: recommendation.cutDigits,
                         modeName: 'พักสูตร/งดตัด',
@@ -1776,6 +1799,7 @@
             if (analysisLimitSelect) {
                 analysisLimitSelect.value = String(limit);
             }
+            state.top3CutCount = getTop3CutCount();
             const excludedHotRank = getExcludedHottestWinRank();
 
             const { rankedDigits, digits, returnDigits, excludedHotDigits } = selectTop3WinDigits(limit);
@@ -1836,8 +1860,10 @@
             const activeLotteryName = state.activeSheet && state.activeSheet.name
                 ? state.activeSheet.name
                 : 'หวย';
+            const cutCount = getTop3CutCount();
+            const keepCount = 10 - cutCount;
             const aiSummaryText = [
-                `${activeLotteryName} สูตรแนะนำลบออก 3 ตัวจาก 10 ตัว: ${cutRecommendation.cutDigits.join(' ') || '-'}`,
+                `${activeLotteryName} สูตรแนะนำลบออก ${cutCount} ตัวจาก 10 ตัว: ${cutRecommendation.cutDigits.join(' ') || '-'}`,
                 `Hot Numbers ${state.period} งวด: ${formatRankedDigits(hotDigits) || '-'}`,
                 `Trending Numbers ล่าสุด ${rankedDigits.trendWindow} งวด: ${formatRankedDigits(trendingDigits) || '-'}`,
                 `เลขค้าง/หายไปนาน (${state.period} งวดล่าสุด): ${formatRankedDigits(staleDigits) || '-'}`,
@@ -1852,13 +1878,13 @@
             analysis.innerHTML = `
                 <span class="block mt-1 text-xs text-indigo-600">ตัดเลขออกมากสุด${excludedHotRank ? `อันดับ ${excludedHotRank} จำนวน 1 ตัว` : ''}: <span class="font-mono">${excludedHotDigits.join(' ') || '-'}</span></span>
                 <span class="block mt-1 text-xs text-rose-600">เลขที่ตัดออกจริง แสดงวัน ทั้งหมด: <span class="font-mono">${allDayOmittedDigits.join(' ') || '-'}</span></span>
-                <span class="block mt-1 text-xs text-amber-700 font-bold">รายละเอียดสูตรลบ 3 ตัว: <span class="font-normal text-amber-600">${fixedCutFormulaDetail}</span></span>
-                <span class="block mt-2 text-xs text-rose-700 font-bold">${activeLotteryName} สูตรแนะนำลบออก 3 ตัวจาก 10 ตัว: <span class="font-mono text-sm">${cutRecommendation.cutDigits.join(' ') || '-'}</span></span>
+                <span class="block mt-1 text-xs text-amber-700 font-bold">รายละเอียดสูตรลบ ${cutCount} ตัว: <span class="font-normal text-amber-600">${fixedCutFormulaDetail}</span></span>
+                <span class="block mt-2 text-xs text-rose-700 font-bold">${activeLotteryName} สูตรแนะนำลบออก ${cutCount} ตัวจาก 10 ตัว: <span class="font-mono text-sm">${cutRecommendation.cutDigits.join(' ') || '-'}</span></span>
                 <label class="mt-1 inline-flex items-center gap-2 text-xs text-emerald-700 font-bold cursor-pointer select-none">
                     <input id="top3-use-cut-keep-digits" type="checkbox" class="w-4 h-4 accent-emerald-600"
                         ${state.useTop3CutKeepDigits ? 'checked' : ''}
                         onchange="window.toggleTop3CutKeepDigits(this.checked)">
-                    เลขที่เหลือ 7 ตัว: <span class="font-mono text-sm">${cutRecommendation.keepDigits.join(' ') || '-'}</span>
+                    เลขที่เหลือ ${keepCount} ตัว: <span class="font-mono text-sm">${cutRecommendation.keepDigits.join(' ') || '-'}</span>
                 </label>
                 <span class="block mt-1 text-xs text-indigo-600">Hot Numbers ${state.period} งวด: <span class="font-mono">${formatRankedDigits(hotDigits) || '-'}</span></span>
                 <span class="block mt-1 text-xs text-indigo-600">Trending Numbers ล่าสุด ${rankedDigits.trendWindow} งวด: <span class="font-mono">${formatRankedDigits(trendingDigits) || '-'}</span></span>
@@ -2105,7 +2131,7 @@
                 const activeLotteryName = state.activeSheet && state.activeSheet.name
                     ? state.activeSheet.name
                     : 'หวย';
-                cut3ColumnTitle.innerText = `${activeLotteryName} สูตรแนะนำลบออก 3 ตัว`;
+                cut3ColumnTitle.innerText = `${activeLotteryName} สูตรแนะนำลบออก ${getTop3CutCount()} ตัว`;
             }
 
             const renderResultBadge = (isHit) => isHit
