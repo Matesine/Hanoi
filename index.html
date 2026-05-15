@@ -242,6 +242,8 @@
                             <option value="3">อันดับ 3</option>
                             <option value="4">อันดับ 4</option>
                             <option value="5">อันดับ 5</option>
+                            <option value="6">อันดับ 6</option>
+                            <option value="7">อันดับ 7</option>
                         </select>
                     </label>
                     <div class="mt-3 flex justify-start">
@@ -464,6 +466,7 @@
             top3CutRankStart: 'auto',
             useTop3CutKeepDigits: false,
             lastTop3CutKeepDigits: [],
+            lastTop3CutRecommendation: null,
             exphuayCatalog: [],
         };
 
@@ -488,6 +491,63 @@
 
         function getCachedDataKey(slug) {
             return `hanoi-exphuay-cache:${slug}`;
+        }
+
+        const TOP3_CUT_FORMULA_HISTORY_KEY = 'hanoi-top3-cut-formula-history:v1';
+
+        function formatFormulaHistoryDate(date) {
+            return [
+                String(date.getDate()).padStart(2, '0'),
+                String(date.getMonth() + 1).padStart(2, '0'),
+                date.getFullYear(),
+            ].join('/');
+        }
+
+        function getTop3CutFormulaTargetDate() {
+            const today = new Date();
+            const todayText = formatFormulaHistoryDate(today);
+            const latestDate = (state.allDayData && state.allDayData[0] && state.allDayData[0].date)
+                || (state.data && state.data[0] && state.data[0].date)
+                || '';
+
+            if (latestDate === todayText) {
+                const nextDate = new Date(today);
+                nextDate.setDate(today.getDate() + 1);
+                return formatFormulaHistoryDate(nextDate);
+            }
+
+            return todayText;
+        }
+
+        function loadTop3CutFormulaHistory() {
+            try {
+                const raw = localStorage.getItem(TOP3_CUT_FORMULA_HISTORY_KEY);
+                const parsed = raw ? JSON.parse(raw) : {};
+                return parsed && typeof parsed === 'object' ? parsed : {};
+            } catch (err) {
+                console.warn('Top3 cut formula history load failed', err);
+                return {};
+            }
+        }
+
+        function saveTop3CutFormulaHistoryRecord(record) {
+            if (!record || !record.slug || !record.date || !record.cutCount) return;
+            try {
+                const history = loadTop3CutFormulaHistory();
+                const key = `${record.slug}|${record.date}|${record.cutCount}`;
+                history[key] = {
+                    ...record,
+                    savedAt: new Date().toISOString(),
+                };
+                localStorage.setItem(TOP3_CUT_FORMULA_HISTORY_KEY, JSON.stringify(history));
+            } catch (err) {
+                console.warn('Top3 cut formula history save failed', err);
+            }
+        }
+
+        function getSavedTop3CutFormulaRecord(slug, date, cutCount = getTop3CutCount()) {
+            const history = loadTop3CutFormulaHistory();
+            return history[`${slug}|${date}|${cutCount}`] || null;
         }
 
         function saveCachedData(slug, rows) {
@@ -1890,6 +1950,8 @@
                     return {
                         cutDigits: recommendation.cutDigits,
                         modeName: 'พักสูตร/งดตัด',
+                        rankModeName: getTop3CutRankModeName(),
+                        rankStartName: getTop3CutRankStartName(),
                         isPass: null,
                         isPaused: true,
                         hitCutDigits: [],
@@ -1901,6 +1963,8 @@
                 return {
                     cutDigits: recommendation.cutDigits,
                     modeName: recommendation.modeName,
+                    rankModeName: getTop3CutRankModeName(),
+                    rankStartName: getTop3CutRankStartName(),
                     isPass: hitCutDigits.length === 0,
                     hitCutDigits,
                 };
@@ -2000,8 +2064,28 @@
             const keepCount = 10 - cutCount;
             const cutRankModeName = getTop3CutRankModeName();
             const cutRankStartName = getTop3CutRankStartName();
+            const formulaTargetDate = getTop3CutFormulaTargetDate();
+            state.lastTop3CutRecommendation = {
+                cutDigits: [...cutRecommendation.cutDigits],
+                keepDigits: [...cutRecommendation.keepDigits],
+                rankModeName: cutRankModeName,
+                rankStartName: cutRankStartName,
+                date: formulaTargetDate,
+            };
+            saveTop3CutFormulaHistoryRecord({
+                slug: state.activeSheet && state.activeSheet.slug,
+                lotteryName: activeLotteryName,
+                date: formulaTargetDate,
+                cutCount,
+                cutDigits: [...cutRecommendation.cutDigits],
+                keepDigits: [...cutRecommendation.keepDigits],
+                rankModeName: cutRankModeName,
+                rankStartName: cutRankStartName,
+                period: state.period,
+                limit,
+            });
             const aiSummaryText = [
-                `${activeLotteryName} สูตรแนะนำลบออก ${cutCount} ตัวจาก 10 ตัว: ${cutRecommendation.cutDigits.join(' ') || '-'}`,
+                `${activeLotteryName} วันที่ ${formulaTargetDate} สูตรแนะนำลบออก ${cutCount} ตัวจาก 10 ตัว: ${cutRecommendation.cutDigits.join(' ') || '-'}`,
                 `ลำดับสูตร: ${cutRankModeName}`,
                 `เริ่มที่: ${cutRankStartName}`,
                 `Hot Numbers ${state.period} งวด: ${formatRankedDigits(hotDigits) || '-'}`,
@@ -2019,7 +2103,7 @@
                 <span class="block mt-1 text-xs text-indigo-600">ตัดเลขออกมากสุด${excludedHotRank ? `อันดับ ${excludedHotRank} จำนวน 1 ตัว` : ''}: <span class="font-mono">${excludedHotDigits.join(' ') || '-'}</span></span>
                 <span class="block mt-1 text-xs text-rose-600">เลขที่ตัดออกจริง แสดงวัน ทั้งหมด: <span class="font-mono">${allDayOmittedDigits.join(' ') || '-'}</span></span>
                 <span class="block mt-1 text-xs text-amber-700 font-bold">รายละเอียดสูตรลบ ${cutCount} ตัว: <span class="font-normal text-amber-600">${fixedCutFormulaDetail}</span></span>
-                <span class="block mt-2 text-xs text-rose-700 font-bold">${activeLotteryName} สูตรแนะนำลบออก ${cutCount} ตัวจาก 10 ตัว: <span class="font-mono text-sm">${cutRecommendation.cutDigits.join(' ') || '-'}</span></span>
+                <span class="block mt-2 text-xs text-rose-700 font-bold">${activeLotteryName} วันที่ ${formulaTargetDate} สูตรแนะนำลบออก ${cutCount} ตัวจาก 10 ตัว: <span class="font-mono text-sm">${cutRecommendation.cutDigits.join(' ') || '-'}</span></span>
                 <span class="inline-flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-xs text-sky-700 bg-sky-50 border border-sky-100 rounded-md px-2 py-1">
                     <span class="font-bold">ลำดับสูตรที่ใช้ตอนนี้:</span>
                     <span>ลำดับสูตร: <span class="font-bold text-sky-900">${cutRankModeName}</span></span>
@@ -2291,7 +2375,7 @@
                     return `
                     <div class="flex flex-col items-center gap-1">
                         <span class="font-mono text-xs font-bold text-amber-600">พักสูตร</span>
-                        <span class="text-[10px] font-semibold text-slate-400">${result.modeName || ''}</span>
+                        <span class="text-[10px] font-semibold text-slate-400">${result.rankModeName || '-'} / ${result.rankStartName || '-'}</span>
                         <span class="inline-flex items-center justify-center min-w-16 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold">งดตัด</span>
                     </div>
                 `;
@@ -2300,12 +2384,43 @@
                 return `
                     <div class="flex flex-col items-center gap-1">
                         <span class="font-mono text-xs font-bold text-slate-600">${result.cutDigits.join(' ')}</span>
-                        <span class="text-[10px] font-semibold text-slate-400">${result.modeName || ''}</span>
+                        <span class="text-[10px] font-semibold text-slate-400">${result.rankModeName || '-'} / ${result.rankStartName || '-'}</span>
                         ${renderResultBadge(result.isPass)}
                     </div>
                 `;
             };
-            const cut3Results = state.data.map((row, index) => getTop3CutBacktestResult(row, index));
+            const buildStoredFormulaResult = (row, record) => {
+                const cutDigits = Array.isArray(record.cutDigits) ? record.cutDigits : [];
+                const cutSet = new Set(cutDigits);
+                const resultDigits = [...new Set(row.top3.split('').map(Number).filter(num => !isNaN(num)))];
+                const hitCutDigits = resultDigits.filter(digit => cutSet.has(digit));
+                return {
+                    cutDigits,
+                    rankModeName: record.rankModeName,
+                    rankStartName: record.rankStartName,
+                    isPass: hitCutDigits.length === 0,
+                    hitCutDigits,
+                };
+            };
+            const activeSlug = state.activeSheet && state.activeSheet.slug;
+            const cut3Results = state.data.map((row, index) => {
+                const savedRecord = activeSlug
+                    ? getSavedTop3CutFormulaRecord(activeSlug, row.date, getTop3CutCount())
+                    : null;
+                if (savedRecord) {
+                    return buildStoredFormulaResult(row, savedRecord);
+                }
+
+                if (
+                    index === 0 &&
+                    state.lastTop3CutRecommendation &&
+                    state.lastTop3CutRecommendation.date === row.date
+                ) {
+                    return buildStoredFormulaResult(row, state.lastTop3CutRecommendation);
+                }
+
+                return getTop3CutBacktestResult(row, index);
+            });
             tableBody.innerHTML = state.data.map((row, index) => `
                 <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                     <td class="px-6 py-3 whitespace-nowrap">${row.date}</td>
