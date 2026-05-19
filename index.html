@@ -2403,8 +2403,9 @@
                 };
             };
             const activeSlug = state.activeSheet && state.activeSheet.slug;
+            const useSavedFormulaRecords = getTop3CutRankStart() === null;
             const cut3Results = state.data.map((row, index) => {
-                const savedRecord = activeSlug
+                const savedRecord = useSavedFormulaRecords && activeSlug
                     ? getSavedTop3CutFormulaRecord(activeSlug, row.date, getTop3CutCount())
                     : null;
                 if (savedRecord) {
@@ -2412,6 +2413,7 @@
                 }
 
                 if (
+                    useSavedFormulaRecords &&
                     index === 0 &&
                     state.lastTop3CutRecommendation &&
                     state.lastTop3CutRecommendation.date === row.date
