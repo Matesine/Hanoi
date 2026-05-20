@@ -322,10 +322,21 @@
 
             <!-- Recent Data Table (Preview) -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mt-8">
-                <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                     <div class="flex items-center space-x-2">
                         <i data-lucide="calendar-days" class="w-5 h-5 text-slate-500"></i>
                         <h3 class="font-bold text-slate-700" id="table-title">ข้อมูลที่ใช้คำนวณ</h3>
+                    </div>
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2 text-xs text-slate-600">
+                        <label for="custom-cut-backtest-input" class="font-bold text-slate-700 whitespace-nowrap">เช็คเลขลบย้อนหลัง</label>
+                        <input id="custom-cut-backtest-input" type="text" inputmode="numeric" maxlength="10"
+                            oninput="window.updateCustomCutBacktest(this.value)" placeholder="เช่น 012"
+                            class="w-full sm:w-32 bg-white border border-slate-200 rounded-md px-3 py-2 text-sm font-mono font-bold text-slate-700 outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400">
+                        <button type="button" onclick="window.findBestCustomCutBacktest()"
+                            class="bg-sky-600 hover:bg-sky-700 text-white px-3 py-2 rounded-md font-bold transition whitespace-nowrap">
+                            หาเลขดีที่สุด
+                        </button>
+                        <span id="custom-cut-backtest-summary" class="font-bold text-sky-700 whitespace-nowrap"></span>
                     </div>
                 </div>
                 <div class="overflow-x-auto">
@@ -337,6 +348,8 @@
                                 <th class="px-6 py-3 font-semibold text-center">2 ตัวล่าง</th>
                                 <th class="px-6 py-3 font-semibold text-center" id="cut3-result-column-title">
                                     สูตรแนะนำลบออก 2/3 ตัวจาก 10 ตัว</th>
+                                <th class="px-6 py-3 font-semibold text-center" id="custom-cut-result-column-title">
+                                    เช็คเลขลบย้อนหลัง</th>
                             </tr>
                         </thead>
                         <tbody id="recent-data-table">
@@ -467,6 +480,7 @@
             useTop3CutKeepDigits: false,
             lastTop3CutKeepDigits: [],
             lastTop3CutRecommendation: null,
+            customCutBacktestDigits: [],
             exphuayCatalog: [],
         };
 
@@ -1212,6 +1226,59 @@
 
             return [...results];
         }
+
+        window.updateCustomCutBacktest = function (rawValue) {
+            state.customCutBacktestDigits = [...new Set((String(rawValue || '').match(/\d/g) || []).map(Number))];
+            renderRecentDataTable();
+        };
+
+        function getCombinations(items, size) {
+            const results = [];
+            const walk = (start, combo) => {
+                if (combo.length === size) {
+                    results.push([...combo]);
+                    return;
+                }
+                for (let index = start; index < items.length; index++) {
+                    combo.push(items[index]);
+                    walk(index + 1, combo);
+                    combo.pop();
+                }
+            };
+            walk(0, []);
+            return results;
+        }
+
+        function scoreCustomCutDigits(rows, digits) {
+            const cutSet = new Set(digits);
+            return rows.reduce((passCount, row) => {
+                if (!row || !row.top3) return passCount;
+                const resultDigits = [...new Set(row.top3.split('').map(Number).filter(num => !isNaN(num)))];
+                return resultDigits.some(digit => cutSet.has(digit)) ? passCount : passCount + 1;
+            }, 0);
+        }
+
+        window.findBestCustomCutBacktest = function () {
+            const input = document.getElementById('custom-cut-backtest-input');
+            const currentDigits = input
+                ? [...new Set((input.value.match(/\d/g) || []).map(Number))]
+                : [];
+            const size = currentDigits.length || getTop3CutCount();
+            const digits = Array.from({ length: 10 }, (_, digit) => digit);
+            const rows = state.data || [];
+            const combos = getCombinations(digits, Math.max(1, Math.min(10, size)));
+            const scored = combos
+                .map(combo => ({ combo, passCount: scoreCustomCutDigits(rows, combo) }))
+                .sort((a, b) =>
+                    b.passCount - a.passCount ||
+                    a.combo.join('').localeCompare(b.combo.join(''))
+                );
+            const best = scored[0];
+            if (!best || !input) return;
+
+            input.value = best.combo.join('');
+            window.updateCustomCutBacktest(input.value);
+        };
 
         window.updateTop3WinNumbers = function () {
             const input = document.getElementById('top3-win-input');
@@ -2363,10 +2430,39 @@
                     : 'หวย';
                 cut3ColumnTitle.innerText = `${activeLotteryName} สูตรแนะนำลบออก ${getTop3CutCount()} ตัว`;
             }
+            const customCutColumnTitle = document.getElementById('custom-cut-result-column-title');
+            const customDigits = Array.isArray(state.customCutBacktestDigits) ? state.customCutBacktestDigits : [];
+            if (customCutColumnTitle) {
+                customCutColumnTitle.innerText = customDigits.length
+                    ? `เช็คเลขลบ ${customDigits.join('')}`
+                    : 'เช็คเลขลบย้อนหลัง';
+            }
 
             const renderResultBadge = (isHit) => isHit
                 ? '<span class="inline-flex items-center justify-center min-w-16 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">ถูก</span>'
                 : '<span class="inline-flex items-center justify-center min-w-16 px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200 text-xs font-bold">ไม่ถูก</span>';
+            const getCustomBacktestResult = (row) => {
+                if (!customDigits.length || !row || !row.top3) return null;
+                const cutSet = new Set(customDigits);
+                const resultDigits = [...new Set(row.top3.split('').map(Number).filter(num => !isNaN(num)))];
+                const hitCutDigits = resultDigits.filter(digit => cutSet.has(digit));
+                return {
+                    cutDigits: customDigits,
+                    isPass: hitCutDigits.length === 0,
+                    hitCutDigits,
+                };
+            };
+            const renderCustomBacktest = (result) => {
+                if (!result) {
+                    return '<span class="inline-flex items-center justify-center min-w-16 px-2.5 py-1 rounded-full bg-slate-100 text-slate-400 border border-slate-200 text-xs font-bold">-</span>';
+                }
+                return `
+                    <div class="flex flex-col items-center gap-1">
+                        <span class="font-mono text-xs font-bold text-slate-600">${result.cutDigits.join(' ')}</span>
+                        ${renderResultBadge(result.isPass)}
+                    </div>
+                `;
+            };
             const renderCut3Backtest = (result) => {
                 if (!result) {
                     return '<span class="inline-flex items-center justify-center min-w-16 px-2.5 py-1 rounded-full bg-slate-100 text-slate-400 border border-slate-200 text-xs font-bold">-</span>';
@@ -2423,6 +2519,27 @@
 
                 return getTop3CutBacktestResult(row, index);
             });
+            const customBacktestResults = state.data.map(row => getCustomBacktestResult(row));
+            const customBacktestSummary = document.getElementById('custom-cut-backtest-summary');
+            if (customBacktestSummary) {
+                const testedResults = customBacktestResults.filter(Boolean);
+                const passCount = testedResults.filter(result => result.isPass).length;
+                const bestText = customDigits.length
+                    ? (() => {
+                        const size = customDigits.length;
+                        const best = getCombinations(Array.from({ length: 10 }, (_, digit) => digit), size)
+                            .map(combo => ({ combo, passCount: scoreCustomCutDigits(state.data, combo) }))
+                            .sort((a, b) =>
+                                b.passCount - a.passCount ||
+                                a.combo.join('').localeCompare(b.combo.join(''))
+                            )[0];
+                        return best ? ` | สูงสุด ${best.combo.join('')} ${best.passCount}/${state.data.length}` : '';
+                    })()
+                    : '';
+                customBacktestSummary.innerText = customDigits.length
+                    ? `ถูก ${passCount}/${testedResults.length} งวด${bestText}`
+                    : '';
+            }
             tableBody.innerHTML = state.data.map((row, index) => `
                 <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                     <td class="px-6 py-3 whitespace-nowrap">${row.date}</td>
@@ -2430,6 +2547,9 @@
                     <td class="px-6 py-3 text-center font-mono font-bold text-rose-500 tracking-widest text-base">${row.bot2}</td>
                     <td class="px-6 py-3 text-center">
                         ${renderCut3Backtest(cut3Results[index])}
+                    </td>
+                    <td class="px-6 py-3 text-center">
+                        ${renderCustomBacktest(customBacktestResults[index])}
                     </td>
                 </tr>
             `).join('');
