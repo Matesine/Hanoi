@@ -504,6 +504,8 @@
             loading: false,
             error: null,
             autoRefreshEnabled: false,
+            autoRefreshInProgress: false,
+            autoRefreshProgress: { current: 0, total: 0, saved: 0, failed: 0, lastName: '' },
             autoRefreshIntervalId: null,
             countdownIntervalId: null,
             countdown: REFRESH_INTERVAL_SECONDS,
@@ -691,8 +693,8 @@
             }
         }
 
-        async function refreshGoogleSheetCache(slug) {
-            if (!GOOGLE_SHEET_CACHE_API) return [];
+        async function refreshGoogleSheetCacheWithMeta(slug) {
+            if (!GOOGLE_SHEET_CACHE_API) return { rows: [], saved: 0 };
             try {
                 const exphuaySlug = getExphuaySlug(slug);
                 const pages = getExphuayPagesToFetch();
@@ -703,9 +705,21 @@
                 if (payload.ok === false) {
                     throw new Error(payload.error || 'Google Sheet cache refresh failed');
                 }
-                return deserializeRowsFromCache(payload.rows);
+                return {
+                    rows: deserializeRowsFromCache(payload.rows),
+                    saved: Number(payload.saved || 0),
+                };
             } catch (err) {
                 console.warn('Google Sheet cache refresh failed', err);
+                throw err;
+            }
+        }
+
+        async function refreshGoogleSheetCache(slug) {
+            try {
+                const result = await refreshGoogleSheetCacheWithMeta(slug);
+                return result.rows;
+            } catch (_) {
                 return [];
             }
         }
@@ -885,8 +899,8 @@
             return results;
         }
 
-        // ดึงข้อมูลหวยจาก LottoTH ตาม slug, period และ dayFilter ปัจจุบัน
-        async function fetchLotterySourceData(slug) {
+        // ดึงข้อมูลหวยจากแหล่งผลจริงตาม slug โดยไม่เปลี่ยน state หน้าจอ
+        async function fetchLotterySourceRows(slug) {
             let allData = [];
             const errors = [];
             try {
@@ -920,6 +934,13 @@
                 seen.add(row.date);
                 return true;
             });
+
+            return unique;
+        }
+
+        // ดึงข้อมูลหวยจาก LottoTH ตาม slug, period และ dayFilter ปัจจุบัน
+        async function fetchLotterySourceData(slug) {
+            const unique = await fetchLotterySourceRows(slug);
 
             // กรองตามวันในสัปดาห์ (ใช้ UTC Day ตรงกับวันที่บันทึก)
             const filtered = state.dayFilter !== -1
@@ -1140,11 +1161,127 @@
         }
 
         // --- ฟังก์ชันสำหรับอัปเดตอัตโนมัติ ---
+        function resetAutoRefreshProgress(total = SHEETS.length) {
+            state.autoRefreshProgress = {
+                current: 0,
+                total,
+                saved: 0,
+                failed: 0,
+                lastName: '',
+            };
+        }
+
+        function applyLoadedRowsAfterAutoRefresh(slug, rows) {
+            const sortedRows = sortUniqueRows(rows);
+            if (!sortedRows.length) return;
+
+            saveCachedData(slug, sortedRows);
+            syncGroupTop3Rows(slug, sortedRows);
+
+            if (state.activeSheet && state.activeSheet.slug === slug) {
+                const filteredRows = filterRowsForCurrentView(sortedRows);
+                state.allDayData = sortedRows;
+                state.data = filteredRows.slice(0, state.period);
+            }
+        }
+
+        async function refreshSingleLotteryForAutoUpdate(sheet) {
+            let sheetRows = await loadGoogleSheetCache(sheet.slug);
+            const sourceRows = await fetchLotterySourceRows(sheet.slug);
+            const missingRows = getRowsMissingFromBase(sourceRows, sheetRows);
+            let savedToSheet = true;
+
+            if (missingRows.length) {
+                savedToSheet = await saveGoogleSheetCache(sheet.slug, missingRows);
+                if (!savedToSheet) {
+                    throw new Error(`บันทึกผลใหม่ ${missingRows.length} งวดลง Google Sheet ไม่สำเร็จ`);
+                }
+                if (savedToSheet) {
+                    sheetRows = await loadGoogleSheetCache(sheet.slug);
+                }
+            }
+
+            const rowsForDisplay = sheetRows.length ? sheetRows : sourceRows;
+            applyLoadedRowsAfterAutoRefresh(sheet.slug, rowsForDisplay);
+
+            return {
+                slug: sheet.slug,
+                name: sheet.name,
+                saved: savedToSheet ? missingRows.length : 0,
+                missing: missingRows.length,
+                fetched: sourceRows.length,
+                savedToSheet,
+            };
+        }
+
+        async function refreshAllLotteriesForAutoUpdate() {
+            if (state.autoRefreshInProgress) return;
+
+            const sheetsToRefresh = SHEETS.slice();
+            const batchSize = 4;
+            resetAutoRefreshProgress(sheetsToRefresh.length);
+            state.autoRefreshInProgress = true;
+            updateRefreshStatus();
+
+            const results = [];
+            for (let start = 0; start < sheetsToRefresh.length; start += batchSize) {
+                const batch = sheetsToRefresh.slice(start, start + batchSize);
+                const batchResults = await Promise.all(batch.map(async sheet => {
+                    try {
+                        const result = await refreshSingleLotteryForAutoUpdate(sheet);
+                        state.autoRefreshProgress.saved += result.saved;
+                        return { ok: true, ...result };
+                    } catch (err) {
+                        state.autoRefreshProgress.failed++;
+                        console.warn(`Auto update failed for ${sheet.slug}`, err);
+                        return {
+                            ok: false,
+                            slug: sheet.slug,
+                            name: sheet.name,
+                            saved: 0,
+                            error: err && err.message ? err.message : String(err),
+                        };
+                    } finally {
+                        state.autoRefreshProgress.current++;
+                        state.autoRefreshProgress.lastName = sheet.name;
+                        updateRefreshStatus();
+                    }
+                }));
+                results.push(...batchResults);
+            }
+
+            state.autoRefreshInProgress = false;
+
+            const successCount = results.filter(result => result.ok).length;
+            const savedCount = results.reduce((total, result) => total + (result.saved || 0), 0);
+            const failedCount = results.length - successCount;
+
+            state.error = failedCount
+                ? `อัปเดตทุกหวยเสร็จแล้ว: เติมผลใหม่ ${savedCount} งวด, อ่านไม่ได้ ${failedCount} หวย และไม่เขียนทับผลที่มีอยู่แล้ว`
+                : `อัปเดตทุกหวยเสร็จแล้ว: เติมผลใหม่ ${savedCount} งวด โดยไม่เขียนทับผลที่มีอยู่แล้ว`;
+
+            renderUI();
+            updateRefreshStatus();
+        }
+
+        async function runAutoRefreshCycle() {
+            if (state.autoRefreshInProgress) return;
+            if (state.autoRefreshEnabled) {
+                resetAutoRefreshTimer();
+            }
+            await refreshAllLotteriesForAutoUpdate();
+        }
+
         function updateRefreshStatus() {
             const statusEl = document.getElementById('refresh-status');
             if (!statusEl) return;
 
-            if (state.autoRefreshEnabled && state.countdownIntervalId) {
+            if (state.autoRefreshInProgress) {
+                const progress = state.autoRefreshProgress || {};
+                statusEl.innerText = `อัปเดต ${progress.current || 0}/${progress.total || SHEETS.length}`;
+                statusEl.classList.remove('text-amber-200');
+                statusEl.classList.add('text-blue-200');
+            } else if (state.autoRefreshEnabled && state.countdownIntervalId) {
                 const minutes = Math.floor(state.countdown / 60);
                 const seconds = state.countdown % 60;
                 statusEl.innerText = `รีเฟรชใน ${minutes}:${seconds.toString().padStart(2, '0')}`;
@@ -1171,8 +1308,8 @@
 
             // ตั้งเวลาสำหรับดึงข้อมูลครั้งถัดไป
             state.autoRefreshIntervalId = setInterval(() => {
-                if (state.loading) return;
-                fetchSheetData(); // การเรียกนี้จะรีเซ็ต timer อีกครั้ง
+                if (state.loading || state.autoRefreshInProgress) return;
+                runAutoRefreshCycle(); // การเรียกนี้จะรีเซ็ต timer อีกครั้ง
             }, REFRESH_INTERVAL_SECONDS * 1000);
 
             // ตั้งเวลานับถอยหลังเพื่อแสดงผลบน UI
@@ -1190,7 +1327,7 @@
         window.toggleAutoRefresh = function (isEnabled) {
             state.autoRefreshEnabled = isEnabled;
             if (isEnabled) {
-                fetchSheetData(); // เริ่มดึงข้อมูลครั้งแรก ซึ่งจะไปกระตุ้นการตั้งเวลา
+                runAutoRefreshCycle(); // เริ่มดึงทุกหวยครั้งแรก ซึ่งจะไปกระตุ้นการตั้งเวลา
             } else {
                 clearAutoRefreshTimers(); // หยุดการทำงานทั้งหมด
                 updateRefreshStatus();
