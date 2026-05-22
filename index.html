@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 
 <head>
@@ -2733,14 +2733,22 @@
                     b.count - a.count ||
                     a.digit - b.digit
                 );
-            const cutDigits = ranked
-                .slice()
+            // สูตรแนวทาง ค (สูตรโซนกลางกระจายต่ำ):
+            // 1. เลือกผู้สมัครโซนกลาง (อันดับ 4, 5, 6, 7 ในตารางจากมากไปน้อย คือ index 3 ถึง 6)
+            const middleCandidates = ranked.slice(3, 7);
+            // 2. จัดเรียงผู้สมัครในโซนกลางตาม:
+            //    - จำนวนประเภทหวยที่ออกน้อยที่สุด (lotteryCount น้อยสุด)
+            //    - ความถี่รวมน้อยที่สุด (count น้อยสุด)
+            //    - ค่าของเลขน้อยที่สุดเป็นตัวตัดสิน
+            const cutDigits = middleCandidates
                 .sort((a, b) =>
+                    a.lotteryCount - b.lotteryCount ||
                     a.count - b.count ||
                     a.digit - b.digit
                 )
                 .slice(0, 3)
-                .map(item => item.digit);
+                .map(item => item.digit)
+                .sort((a, b) => a - b);
 
             return {
                 ranked,
@@ -2840,8 +2848,8 @@
                     </div>
                     <div class="px-4 py-3 border-b border-rose-100 bg-rose-50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div>
-                            <div class="text-sm font-bold text-rose-700">เลขน้อยสุด 3 อันดับสำหรับตัดวิน</div>
-                            <div class="text-xs font-semibold text-rose-500">เลือกจากจำนวนครั้งที่ออกน้อยที่สุดในเงื่อนไขนี้</div>
+                            <div class="text-sm font-bold text-rose-700">เลขตัดวินสูตรโซนกลางกระจายต่ำ</div>
+                            <div class="text-xs font-semibold text-rose-500">เลี่ยงเลขร้อนจัด (1-3) และเย็นจัด (8-10) เลือกตัวที่มีการกระจายในกลุ่มหวยน้อยที่สุด</div>
                         </div>
                         <div class="flex items-center gap-2">${cutDigitsHtml}</div>
                     </div>
