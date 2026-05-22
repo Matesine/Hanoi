@@ -153,6 +153,41 @@
                 </div>
             </div>
 
+            <!-- Group Top 3-Digit Digit Frequency -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mt-8">
+                <div
+                    class="bg-sky-50 px-6 py-4 border-b border-sky-100 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="list-ordered" class="w-5 h-5 text-sky-600"></i>
+                        <h3 class="font-bold text-sky-800">สถิติตัวเลข 0-9 ในเลข 3 ตัวบนรวมกลุ่ม</h3>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 text-sm font-semibold text-sky-800">
+                        <label for="group-top3-day-filter" class="whitespace-nowrap">เลือกวัน:</label>
+                        <select id="group-top3-day-filter" onchange="window.changeGroupTop3DayFilter(Number(this.value))"
+                            class="bg-white border border-sky-200 text-sky-700 text-sm rounded-md focus:ring-sky-500 focus:border-sky-500 p-1.5 font-bold outline-none shadow-sm cursor-pointer">
+                            <option value="-1">รวมทุกวัน</option>
+                            <option value="0">วันอาทิตย์</option>
+                            <option value="1">วันจันทร์</option>
+                            <option value="2">วันอังคาร</option>
+                            <option value="3">วันพุธ</option>
+                            <option value="4">วันพฤหัสบดี</option>
+                            <option value="5">วันศุกร์</option>
+                            <option value="6">วันเสาร์</option>
+                        </select>
+                        <button type="button" onclick="window.reloadGroupTop3Stats()"
+                            class="bg-white hover:bg-sky-100 text-sky-700 border border-sky-200 px-3 py-1.5 rounded-md inline-flex items-center transition font-bold">
+                            <i data-lucide="refresh-cw" class="w-3.5 h-3.5 mr-1"></i> รีเฟรช
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div id="group-top3-status" class="mb-4 text-sm font-semibold text-slate-500"></div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4" id="group-top3-stats-grid">
+                        <!-- การ์ดสถิติหวยฮานอยทั้งหมดและหวยลาวทั้งหมด จะถูกแทรกด้วย JS -->
+                    </div>
+                </div>
+            </div>
+
             <!-- Top 3-Digit Win Builder -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mt-8">
                 <div class="bg-indigo-50 px-6 py-4 border-b border-indigo-100 flex items-center space-x-2">
@@ -482,6 +517,12 @@
             lastTop3CutRecommendation: null,
             customCutBacktestDigits: [],
             exphuayCatalog: [],
+            groupTop3DayFilter: -1,
+            groupTop3RequestId: 0,
+            groupTop3Data: {
+                hanoi: { rowsBySlug: {}, errorsBySlug: {}, loading: false, loaded: false },
+                lao: { rowsBySlug: {}, errorsBySlug: {}, loading: false, loaded: false },
+            },
         };
 
         // --- 2. ฟังก์ชันจำลองข้อมูล (Fallback) ---
@@ -915,6 +956,100 @@
             state.allDayData = sortedRows;
             state.data = filteredRows.slice(0, state.period);
             saveCachedData(slug, sortedRows);
+            syncGroupTop3Rows(slug, sortedRows);
+        }
+
+        function getLotteryGroup(groupKey) {
+            return LOTTERY_GROUPS.find(group => group.key === groupKey);
+        }
+
+        function getGroupTop3State(groupKey) {
+            if (!state.groupTop3Data[groupKey]) {
+                state.groupTop3Data[groupKey] = {
+                    rowsBySlug: {},
+                    errorsBySlug: {},
+                    loading: false,
+                    loaded: false,
+                };
+            }
+            return state.groupTop3Data[groupKey];
+        }
+
+        function syncGroupTop3Rows(slug, rows) {
+            const sheet = SHEETS.find(item => item.slug === slug);
+            if (!sheet || !['hanoi', 'lao'].includes(sheet.group)) return;
+            const groupState = getGroupTop3State(sheet.group);
+            groupState.rowsBySlug[slug] = sortUniqueRows(rows);
+        }
+
+        function getDayLabel(dayIndex) {
+            const day = DAYS_OF_WEEK.find(item => item.index === dayIndex);
+            return day ? day.name : 'ทั้งหมด';
+        }
+
+        async function loadGroupSheetRows(slug) {
+            const sheetRows = await loadGoogleSheetCache(slug);
+            if (sheetRows.length) {
+                saveCachedData(slug, sheetRows);
+                return sortUniqueRows(sheetRows);
+            }
+            return sortUniqueRows(loadCachedData(slug));
+        }
+
+        async function loadGroupTop3Stats(force = false) {
+            const groupKeys = ['hanoi', 'lao'];
+            const needsLoad = force || groupKeys.some(groupKey => {
+                const groupState = getGroupTop3State(groupKey);
+                return !groupState.loaded && !groupState.loading;
+            });
+
+            if (!needsLoad) {
+                renderGroupTop3StatsPanel();
+                return;
+            }
+
+            const requestId = ++state.groupTop3RequestId;
+            groupKeys.forEach(groupKey => {
+                const groupState = getGroupTop3State(groupKey);
+                groupState.loading = true;
+                groupState.errorsBySlug = {};
+                if (force) groupState.loaded = false;
+            });
+            renderGroupTop3StatsPanel();
+
+            await Promise.all(groupKeys.map(async groupKey => {
+                const group = getLotteryGroup(groupKey);
+                const groupState = getGroupTop3State(groupKey);
+                const results = await Promise.allSettled(group.sheets.map(async sheet => ({
+                    sheet,
+                    rows: await loadGroupSheetRows(sheet.slug),
+                })));
+
+                if (requestId !== state.groupTop3RequestId) return;
+
+                const rowsBySlug = {};
+                const errorsBySlug = {};
+                results.forEach((result, index) => {
+                    const sheet = group.sheets[index];
+                    if (result.status === 'fulfilled') {
+                        rowsBySlug[sheet.slug] = result.value.rows;
+                    } else {
+                        rowsBySlug[sheet.slug] = sortUniqueRows(loadCachedData(sheet.slug));
+                        errorsBySlug[sheet.slug] = result.reason && result.reason.message
+                            ? result.reason.message
+                            : 'โหลดข้อมูลไม่ได้';
+                    }
+                });
+
+                groupState.rowsBySlug = rowsBySlug;
+                groupState.errorsBySlug = errorsBySlug;
+                groupState.loading = false;
+                groupState.loaded = true;
+            }));
+
+            if (requestId !== state.groupTop3RequestId) return;
+            renderGroupTop3StatsPanel();
+            if (window.lucide) lucide.createIcons();
         }
 
         function getRowsMissingFromBase(candidateRows, baseRows) {
@@ -2285,6 +2420,8 @@
             if (window.lucide) {
                 lucide.createIcons();
             }
+
+            loadGroupTop3Stats();
         }
 
         function renderNavigations() {
@@ -2417,6 +2554,190 @@
                     </td>
                 </tr>
             `).join('');
+        }
+
+        function buildGroupTop3Frequency(groupKey) {
+            const group = getLotteryGroup(groupKey);
+            const groupState = getGroupTop3State(groupKey);
+            const counts = Array(10).fill(0);
+            const lotteriesByDigit = Array.from({ length: 10 }, () => new Set());
+            let drawCount = 0;
+            let digitCount = 0;
+            let sheetWithDataCount = 0;
+
+            group.sheets.forEach(sheet => {
+                const rows = sortUniqueRows(groupState.rowsBySlug[sheet.slug] || []);
+                const filteredRows = state.groupTop3DayFilter !== -1
+                    ? rows.filter(row => row.dateObject.getUTCDay() === state.groupTop3DayFilter)
+                    : rows;
+                const periodRows = filteredRows.slice(0, state.period);
+                if (periodRows.length) sheetWithDataCount++;
+                drawCount += periodRows.length;
+
+                periodRows.forEach(row => {
+                    if (!row.top3 || row.top3.length !== 3) return;
+                    row.top3.split('').forEach(digitText => {
+                        const digit = Number(digitText);
+                        if (!Number.isInteger(digit) || digit < 0 || digit > 9) return;
+                        counts[digit]++;
+                        digitCount++;
+                        lotteriesByDigit[digit].add(sheet.name);
+                    });
+                });
+            });
+
+            const ranked = counts
+                .map((count, digit) => ({
+                    digit,
+                    count,
+                    lotteryCount: lotteriesByDigit[digit].size,
+                }))
+                .sort((a, b) =>
+                    b.count - a.count ||
+                    a.digit - b.digit
+                );
+            const cutDigits = ranked
+                .slice()
+                .sort((a, b) =>
+                    a.count - b.count ||
+                    a.digit - b.digit
+                )
+                .slice(0, 3)
+                .map(item => item.digit);
+
+            return {
+                ranked,
+                cutDigits,
+                drawCount,
+                digitCount,
+                sheetCount: group.sheets.length,
+                sheetWithDataCount,
+                errorCount: Object.keys(groupState.errorsBySlug || {}).length,
+                loading: groupState.loading,
+                loaded: groupState.loaded,
+            };
+        }
+
+        function createGroupTop3StatsCard(groupKey) {
+            const group = getLotteryGroup(groupKey);
+            const stats = buildGroupTop3Frequency(groupKey);
+            const isHanoi = groupKey === 'hanoi';
+            const accent = isHanoi
+                ? {
+                    header: 'bg-violet-50 border-violet-100',
+                    text: 'text-violet-800',
+                    icon: 'text-violet-600',
+                    badge: 'bg-violet-100 text-violet-700 border-violet-200',
+                    bar: 'bg-violet-500',
+                    soft: 'bg-violet-50',
+                }
+                : {
+                    header: 'bg-teal-50 border-teal-100',
+                    text: 'text-teal-800',
+                    icon: 'text-teal-600',
+                    badge: 'bg-teal-100 text-teal-700 border-teal-200',
+                    bar: 'bg-teal-500',
+                    soft: 'bg-teal-50',
+                };
+            const title = isHanoi ? 'หวยฮานอยทั้งหมด' : 'หวยลาวทั้งหมด';
+            const maxCount = stats.ranked[0]?.count || 1;
+            const cutDigitSet = new Set(stats.cutDigits);
+            const cutDigitsHtml = stats.cutDigits.length
+                ? stats.cutDigits.map(digit => `
+                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-rose-600 text-white font-mono font-black text-base">${digit}</span>
+                `).join('')
+                : '<span class="text-sm font-semibold text-slate-400">-</span>';
+
+            const rowsHtml = stats.ranked.length
+                ? stats.ranked.map((item, index) => {
+                    const width = Math.max((item.count / maxCount) * 100, 3);
+                    const isCutDigit = cutDigitSet.has(item.digit);
+                    return `
+                        <div class="grid grid-cols-[44px_56px_minmax(0,1fr)_84px] items-center gap-2 text-sm p-2 rounded-md ${isCutDigit ? 'bg-rose-50 ring-1 ring-rose-100' : index < 3 ? accent.soft : 'hover:bg-slate-50'}">
+                            <div class="text-xs font-bold text-slate-400">#${index + 1}</div>
+                            <div class="font-mono font-black text-lg ${isCutDigit ? 'text-rose-700' : index < 3 ? accent.text : 'text-slate-700'}">${item.digit}</div>
+                            <div class="h-5 bg-slate-100 rounded-md overflow-hidden shadow-inner">
+                                <div class="h-full ${isCutDigit ? 'bg-rose-500' : accent.bar} rounded-md" style="width: ${width}%;"></div>
+                            </div>
+                            <div class="text-right">
+                                <span class="font-mono font-bold text-slate-700">${item.count}</span>
+                                <span class="text-[10px] text-slate-400">ครั้ง</span>
+                                ${isCutDigit ? '<span class="block text-[10px] font-bold text-rose-600">ตัดวิน</span>' : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('')
+                : `
+                    <div class="text-center text-sm text-slate-400 py-8">
+                        ${stats.loading ? 'กำลังโหลดข้อมูลรวม...' : 'ยังไม่มีข้อมูลสำหรับเงื่อนไขนี้'}
+                    </div>
+                `;
+
+            return `
+                <div class="border border-slate-200 rounded-lg overflow-hidden bg-white">
+                    <div class="${accent.header} border-b px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="${isHanoi ? 'bar-chart-3' : 'pie-chart'}" class="w-4 h-4 ${accent.icon}"></i>
+                            <div>
+                                <div class="font-bold ${accent.text}">${title}</div>
+                                <div class="text-xs font-semibold text-slate-500">นับเลขโดดจาก 3 ตัวบน / ${getDayLabel(state.groupTop3DayFilter)} / ${state.period} งวดล่าสุดต่อหวย</div>
+                            </div>
+                        </div>
+                        <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full border text-xs font-bold ${accent.badge}">
+                            ${stats.sheetWithDataCount}/${stats.sheetCount} ประเภท
+                        </span>
+                    </div>
+                    <div class="px-4 py-3 border-b border-slate-100 grid grid-cols-3 gap-2 text-center">
+                        <div>
+                            <div class="font-mono font-black text-slate-700">${stats.drawCount}</div>
+                            <div class="text-[11px] font-semibold text-slate-400">งวดรวม</div>
+                        </div>
+                        <div>
+                            <div class="font-mono font-black text-slate-700">${stats.digitCount}</div>
+                            <div class="text-[11px] font-semibold text-slate-400">ครั้งรวม</div>
+                        </div>
+                        <div>
+                            <div class="font-mono font-black text-slate-700">${stats.errorCount}</div>
+                            <div class="text-[11px] font-semibold text-slate-400">อ่านไม่ได้</div>
+                        </div>
+                    </div>
+                    <div class="px-4 py-3 border-b border-rose-100 bg-rose-50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                            <div class="text-sm font-bold text-rose-700">เลขน้อยสุด 3 อันดับสำหรับตัดวิน</div>
+                            <div class="text-xs font-semibold text-rose-500">เลือกจากจำนวนครั้งที่ออกน้อยที่สุดในเงื่อนไขนี้</div>
+                        </div>
+                        <div class="flex items-center gap-2">${cutDigitsHtml}</div>
+                    </div>
+                    <div class="p-3 max-h-[380px] overflow-y-auto space-y-1">
+                        ${rowsHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderGroupTop3StatsPanel() {
+            const grid = document.getElementById('group-top3-stats-grid');
+            const status = document.getElementById('group-top3-status');
+            const daySelect = document.getElementById('group-top3-day-filter');
+            if (!grid) return;
+
+            if (daySelect && daySelect.value !== String(state.groupTop3DayFilter)) {
+                daySelect.value = String(state.groupTop3DayFilter);
+            }
+
+            const hanoiState = getGroupTop3State('hanoi');
+            const laoState = getGroupTop3State('lao');
+            const isLoading = hanoiState.loading || laoState.loading;
+            if (status) {
+                status.innerText = isLoading
+                    ? 'กำลังโหลดข้อมูลรวมของหวยฮานอยทั้งหมดและลาวทั้งหมด...'
+                    : `เรียงสถิติตัวเลข 0-9 ที่อยู่ใน 3 ตัวบนจากมากไปน้อย: ${getDayLabel(state.groupTop3DayFilter)}`;
+            }
+
+            grid.innerHTML = `
+                ${createGroupTop3StatsCard('hanoi')}
+                ${createGroupTop3StatsCard('lao')}
+            `;
         }
 
         function renderRecentDataTable() {
@@ -2647,6 +2968,18 @@
         window.changeDayFilter = function (dayIndex) {
             state.dayFilter = dayIndex;
             fetchSheetData();
+        };
+
+        window.changeGroupTop3DayFilter = function (dayIndex) {
+            state.groupTop3DayFilter = Number.isInteger(dayIndex) && dayIndex >= -1 && dayIndex <= 6
+                ? dayIndex
+                : -1;
+            renderGroupTop3StatsPanel();
+            if (window.lucide) lucide.createIcons();
+        };
+
+        window.reloadGroupTop3Stats = function () {
+            loadGroupTop3Stats(true);
         };
 
         window.copyCombos = function () {
