@@ -2693,131 +2693,76 @@
             `).join('');
         }
 
-        function scoreGroupTop3RiskCandidates(ranked, positionCounts, recentCounts, sheetWithDataCount) {
-            const countByDigit = new Map(ranked.map(item => [item.digit, item.count]));
-            const lotteryCountByDigit = new Map(ranked.map(item => [item.digit, item.lotteryCount]));
-            const rankByDigit = new Map(ranked.map((item, index) => [item.digit, index]));
-            const maxTotal = Math.max(...ranked.map(item => item.count), 1);
-            const maxRecent = Math.max(...recentCounts, 1);
-            const maxLotteryCount = Math.max(sheetWithDataCount, ...ranked.map(item => item.lotteryCount), 1);
-            const maxPositionCount = Math.max(
-                ...positionCounts.top100,
-                ...positionCounts.top10,
-                ...positionCounts.top1,
-                1
-            );
-            const positionHotDigits = new Set(Object.values(positionCounts).flatMap(counts =>
-                counts
-                    .map((count, digit) => ({ digit, count }))
-                    .filter(item => item.count > 0)
-                    .sort((a, b) => b.count - a.count || a.digit - b.digit)
-                    .slice(0, 2)
-                    .map(item => item.digit)
-            ));
-            const recentHotDigits = new Set(recentCounts
-                .map((count, digit) => ({ digit, count }))
-                .filter(item => item.count > 0)
-                .sort((a, b) => b.count - a.count || a.digit - b.digit)
-                .slice(0, 3)
-                .map(item => item.digit));
-
-            return Array.from({ length: 10 }, (_, digit) => {
-                const count = countByDigit.get(digit) || 0;
-                const lotteryCount = lotteryCountByDigit.get(digit) || 0;
-                const rankIndex = rankByDigit.get(digit) ?? 9;
-                const zone = rankIndex <= 2 ? 'hot' : rankIndex <= 6 ? 'middle' : 'cold';
-                const positionMax = Math.max(
-                    positionCounts.top100[digit] || 0,
-                    positionCounts.top10[digit] || 0,
-                    positionCounts.top1[digit] || 0
-                );
-                const recentCount = recentCounts[digit] || 0;
-                const zoneScore = zone === 'middle' ? 26 : zone === 'cold' ? 14 : 4;
-                const totalScore = (1 - (count / maxTotal)) * 22;
-                const positionScore = (1 - (positionMax / maxPositionCount)) * 22;
-                const recentScore = (1 - (recentCount / maxRecent)) * 24;
-                const spreadScore = (1 - (lotteryCount / maxLotteryCount)) * 16;
-                const hotPenalty = zone === 'hot' ? 18 : 0;
-                const positionPenalty = positionHotDigits.has(digit) ? 10 : 0;
-                const recentPenalty = recentHotDigits.has(digit) ? 14 : 0;
-                const score = zoneScore + totalScore + positionScore + recentScore + spreadScore
-                    - hotPenalty - positionPenalty - recentPenalty;
-
-                return {
-                    digit,
-                    score,
-                    count,
-                    lotteryCount,
-                    positionMax,
-                    recentCount,
-                    zone,
-                    isPositionHot: positionHotDigits.has(digit),
-                    isRecentHot: recentHotDigits.has(digit),
-                };
-            }).sort((a, b) =>
-                b.score - a.score ||
-                a.recentCount - b.recentCount ||
-                a.positionMax - b.positionMax ||
-                a.count - b.count ||
-                a.digit - b.digit
-            );
+        function getGroupTop3DailyStep(groupKey) {
+            const today = new Date();
+            const dayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const dayNumber = Math.floor(dayStart.getTime() / 86400000);
+            const groupOffset = String(groupKey || '')
+                .split('')
+                .reduce((total, char) => total + char.charCodeAt(0), 0);
+            return dayNumber + groupOffset;
         }
 
-        function selectBalancedGroupTop3CutDigits(scoredDigits, cutCount = 3) {
-            const candidates = getCombinations(scoredDigits, cutCount);
-            if (!candidates.length) return [];
+        function getPingPongIndex(step, length) {
+            if (length <= 1) return 0;
+            const period = (length - 1) * 2;
+            const position = ((step % period) + period) % period;
+            return position < length ? position : period - position;
+        }
 
-            const scoredCombos = candidates.map(combo => {
-                const digits = combo.map(item => item.digit);
-                const parityCount = new Set(digits.map(digit => digit % 2)).size;
-                const rangeCount = new Set(digits.map(digit => digit <= 4 ? 'low' : 'high')).size;
-                const zoneCount = new Set(combo.map(item => item.zone)).size;
-                const hotCount = combo.filter(item => item.zone === 'hot').length;
-                const coldCount = combo.filter(item => item.zone === 'cold').length;
-                const middleCount = combo.filter(item => item.zone === 'middle').length;
-                const recentHotCount = combo.filter(item => item.isRecentHot).length;
-                const positionHotCount = combo.filter(item => item.isPositionHot).length;
-                const sortedDigits = [...digits].sort((a, b) => a - b);
-                const digitSpread = sortedDigits[sortedDigits.length - 1] - sortedDigits[0];
-                const baseScore = combo.reduce((total, item) => total + item.score, 0);
-                const balanceScore =
-                    (parityCount > 1 ? 14 : -24) +
-                    (rangeCount > 1 ? 14 : -24) +
-                    (zoneCount > 1 ? 8 : -10) +
-                    (middleCount > 0 ? 12 : -16) +
-                    (coldCount > 0 ? 4 : -4) +
-                    (digitSpread >= 4 ? 4 : 0) -
-                    (coldCount === cutCount ? 18 : 0) -
-                    (hotCount > 1 ? 20 : hotCount * 5) -
-                    (recentHotCount * 8) -
-                    (positionHotCount * 5);
+        function buildGroupTop3RankGroups(ranked, sheetWithDataCount) {
+            const maxLotteryCount = Math.max(sheetWithDataCount, ...ranked.map(item => item.lotteryCount), 1);
+            return [
+                { key: 'hot', label: 'กลุ่มร้อน', zone: 'hot', items: ranked.slice(0, 3) },
+                { key: 'middle', label: 'กลุ่มกลาง', zone: 'middle', items: ranked.slice(3, 7) },
+                { key: 'cold', label: 'กลุ่มเย็น', zone: 'cold', items: ranked.slice(7, 10) },
+            ].map(group => ({
+                ...group,
+                items: group.items.map((item, index) => {
+                    const rank = ranked.findIndex(rankedItem => rankedItem.digit === item.digit) + 1;
+                    const spreadScore = (1 - (item.lotteryCount / maxLotteryCount)) * 10;
+                    const positionScore = Math.max(0, group.items.length - index) * 5;
+                    return {
+                        ...item,
+                        rank,
+                        score: positionScore + spreadScore,
+                        zone: group.zone,
+                        groupKey: group.key,
+                        groupLabel: group.label,
+                        groupPosition: index + 1,
+                        groupSize: group.items.length,
+                    };
+                }),
+            }));
+        }
 
-                return {
-                    combo,
-                    digits: sortedDigits,
-                    score: baseScore + balanceScore,
-                    baseScore,
-                };
-            }).sort((a, b) =>
-                b.score - a.score ||
-                b.baseScore - a.baseScore ||
-                a.digits.join('').localeCompare(b.digits.join(''))
+        function selectRotatingGroupTop3CutItems(rankGroups, groupKey) {
+            const dailyStep = getGroupTop3DailyStep(groupKey);
+            const groupOrder = Array.from({ length: rankGroups.length }, (_, index) =>
+                (index + dailyStep) % rankGroups.length
             );
 
-            return scoredCombos[0].digits;
+            return groupOrder
+                .map(groupIndex => {
+                    const group = rankGroups[groupIndex];
+                    if (!group || !group.items.length) return null;
+                    const itemIndex = getPingPongIndex(dailyStep + (groupIndex * 2), group.items.length);
+                    return group.items[itemIndex];
+                })
+                .filter(Boolean);
+        }
+
+        function getGroupTop3WinComboCount(digitCount, includeRepeats = true) {
+            if (!digitCount) return 0;
+            if (includeRepeats) return Math.max(0, Math.pow(digitCount, 3) - digitCount);
+            if (digitCount < 3) return 0;
+            return digitCount * (digitCount - 1) * (digitCount - 2);
         }
 
         function buildGroupTop3Frequency(groupKey) {
             const group = getLotteryGroup(groupKey);
             const groupState = getGroupTop3State(groupKey);
             const counts = Array(10).fill(0);
-            const positionCounts = {
-                top100: Array(10).fill(0),
-                top10: Array(10).fill(0),
-                top1: Array(10).fill(0),
-            };
-            const recentCounts = Array(10).fill(0);
-            const recentWindow = Math.min(5, Math.max(1, state.period || 5));
             const lotteriesByDigit = Array.from({ length: 10 }, () => new Set());
             let drawCount = 0;
             let digitCount = 0;
@@ -2832,16 +2777,12 @@
                 if (periodRows.length) sheetWithDataCount++;
                 drawCount += periodRows.length;
 
-                periodRows.forEach((row, rowIndex) => {
+                periodRows.forEach(row => {
                     if (!row.top3 || row.top3.length !== 3) return;
-                    row.top3.split('').forEach((digitText, positionIndex) => {
+                    row.top3.split('').forEach(digitText => {
                         const digit = Number(digitText);
                         if (!Number.isInteger(digit) || digit < 0 || digit > 9) return;
                         counts[digit]++;
-                        if (positionIndex === 0) positionCounts.top100[digit]++;
-                        if (positionIndex === 1) positionCounts.top10[digit]++;
-                        if (positionIndex === 2) positionCounts.top1[digit]++;
-                        if (rowIndex < recentWindow) recentCounts[digit]++;
                         digitCount++;
                         lotteriesByDigit[digit].add(sheet.name);
                     });
@@ -2858,24 +2799,35 @@
                     b.count - a.count ||
                     a.digit - b.digit
                 );
-            const scoredCutDigits = digitCount
-                ? scoreGroupTop3RiskCandidates(ranked, positionCounts, recentCounts, sheetWithDataCount)
+            const rankGroups = digitCount
+                ? buildGroupTop3RankGroups(ranked, sheetWithDataCount)
                 : [];
+            const scoredCutDigits = rankGroups.flatMap(group => group.items);
             const scoreByDigit = new Map(scoredCutDigits.map(item => [item.digit, item]));
             ranked.forEach(item => {
                 const scoreItem = scoreByDigit.get(item.digit);
                 item.cutScore = scoreItem ? scoreItem.score : 0;
-                item.recentCount = scoreItem ? scoreItem.recentCount : 0;
-                item.positionMax = scoreItem ? scoreItem.positionMax : 0;
+                item.cutRank = scoreItem ? scoreItem.rank : 0;
                 item.cutZone = scoreItem ? scoreItem.zone : 'cold';
+                item.cutGroupLabel = scoreItem ? scoreItem.groupLabel : '';
+                item.cutGroupPosition = scoreItem ? scoreItem.groupPosition : 0;
             });
-            const cutDigits = selectBalancedGroupTop3CutDigits(scoredCutDigits, 3);
+            const cutItems = selectRotatingGroupTop3CutItems(rankGroups, groupKey);
+            const cutDigits = cutItems.map(item => item.digit);
+            const cutDigitSet = new Set(cutDigits);
+            const winDigits = digitCount
+                ? Array.from({ length: 10 }, (_, digit) => digit).filter(digit => !cutDigitSet.has(digit))
+                : [];
+            const winComboCount = getGroupTop3WinComboCount(winDigits.length, true);
 
             return {
                 ranked,
                 cutDigits,
+                winDigits,
+                winComboCount,
                 scoredCutDigits,
-                recentWindow,
+                cutItems,
+                formulaName: 'สูตรกลุ่มละ 1 ตัวหมุนรายวัน',
                 drawCount,
                 digitCount,
                 sheetCount: group.sheets.length,
@@ -2911,11 +2863,16 @@
             const maxCount = stats.ranked[0]?.count || 1;
             const cutDigitSet = new Set(stats.cutDigits);
             const cutScoreByDigit = new Map((stats.scoredCutDigits || []).map(item => [item.digit, item]));
+            const winDigitsHtml = stats.winDigits.length
+                ? stats.winDigits.map(digit => `
+                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-emerald-600 text-white font-mono font-black text-base">${digit}</span>
+                `).join('')
+                : '<span class="text-sm font-semibold text-slate-400">-</span>';
             const cutDigitsHtml = stats.cutDigits.length
                 ? stats.cutDigits.map(digit => {
                     const detail = cutScoreByDigit.get(digit);
                     const title = detail
-                        ? `คะแนน ${detail.score.toFixed(1)} | ล่าสุด ${detail.recentCount} | สูงสุดรายหลัก ${detail.positionMax}`
+                        ? `${detail.groupLabel} ตำแหน่ง ${detail.groupPosition}/${detail.groupSize} | ลำดับ #${detail.rank} | กระจาย ${detail.lotteryCount} ประเภท`
                         : '';
                     return `
                     <span title="${title}" class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-rose-600 text-white font-mono font-black text-base">${digit}</span>
@@ -2976,12 +2933,19 @@
                             <div class="text-[11px] font-semibold text-slate-400">อ่านไม่ได้</div>
                         </div>
                     </div>
-                    <div class="px-4 py-3 border-b border-rose-100 bg-rose-50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div class="px-4 py-3 border-b border-emerald-100 bg-emerald-50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div>
-                            <div class="text-sm font-bold text-rose-700">เลขตัดวินสูตรกระจายความเสี่ยง</div>
-                            <div class="text-xs font-semibold text-rose-500">ใช้สถิติรวม + แยกหลัก + ${stats.recentWindow} งวดล่าสุด + สมดุลคี่คู่/สูงต่ำ</div>
+                            <div class="text-sm font-bold text-emerald-700">เลขวินคาดการณ์งวดต่อไป 7 ตัว</div>
+                            <div class="text-xs font-semibold text-emerald-600">เก็บเลขที่สูตรไม่ตัดออก วินรวมเบิ้ล/หาม ${stats.winComboCount} ชุด ไม่รวมตอง</div>
                         </div>
-                        <div class="flex items-center gap-2">${cutDigitsHtml}</div>
+                        <div class="flex flex-wrap items-center gap-2">${winDigitsHtml}</div>
+                    </div>
+                    <div class="px-4 py-4 border-b border-rose-100 bg-rose-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div class="space-y-1.5">
+                            <div class="text-sm font-bold text-rose-700 leading-5">เลขตัดวินสูตรกลุ่มละ 1 ตัว</div>
+                            <div class="text-xs font-semibold text-rose-500 leading-5">แบ่งร้อน #1-#3 / กลาง #4-#7 / เย็น #8-#10 เลือกกลุ่มละ 1 ตัว และหมุนรายวัน</div>
+                        </div>
+                        <div class="flex items-center gap-2.5 sm:ml-4">${cutDigitsHtml}</div>
                     </div>
                     <div class="p-3 max-h-[380px] overflow-y-auto space-y-1">
                         ${rowsHtml}
