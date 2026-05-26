@@ -97,6 +97,8 @@
                             <option value="5">Top 5 (หลักละ 5 ตัว)</option>
                             <option value="6" selected>Top 6 (หลักละ 6 ตัว)</option>
                             <option value="7">Top 7 (หลักละ 7 ตัว)</option>
+                            <option value="8">Top 8 (หลักละ 8 ตัว)</option>
+                            <option value="9">Top 9 (หลักละ 9 ตัว)</option>
                         </select>
                     </div>
                     <div class="flex items-center gap-2">
@@ -332,6 +334,15 @@
                         <option value="day">แสดงเป็นวัน</option>
                     </select>
                 </div>
+                <div class="flex flex-wrap items-center justify-end gap-2 mb-3 text-xs text-slate-600">
+                    <span class="font-semibold">ถูกต่อเนื่อง:</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border border-slate-300 bg-white shadow-sm"></span>1-10</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-emerald-700 bg-emerald-600 shadow-sm"></span>11-15</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-sky-700 bg-sky-600 shadow-sm"></span>16-20</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-amber-600 bg-amber-500 shadow-sm"></span>21-25</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-fuchsia-700 bg-fuchsia-600 shadow-sm"></span>26+</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-red-600 bg-red-500 shadow-sm"></span>ผิด</span>
+                </div>
                 <div class="overflow-x-auto border border-slate-200 rounded-xl">
                     <table class="w-full text-center border-collapse min-w-[600px] font-mono">
                         <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
@@ -369,6 +380,15 @@
                         <option value="day">แสดงเป็นวัน</option>
                     </select>
                 </div>
+                <div class="flex flex-wrap items-center justify-end gap-2 mb-3 text-xs text-slate-600">
+                    <span class="font-semibold">ถูกต่อเนื่อง:</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border border-slate-300 bg-white shadow-sm"></span>1-10</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-emerald-700 bg-emerald-600 shadow-sm"></span>11-15</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-sky-700 bg-sky-600 shadow-sm"></span>16-20</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-amber-600 bg-amber-500 shadow-sm"></span>21-25</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-fuchsia-700 bg-fuchsia-600 shadow-sm"></span>26+</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-red-600 bg-red-500 shadow-sm"></span>ผิด</span>
+                </div>
                 <div class="overflow-x-auto border border-slate-200 rounded-xl">
                     <table class="w-full text-center border-collapse min-w-[600px] font-mono">
                         <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
@@ -405,6 +425,15 @@
                         <option value="all" selected>แสดงทั้งหมด</option>
                         <option value="day">แสดงเป็นวัน</option>
                     </select>
+                </div>
+                <div class="flex flex-wrap items-center justify-end gap-2 mb-3 text-xs text-slate-600">
+                    <span class="font-semibold">ถูกต่อเนื่อง:</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border border-slate-300 bg-white shadow-sm"></span>1-10</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-emerald-700 bg-emerald-600 shadow-sm"></span>11-15</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-sky-700 bg-sky-600 shadow-sm"></span>16-20</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-amber-600 bg-amber-500 shadow-sm"></span>21-25</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-fuchsia-700 bg-fuchsia-600 shadow-sm"></span>26+</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-red-600 bg-red-500 shadow-sm"></span>ผิด</span>
                 </div>
                 <div class="overflow-x-auto border border-slate-200 rounded-xl">
                     <table class="w-full text-center border-collapse min-w-[600px] font-mono">
@@ -916,9 +945,8 @@
             });
         }
 
-                                                const realHistoryData = [
+                                                        const realHistoryData = [
             { date: "16-5-2569", prize1: "107387", down2: "08" },
-            { date: "2-5-2569", prize1: "536077", down2: "43" },
             { date: "2-5-2569", prize1: "536077", down2: "43" },
             { date: "16-4-2569", prize1: "309612", down2: "77" },
             { date: "1-4-2569", prize1: "292514", down2: "47" },
@@ -1553,24 +1581,36 @@
                     }
                 }
 
-                const streak = Array.from({length: totalRows}, () => Array(numFormulas).fill(false));
+                const streakCounts = Array.from({length: totalRows}, () => Array(numFormulas).fill(0));
                 for (let c = 0; c < numFormulas; c++) {
                     let currentStreak = 0;
-                    let streakStart = -1;
-                    for (let r = 0; r < totalRows; r++) {
+                    for (let r = totalRows - 1; r >= 0; r--) {
                         if (!failed[r][c]) {
-                            if (currentStreak === 0) streakStart = r;
                             currentStreak++;
+                            streakCounts[r][c] = currentStreak;
                         } else {
-                            if (currentStreak >= 10) {
-                                for (let i = streakStart; i < r; i++) streak[i][c] = true;
-                            }
                             currentStreak = 0;
                         }
                     }
-                    if (currentStreak >= 10) {
-                        for (let i = streakStart; i < totalRows; i++) streak[i][c] = true;
+                }
+
+                function getStreakBadgeClass(streakCount) {
+                    if (streakCount <= 0) {
+                        return "inline-block bg-white text-slate-700 font-bold px-2 py-0.5 rounded shadow-sm border border-slate-300 min-w-[28px]";
                     }
+                    if (streakCount <= 10) {
+                        return "inline-block bg-white text-slate-700 font-bold px-2 py-0.5 rounded shadow-sm border border-slate-300 min-w-[28px]";
+                    }
+                    if (streakCount <= 15) {
+                        return "inline-block bg-emerald-600 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-emerald-700 min-w-[28px]";
+                    }
+                    if (streakCount <= 20) {
+                        return "inline-block bg-sky-600 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-sky-700 min-w-[28px]";
+                    }
+                    if (streakCount <= 25) {
+                        return "inline-block bg-amber-500 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-amber-600 min-w-[28px]";
+                    }
+                    return "inline-block bg-fuchsia-600 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-fuchsia-700 min-w-[28px]";
                 }
 
                 dataSet.forEach((record, index) => {
@@ -1587,15 +1627,15 @@
                     sums.forEach((sum, i) => {
                         const deadDigit = sum % 10;
                         const isFailed = failed[index][i];
-                        const isStreak = streak[index][i];
+                        const streakCount = streakCounts[index][i];
                         const bgClass = i === 0 ? 'bg-slate-100/60' : 'bg-slate-50/40';
-                        let badgeClass = "inline-block bg-white text-slate-700 font-bold px-2 py-0.5 rounded shadow-sm border border-slate-300 min-w-[28px]";
+                        let badgeClass = getStreakBadgeClass(streakCount);
+                        let badgeTitle = streakCount > 0 ? `ถูกต่อเนื่อง ${streakCount} งวด` : '';
                         if (isFailed) {
                             badgeClass = "inline-block bg-red-500 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-red-600 min-w-[28px]";
-                        } else if (isStreak) {
-                            badgeClass = "inline-block bg-emerald-600 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-emerald-700 min-w-[28px]";
+                            badgeTitle = 'ผิด';
                         }
-                        cellsHtml += `<td class="p-2 border-l text-center ${bgClass}"><span class="${badgeClass}">${deadDigit}</span></td>`;
+                        cellsHtml += `<td class="p-2 border-l text-center ${bgClass}"><span class="${badgeClass}" title="${badgeTitle}">${deadDigit}</span></td>`;
                     });
 
                     const tr = document.createElement('tr');
