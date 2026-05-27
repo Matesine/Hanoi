@@ -3265,11 +3265,13 @@
                         winDigitCount
                     );
                 }
+                // Use live calculation first (matches the stats panel)
                 if (['hanoi', 'lao'].includes(groupKey)) {
                     const liveStats = buildGroupTop3Frequency(groupKey);
                     const liveDigits = getGroupTop3WinDigitsByCount(liveStats, winDigitCount);
                     if (liveDigits.length) return liveDigits;
                 }
+                // Fallback to saved prediction if no live data
                 const targetDayIndex = state.recentResultDayFilter !== -1
                     ? state.recentResultDayFilter
                     : state.groupTop3DayFilter;
@@ -3314,12 +3316,33 @@
                 selectedWinDigitCount,
                 false
             );
+            // Determine today's target date to use live calculation for today's rows
+            const todayTargetDayIndex = state.recentResultDayFilter !== -1
+                ? state.recentResultDayFilter
+                : state.groupTop3DayFilter;
+            const todayTarget = getGroupTop3PredictionTargetDate(todayTargetDayIndex);
+            const todayTargetDate = todayTarget.date; // e.g. "27/05/2026"
+            // Cache live digits per group for today's rows
+            const liveDigitsCache = {};
+            const getLiveDigitsForGroup = (groupKey) => {
+                if (!['hanoi', 'lao'].includes(groupKey)) return [];
+                if (!liveDigitsCache[groupKey]) {
+                    const liveStats = buildGroupTop3Frequency(groupKey);
+                    liveDigitsCache[groupKey] = getGroupTop3WinDigitsByCount(liveStats, selectedWinDigitCount);
+                }
+                return liveDigitsCache[groupKey];
+            };
             const lineItems = recentRows.map(item => {
-                const winDigits = applyWinDigitCount(
-                    getPredictionDigitsForRecord(item.groupKey, item.row.date, item.row.dateObject, selectedWinDigitCount),
-                    selectedWinDigitCount,
-                    false
-                );
+                const isToday = item.row.date === todayTargetDate;
+                let rawDigits;
+                if (isToday && ['hanoi', 'lao'].includes(item.groupKey)) {
+                    // Today's rows: use live calculation (matches stats panel)
+                    rawDigits = getLiveDigitsForGroup(item.groupKey);
+                } else {
+                    // Past rows: use saved prediction
+                    rawDigits = getPredictionDigitsForRecord(item.groupKey, item.row.date, item.row.dateObject, selectedWinDigitCount);
+                }
+                const winDigits = applyWinDigitCount(rawDigits, selectedWinDigitCount, false);
                 const displayDigits = winDigits.length ? winDigits : [];
                 const result = evaluateWinLine(item.row, displayDigits);
                 return {
