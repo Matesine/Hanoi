@@ -1767,8 +1767,11 @@
                 return;
             }
 
+            const selectedWinDigitCount = [7, 8, 9].includes(state.groupTop3WinDigitCount)
+                ? state.groupTop3WinDigitCount
+                : 7;
             const stats = buildGroupTop3Frequency(groupKey);
-            const digits = getGroupTop3WinDigitsByCount(stats, 9)
+            const digits = getGroupTop3WinDigitsByCount(stats, selectedWinDigitCount)
                 .filter(digit => Number.isInteger(digit));
             if (!digits.length) return;
 
@@ -1777,7 +1780,7 @@
                 input.value = digits.join(' ');
             }
             state.top3WinSourceGroup = groupKey;
-            state.lastTop3WinLimit = 9;
+            state.lastTop3WinLimit = selectedWinDigitCount;
             window.updateTop3WinNumbers();
             renderGroupTop3StatsPanel();
             if (window.lucide) lucide.createIcons();
@@ -2996,7 +2999,7 @@
             const selectedWinDigitCount = [7, 8, 9].includes(state.groupTop3WinDigitCount)
                 ? state.groupTop3WinDigitCount
                 : 7;
-            const inputWinDigits = getGroupTop3WinDigitsByCount(stats, 9);
+            const inputWinDigits = getGroupTop3WinDigitsByCount(stats, selectedWinDigitCount);
             const selectedCutDigitCount = Math.max(1, 10 - selectedWinDigitCount);
             const selectedCutDigits = stats.cutDigits.slice(0, selectedCutDigitCount);
             const selectedCutDigitSet = new Set(selectedCutDigits);
@@ -3080,7 +3083,7 @@
                                     class="w-4 h-4 accent-emerald-600"
                                     ${isInputSource ? 'checked' : ''}
                                     onchange="window.applyGroupTop3WinDigitsToInput('${groupKey}', this.checked)">
-                                <span>เลขวินคาดการณ์งวดต่อไป 9 ตัว</span>
+                                <span>เลขวินคาดการณ์งวดต่อไป ${selectedWinDigitCount} ตัว</span>
                             </label>
                             <div class="text-xs font-semibold text-emerald-600">ติ๊กเพื่อส่งเลขชุดนี้ไปช่องวิน 3 ตัวบน / วินรวมเบิ้ล-หาม ${inputWinComboCount} ชุด ไม่รวมตอง</div>
                         </div>
