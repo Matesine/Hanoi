@@ -142,17 +142,6 @@
                 </div>
             </div>
 
-            <!-- Detailed Stats Grid -->
-            <div>
-                <h2 class="text-xl font-bold mb-4 flex items-center text-slate-700">
-                    <i data-lucide="pie-chart" class="w-6 h-6 mr-2 text-blue-600"></i>
-                    สถิติการออกรางวัลแยกตามหลัก (0-9)
-                </h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4" id="stats-grid">
-                    <!-- กราฟสถิติ 5 แผง จะถูกแทรกด้วย JS -->
-                </div>
-            </div>
-
             <!-- Group Top 3-Digit Digit Frequency -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mt-8">
                 <div
@@ -162,6 +151,13 @@
                         <h3 class="font-bold text-sky-800">สถิติตัวเลข 0-9 ในเลข 3 ตัวบนรวมกลุ่ม</h3>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 text-sm font-semibold text-sky-800">
+                        <label for="group-top3-win-digit-count" class="whitespace-nowrap">เลือกวิน:</label>
+                        <select id="group-top3-win-digit-count" onchange="window.changeGroupTop3WinDigitCount(Number(this.value))"
+                            class="bg-white border border-sky-200 text-sky-700 text-sm rounded-md focus:ring-sky-500 focus:border-sky-500 p-1.5 font-bold outline-none shadow-sm cursor-pointer">
+                            <option value="7">วิน 7</option>
+                            <option value="8">วิน 8</option>
+                            <option value="9">วิน 9</option>
+                        </select>
                         <label for="group-top3-day-filter" class="whitespace-nowrap">เลือกวัน:</label>
                         <select id="group-top3-day-filter" onchange="window.changeGroupTop3DayFilter(Number(this.value))"
                             class="bg-white border border-sky-200 text-sky-700 text-sm rounded-md focus:ring-sky-500 focus:border-sky-500 p-1.5 font-bold outline-none shadow-sm cursor-pointer">
@@ -299,98 +295,70 @@
             </div>
 
             <!-- 3-Digit Combinations -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mt-8">
-                <div
-                    class="bg-indigo-50 px-6 py-4 border-b border-indigo-100 flex flex-col sm:flex-row items-center justify-between gap-3">
-                    <div class="flex items-center space-x-2 w-full sm:w-auto">
-                        <i data-lucide="layers" class="w-5 h-5 text-indigo-600"></i>
-                        <h3 class="font-bold text-indigo-800">ชุดจับคู่ 3 ตัวบน (<span
-                                id="top3-combo-count-title">...</span> ชุด)</h3>
-                    </div>
-                    <!-- ส่วน Dropdown สำหรับเลือก Top 6 หรือ Top 7 และเรียงลำดับ -->
-                    <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-start sm:justify-end">
-                        <span class="text-sm font-semibold text-indigo-800">เลือกจำนวน:</span>
-                        <select id="top3-select" onchange="window.updateTop3Combos()"
-                            class="bg-white border border-indigo-200 text-indigo-700 text-sm rounded-md focus:ring-indigo-500 focus:border-indigo-500 block p-1.5 font-bold outline-none shadow-sm cursor-pointer">
-                            <option value="6">Top 6</option>
-                            <option value="7">Top 7</option>
-                        </select>
-                        <span class="text-sm font-semibold text-indigo-800">เรียงลำดับ:</span>
-                        <select id="top3-sort" onchange="window.updateTop3Combos()"
-                            class="bg-white border border-indigo-200 text-indigo-700 text-sm rounded-md focus:ring-indigo-500 focus:border-indigo-500 block p-1.5 font-bold outline-none shadow-sm cursor-pointer">
-                            <option value="asc">น้อยไปมาก</option>
-                            <option value="desc">มากไปน้อย</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="p-6">
-                    <div
-                        class="mb-4 text-sm text-slate-600 flex flex-wrap gap-4 md:gap-8 bg-slate-50 p-3 rounded-md border border-slate-100">
-                        <div><span class="font-bold text-slate-700">หลักร้อย <span
-                                    class="top3-n-label text-indigo-600">6</span> ลำดับแรก:</span> <span id="top-100"
-                                class="text-indigo-600 font-mono font-bold text-base ml-1"></span></div>
-                        <div><span class="font-bold text-slate-700">หลักสิบ <span
-                                    class="top3-n-label text-indigo-600">6</span> ลำดับแรก:</span> <span id="top-10"
-                                class="text-indigo-600 font-mono font-bold text-base ml-1"></span></div>
-                        <div><span class="font-bold text-slate-700">หลักหน่วย <span
-                                    class="top3-n-label text-indigo-600">6</span> ลำดับแรก:</span> <span id="top-1"
-                                class="text-indigo-600 font-mono font-bold text-base ml-1"></span></div>
-                    </div>
-
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="text-sm font-medium text-slate-500">ผลการจับคู่ทั้งหมด <span
-                                id="top3-combo-count">...</span> ชุด <span
-                                class="text-xs text-rose-500 font-bold ml-1">(ตัดเลขตอง)</span></div>
-                        <button id="btn-copy-combo" onclick="copyCombos()"
-                            class="text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1.5 rounded-md flex items-center transition font-bold">
-                            <i data-lucide="copy" class="w-3.5 h-3.5 mr-1"></i> คัดลอกทั้งหมด
-                        </button>
-                        <input type="hidden" id="combo-hidden-text">
-                    </div>
-
-                    <div id="combo-grid"
-                        class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-9 lg:grid-cols-12 gap-2 max-h-[300px] overflow-y-auto p-3 bg-slate-50 border border-slate-200 rounded-lg shadow-inner">
-                        <!-- ตัวเลข ชุดจะถูกแทรกด้วย JS -->
-                    </div>
-                </div>
-            </div>
-
             <!-- Recent Data Table (Preview) -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mt-8">
-                <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
                     <div class="flex items-center space-x-2">
                         <i data-lucide="calendar-days" class="w-5 h-5 text-slate-500"></i>
                         <h3 class="font-bold text-slate-700" id="table-title">ข้อมูลที่ใช้คำนวณ</h3>
                     </div>
-                    <div class="flex flex-col sm:flex-row sm:items-center gap-2 text-xs text-slate-600">
-                        <label for="custom-cut-backtest-input" class="font-bold text-slate-700 whitespace-nowrap">เช็คเลขลบย้อนหลัง</label>
-                        <input id="custom-cut-backtest-input" type="text" inputmode="numeric" maxlength="10"
-                            oninput="window.updateCustomCutBacktest(this.value)" placeholder="เช่น 012"
-                            class="w-full sm:w-32 bg-white border border-slate-200 rounded-md px-3 py-2 text-sm font-mono font-bold text-slate-700 outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400">
-                        <button type="button" onclick="window.findBestCustomCutBacktest()"
-                            class="bg-sky-600 hover:bg-sky-700 text-white px-3 py-2 rounded-md font-bold transition whitespace-nowrap">
-                            หาเลขดีที่สุด
-                        </button>
-                        <span id="custom-cut-backtest-summary" class="font-bold text-sky-700 whitespace-nowrap"></span>
+                    <div class="flex flex-col xl:flex-row xl:items-center gap-3">
+                        <div class="flex flex-wrap items-center gap-1 rounded-lg bg-white border border-slate-200 p-1 shadow-sm"
+                            role="tablist" aria-label="เลือกรูปแบบข้อมูลย้อนหลัง">
+                            <button type="button" data-recent-result-view="single" onclick="window.changeRecentResultView('single')"
+                                class="px-3 py-2 rounded-md text-xs font-bold transition bg-sky-600 text-white shadow-sm">
+                                หวยเดี่ยว
+                            </button>
+                            <button type="button" data-recent-result-view="hanoi" onclick="window.changeRecentResultView('hanoi')"
+                                class="px-3 py-2 rounded-md text-xs font-bold transition text-slate-600 hover:bg-sky-50 hover:text-sky-700">
+                                ฮานอยรวม 9
+                            </button>
+                            <button type="button" data-recent-result-view="lao" onclick="window.changeRecentResultView('lao')"
+                                class="px-3 py-2 rounded-md text-xs font-bold transition text-slate-600 hover:bg-sky-50 hover:text-sky-700">
+                                ลาวรวม 14
+                            </button>
+                        </div>
+                        <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 text-xs text-slate-600">
+                            <label for="recent-result-day-filter" class="font-bold text-slate-700 whitespace-nowrap">ดูวัน:</label>
+                            <select id="recent-result-day-filter" onchange="window.changeRecentResultDayFilter(Number(this.value))"
+                                class="bg-white border border-slate-200 text-slate-700 text-sm rounded-md focus:ring-sky-500 focus:border-sky-500 p-2 font-bold outline-none shadow-sm cursor-pointer">
+                                <option value="-1">ทุกวัน</option>
+                                <option value="0">วันอาทิตย์</option>
+                                <option value="1">วันจันทร์</option>
+                                <option value="2">วันอังคาร</option>
+                                <option value="3">วันพุธ</option>
+                                <option value="4">วันพฤหัสบดี</option>
+                                <option value="5">วันศุกร์</option>
+                                <option value="6">วันเสาร์</option>
+                            </select>
+                            <label for="recent-result-date-filter" class="font-bold text-slate-700 whitespace-nowrap">วันที่:</label>
+                            <input id="recent-result-date-filter" type="date" onchange="window.changeRecentResultDateFilter(this.value)"
+                                class="bg-white border border-slate-200 rounded-md px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400">
+                            <button type="button" onclick="window.clearRecentResultDateFilter()"
+                                class="bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 px-3 py-2 rounded-md font-bold transition whitespace-nowrap">
+                                ล้างวันที่
+                            </button>
+                            <label for="recent-win-digit-count" class="font-bold text-slate-700 whitespace-nowrap">เลือกวิน:</label>
+                            <select id="recent-win-digit-count" onchange="window.changeRecentWinDigitCount(Number(this.value))"
+                                class="bg-white border border-slate-200 text-slate-700 text-sm rounded-md focus:ring-sky-500 focus:border-sky-500 p-2 font-bold outline-none shadow-sm cursor-pointer">
+                                <option value="7">วิน 7</option>
+                                <option value="8">วิน 8</option>
+                                <option value="9">วิน 9</option>
+                            </select>
+                            <label for="custom-cut-backtest-input" class="font-bold text-slate-700 whitespace-nowrap">เช็คเลขลบย้อนหลัง</label>
+                            <input id="custom-cut-backtest-input" type="text" inputmode="numeric" maxlength="10"
+                                oninput="window.updateCustomCutBacktest(this.value)" placeholder="เช่น 012"
+                                class="w-full sm:w-32 bg-white border border-slate-200 rounded-md px-3 py-2 text-sm font-mono font-bold text-slate-700 outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400">
+                            <button type="button" onclick="window.findBestCustomCutBacktest()"
+                                class="bg-sky-600 hover:bg-sky-700 text-white px-3 py-2 rounded-md font-bold transition whitespace-nowrap">
+                                หาเลขดีที่สุด
+                            </button>
+                            <span id="custom-cut-backtest-summary" class="font-bold text-sky-700 whitespace-nowrap"></span>
+                        </div>
                     </div>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm text-left text-slate-600">
-                        <thead class="text-xs text-slate-500 uppercase bg-slate-100 border-b border-slate-200">
-                            <tr>
-                                <th class="px-6 py-3 font-semibold">วันที่</th>
-                                <th class="px-6 py-3 font-semibold text-center">3 ตัวบน</th>
-                                <th class="px-6 py-3 font-semibold text-center">2 ตัวล่าง</th>
-                                <th class="px-6 py-3 font-semibold text-center" id="cut3-result-column-title">
-                                    สูตรแนะนำลบออก 2/3 ตัวจาก 10 ตัว</th>
-                                <th class="px-6 py-3 font-semibold text-center" id="custom-cut-result-column-title">
-                                    เช็คเลขลบย้อนหลัง</th>
-                            </tr>
-                        </thead>
-                        <tbody id="recent-data-table">
-                            <!-- ข้อมูลตารางจะถูกแทรกด้วย JS -->
-                        </tbody>
-                    </table>
+                <div id="recent-data-table" class="px-6 py-5">
+                    <!-- รายการย้อนหลังจะถูกแทรกด้วย JS -->
                 </div>
             </div>
 
@@ -517,10 +485,19 @@
             useTop3CutKeepDigits: false,
             lastTop3CutKeepDigits: [],
             lastTop3CutRecommendation: null,
+            recentWinDigitCount: 7,
+            recentResultView: 'single',
+            recentResultDayFilter: -1,
+            recentResultDateFilter: '',
             customCutBacktestDigits: [],
             exphuayCatalog: [],
+            groupTop3WinDigitCount: 7,
             groupTop3DayFilter: -1,
             groupTop3RequestId: 0,
+            groupTop3PredictionSaveKeys: new Set(),
+            groupTop3PredictionRows: { hanoi: [], lao: [] },
+            groupTop3PredictionLoaded: { hanoi: false, lao: false },
+            groupTop3PredictionLoading: {},
             groupTop3Data: {
                 hanoi: { rowsBySlug: {}, errorsBySlug: {}, loading: false, loaded: false },
                 lao: { rowsBySlug: {}, errorsBySlug: {}, loading: false, loaded: false },
@@ -677,6 +654,76 @@
                 console.warn('Google Sheet cache save failed', err);
                 return false;
             }
+        }
+
+        async function saveGroupTop3PredictionToGoogleSheet(prediction) {
+            if (!GOOGLE_SHEET_CACHE_API || !prediction) return false;
+            try {
+                const res = await fetch(GOOGLE_SHEET_CACHE_API, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        token: GOOGLE_SHEET_CACHE_TOKEN,
+                        action: 'saveGroupPrediction',
+                        predictions: [prediction],
+                    }),
+                });
+                if (!res.ok) return false;
+                const payload = await res.json();
+                return payload.ok !== false;
+            } catch (err) {
+                console.warn('Group top3 prediction save failed', err);
+                return false;
+            }
+        }
+
+        function deserializeGroupTop3Predictions(rows) {
+            return (rows || [])
+                .map(row => ({
+                    date: String(row.date || '').trim(),
+                    dayLabel: String(row.dayLabel || '').trim(),
+                    groupKey: String(row.groupKey || '').trim(),
+                    groupName: String(row.groupName || '').trim(),
+                    period: Number(row.period || 0),
+                    cutDigits: String(row.cutDigits || '').trim(),
+                    winDigits7: String(row.winDigits7 || row.winDigits || '').trim(),
+                    winDigits8: String(row.winDigits8 || '').trim(),
+                    winDigits9: String(row.winDigits9 || '').trim(),
+                    generatedAt: String(row.generatedAt || '').trim(),
+                }))
+                .filter(row => row.date && row.groupKey && row.winDigits7);
+        }
+
+        async function loadGroupTop3Predictions(groupKey, force = false) {
+            if (!GOOGLE_SHEET_CACHE_API || !['hanoi', 'lao'].includes(groupKey)) return [];
+            if (!force && state.groupTop3PredictionLoaded[groupKey]) {
+                return state.groupTop3PredictionRows[groupKey] || [];
+            }
+            if (state.groupTop3PredictionLoading[groupKey]) {
+                return state.groupTop3PredictionLoading[groupKey];
+            }
+
+            const request = (async () => {
+                try {
+                    const url = `${GOOGLE_SHEET_CACHE_API}?action=loadGroupPredictions&token=${encodeURIComponent(GOOGLE_SHEET_CACHE_TOKEN)}&groupKey=${encodeURIComponent(groupKey)}`;
+                    const res = await fetch(url, { cache: 'no-store' });
+                    if (!res.ok) return [];
+                    const payload = await res.json();
+                    const rows = deserializeGroupTop3Predictions(payload.rows);
+                    state.groupTop3PredictionRows[groupKey] = rows;
+                    state.groupTop3PredictionLoaded[groupKey] = true;
+                    return rows;
+                } catch (err) {
+                    console.warn('Group top3 prediction load failed', err);
+                    state.groupTop3PredictionLoaded[groupKey] = true;
+                    return [];
+                } finally {
+                    state.groupTop3PredictionLoading[groupKey] = null;
+                }
+            })();
+
+            state.groupTop3PredictionLoading[groupKey] = request;
+            return request;
         }
 
         async function loadGoogleSheetCache(slug) {
@@ -1008,6 +1055,208 @@
             return day ? day.name : 'ทั้งหมด';
         }
 
+        function getGroupTop3PredictionTargetDate(dayIndex = state.groupTop3DayFilter) {
+            const targetDate = new Date();
+            targetDate.setHours(12, 0, 0, 0);
+            if (Number.isInteger(dayIndex) && dayIndex >= 0 && dayIndex <= 6) {
+                const dayOffset = (dayIndex - targetDate.getDay() + 7) % 7;
+                targetDate.setDate(targetDate.getDate() + dayOffset);
+            }
+
+            return {
+                date: formatFormulaHistoryDate(targetDate),
+                dateISO: targetDate.toISOString(),
+                dayLabel: getDayLabel(dayIndex),
+            };
+        }
+
+        function getGroupTop3DisplayName(groupKey) {
+            if (groupKey === 'hanoi') return 'หวยฮานอยทั้งหมด';
+            if (groupKey === 'lao') return 'หวยลาวทั้งหมด';
+            const group = getLotteryGroup(groupKey);
+            return group ? group.label : groupKey;
+        }
+
+        function normalizeRecentResultView(viewKey) {
+            return ['single', 'hanoi', 'lao'].includes(viewKey) ? viewKey : 'single';
+        }
+
+        function parseDateInputValue(value) {
+            const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (!match) return null;
+            const [, year, month, day] = match;
+            const dateObject = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+            return isNaN(dateObject) ? null : dateObject;
+        }
+
+        function formatDateObjectForRowKey(dateObject) {
+            if (!dateObject || isNaN(dateObject)) return '';
+            const day = String(dateObject.getUTCDate()).padStart(2, '0');
+            const month = String(dateObject.getUTCMonth() + 1).padStart(2, '0');
+            const year = dateObject.getUTCFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+        function isSameUtcDate(firstDate, secondDate) {
+            return !!firstDate && !!secondDate &&
+                firstDate.getUTCFullYear() === secondDate.getUTCFullYear() &&
+                firstDate.getUTCMonth() === secondDate.getUTCMonth() &&
+                firstDate.getUTCDate() === secondDate.getUTCDate();
+        }
+
+        function getRecentResultViewMeta(viewKey) {
+            if (viewKey === 'hanoi') {
+                return { title: 'หวยฮานอยทั้งหมด 9 ประเภท', groupKey: 'hanoi', isGroupView: true };
+            }
+            if (viewKey === 'lao') {
+                return { title: 'หวยลาวทั้งหมด 14 ประเภท', groupKey: 'lao', isGroupView: true };
+            }
+            return {
+                title: state.activeSheet && state.activeSheet.name ? state.activeSheet.name : 'สูตรวินย้อนหลัง',
+                groupKey: state.activeSheet && state.activeSheet.group,
+                isGroupView: false,
+            };
+        }
+
+        function updateRecentResultControls(viewKey) {
+            document.querySelectorAll('[data-recent-result-view]').forEach(button => {
+                const isActive = button.dataset.recentResultView === viewKey;
+                button.classList.toggle('bg-sky-600', isActive);
+                button.classList.toggle('text-white', isActive);
+                button.classList.toggle('shadow-sm', isActive);
+                button.classList.toggle('text-slate-600', !isActive);
+                button.classList.toggle('hover:bg-sky-50', !isActive);
+                button.classList.toggle('hover:text-sky-700', !isActive);
+                button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            });
+
+            const daySelect = document.getElementById('recent-result-day-filter');
+            if (daySelect && daySelect.value !== String(state.recentResultDayFilter)) {
+                daySelect.value = String(state.recentResultDayFilter);
+            }
+
+            const dateInput = document.getElementById('recent-result-date-filter');
+            if (dateInput && dateInput.value !== state.recentResultDateFilter) {
+                dateInput.value = state.recentResultDateFilter || '';
+            }
+        }
+
+        function getRecentResultRowsForView(viewKey) {
+            const selectedDateObject = parseDateInputValue(state.recentResultDateFilter);
+            const dayFilter = state.recentResultDayFilter;
+            const filterRows = (rows) => {
+                const sortedRows = sortUniqueRows(rows);
+                const filteredRows = selectedDateObject
+                    ? sortedRows.filter(row => isSameUtcDate(row.dateObject, selectedDateObject))
+                    : dayFilter !== -1
+                        ? sortedRows.filter(row => row.dateObject.getUTCDay() === dayFilter)
+                        : sortedRows;
+                return selectedDateObject ? filteredRows : filteredRows.slice(0, state.period);
+            };
+
+            if (viewKey === 'single') {
+                const useAllRows = selectedDateObject || dayFilter !== -1;
+                const sourceRows = useAllRows && state.allDayData.length ? state.allDayData : state.data;
+                return filterRows(sourceRows).map(row => ({
+                    row,
+                    groupKey: state.activeSheet && state.activeSheet.group,
+                    sourceName: state.activeSheet && state.activeSheet.name ? state.activeSheet.name : 'หวย',
+                    sourceSlug: state.activeSheet && state.activeSheet.slug,
+                    sheetOrder: 0,
+                }));
+            }
+
+            const group = getLotteryGroup(viewKey);
+            if (!group) return [];
+            const groupState = getGroupTop3State(viewKey);
+            return group.sheets
+                .flatMap((sheet, sheetOrder) => filterRows(groupState.rowsBySlug[sheet.slug] || []).map(row => ({
+                    row,
+                    groupKey: viewKey,
+                    sourceName: sheet.name,
+                    sourceSlug: sheet.slug,
+                    sheetOrder,
+                })))
+                .sort((a, b) =>
+                    b.row.dateObject - a.row.dateObject ||
+                    a.sheetOrder - b.sheetOrder ||
+                    a.sourceName.localeCompare(b.sourceName)
+                );
+        }
+
+        function buildGroupTop3PredictionPayload(groupKey, stats) {
+            if (!stats || stats.loading || stats.winDigits7.length !== 7 || stats.winDigits8.length !== 8 || stats.winDigits9.length !== 9) return null;
+            if (stats.sheetCount && stats.sheetWithDataCount < stats.sheetCount) return null;
+
+            const target = getGroupTop3PredictionTargetDate();
+            return {
+                groupKey,
+                groupName: getGroupTop3DisplayName(groupKey),
+                date: target.date,
+                dateISO: target.dateISO,
+                dayLabel: target.dayLabel,
+                dayFilter: state.groupTop3DayFilter,
+                period: state.period,
+                sheetWithDataCount: stats.sheetWithDataCount,
+                sheetCount: stats.sheetCount,
+                drawCount: stats.drawCount,
+                digitCount: stats.digitCount,
+                cutDigits: stats.cutDigits.join(' '),
+                winDigits: stats.winDigits7.join(' '),
+                winDigits7: stats.winDigits7.join(' '),
+                winDigits8: stats.winDigits8.join(' '),
+                winDigits9: stats.winDigits9.join(' '),
+                generatedAt: new Date().toISOString(),
+            };
+        }
+
+        function getGroupTop3PredictionSaveKey(prediction) {
+            return [
+                prediction.groupKey,
+                prediction.date,
+                prediction.dayFilter,
+                prediction.period,
+                prediction.cutDigits,
+                prediction.winDigits7 || prediction.winDigits,
+                prediction.winDigits8,
+                prediction.winDigits9,
+            ].join('|');
+        }
+
+        function upsertLocalGroupTop3Prediction(prediction) {
+            if (!prediction || !prediction.groupKey) return;
+            const rows = state.groupTop3PredictionRows[prediction.groupKey] || [];
+            const existingIndex = rows.findIndex(row =>
+                row.date === prediction.date &&
+                row.dayLabel === prediction.dayLabel &&
+                row.groupKey === prediction.groupKey
+            );
+            const normalized = deserializeGroupTop3Predictions([prediction])[0];
+            if (!normalized) return;
+            if (existingIndex >= 0) {
+                rows[existingIndex] = normalized;
+            } else {
+                rows.unshift(normalized);
+            }
+            state.groupTop3PredictionRows[prediction.groupKey] = rows;
+            state.groupTop3PredictionLoaded[prediction.groupKey] = true;
+        }
+
+        async function syncGroupTop3PredictionToSheet(groupKey, stats) {
+            const prediction = buildGroupTop3PredictionPayload(groupKey, stats);
+            if (!prediction) return;
+
+            const saveKey = getGroupTop3PredictionSaveKey(prediction);
+            if (state.groupTop3PredictionSaveKeys.has(saveKey)) return;
+            state.groupTop3PredictionSaveKeys.add(saveKey);
+            upsertLocalGroupTop3Prediction(prediction);
+
+            const saved = await saveGroupTop3PredictionToGoogleSheet(prediction);
+            if (!saved) {
+                state.groupTop3PredictionSaveKeys.delete(saveKey);
+            }
+        }
+
         async function loadGroupSheetRows(slug) {
             const sheetRows = await loadGoogleSheetCache(slug);
             if (sheetRows.length) {
@@ -1070,6 +1319,7 @@
 
             if (requestId !== state.groupTop3RequestId) return;
             renderGroupTop3StatsPanel();
+            renderRecentDataTable();
             if (window.lucide) lucide.createIcons();
         }
 
@@ -1537,7 +1787,8 @@
                 : [];
             const size = currentDigits.length || getTop3CutCount();
             const digits = Array.from({ length: 10 }, (_, digit) => digit);
-            const rows = state.data || [];
+            const rows = getRecentResultRowsForView(normalizeRecentResultView(state.recentResultView))
+                .map(item => item.row);
             const combos = getCombinations(digits, Math.max(1, Math.min(10, size)));
             const scored = combos
                 .map(combo => ({ combo, passCount: scoreCustomCutDigits(rows, combo) }))
@@ -2471,6 +2722,12 @@
 
         // --- ฟังก์ชันอัปเดต 3 ตัวบน (รองรับการเลือก Top 6/7 และเรียงลำดับ) ---
         window.updateTop3Combos = function () {
+            const comboGrid = document.getElementById('combo-grid');
+            if (!comboGrid) {
+                state.top3Combinations = [];
+                renderRecentDataTable();
+                return;
+            }
             const stats = calculateStats();
 
             // อ่านค่าตัวเลข (N) จาก Dropdown
@@ -2488,9 +2745,12 @@
             const topTens = getTopN(stats.top10, n, ascending);
             const topUnits = getTopN(stats.top1, n, ascending);
 
-            document.getElementById('top-100').innerText = topHundreds.join(', ');
-            document.getElementById('top-10').innerText = topTens.join(', ');
-            document.getElementById('top-1').innerText = topUnits.join(', ');
+            const top100El = document.getElementById('top-100');
+            const top10El = document.getElementById('top-10');
+            const top1El = document.getElementById('top-1');
+            if (top100El) top100El.innerText = topHundreds.join(', ');
+            if (top10El) top10El.innerText = topTens.join(', ');
+            if (top1El) top1El.innerText = topUnits.join(', ');
 
             let combinations = [];
             for (let h of topHundreds) {
@@ -2505,14 +2765,15 @@
             }
 
             // อัปเดตจำนวนชุดบนหน้าจอ
-            document.getElementById('top3-combo-count-title').innerText = combinations.length;
-            document.getElementById('top3-combo-count').innerText = combinations.length;
+            const comboTitleCount = document.getElementById('top3-combo-count-title');
+            const comboCount = document.getElementById('top3-combo-count');
+            if (comboTitleCount) comboTitleCount.innerText = combinations.length;
+            if (comboCount) comboCount.innerText = combinations.length;
             const resultColumnTitle = document.getElementById('top3-result-column-title');
             if (resultColumnTitle) {
                 resultColumnTitle.innerText = `ผลชุดจับคู่ 3 ตัวบน (${combinations.length} ชุด)`;
             }
 
-            const comboGrid = document.getElementById('combo-grid');
             comboGrid.innerHTML = combinations.map(c => `
                 <div class="bg-white border border-slate-200 text-center py-1.5 rounded text-slate-700 font-mono font-bold text-sm shadow-sm hover:border-indigo-400 hover:text-indigo-600 transition-colors">
                     ${c}
@@ -2520,7 +2781,8 @@
             `).join('');
 
             // นำตัวเลขชุดมารวมกัน คั่นด้วยลูกน้ำ (,) สำหรับให้กดปุ่ม Copy
-            document.getElementById('combo-hidden-text').value = combinations.join(', ');
+            const comboHiddenText = document.getElementById('combo-hidden-text');
+            if (comboHiddenText) comboHiddenText.value = combinations.join(', ');
             state.top3Combinations = combinations;
             renderRecentDataTable();
         };
@@ -2627,11 +2889,13 @@
 
             // Render Detailed Stats Grid
             const gridContainer = document.getElementById('stats-grid');
-            gridContainer.innerHTML = `
-                ${createStatPanel('หลักร้อยบน', stats.top100, topNumbers.top100, 'bg-amber-400', 'text-amber-600', 'bg-amber-50')}
-                ${createStatPanel('หลักสิบบน', stats.top10, topNumbers.top10, 'bg-blue-500', 'text-blue-700', 'bg-blue-50')}
-                ${createStatPanel('หลักหน่วยบน', stats.top1, topNumbers.top1, 'bg-cyan-500', 'text-cyan-700', 'bg-cyan-50')}
-            `;
+            if (gridContainer) {
+                gridContainer.innerHTML = `
+                    ${createStatPanel('หลักร้อยบน', stats.top100, topNumbers.top100, 'bg-amber-400', 'text-amber-600', 'bg-amber-50')}
+                    ${createStatPanel('หลักสิบบน', stats.top10, topNumbers.top10, 'bg-blue-500', 'text-blue-700', 'bg-blue-50')}
+                    ${createStatPanel('หลักหน่วยบน', stats.top1, topNumbers.top1, 'bg-cyan-500', 'text-cyan-700', 'bg-cyan-50')}
+                `;
+            }
             // --- เรียกใช้งานฟังก์ชันอัปเดตชุดจับคู่ตัวเลข ---
             window.updateTop3Combos();
             // Trigger animation for progress bars
@@ -2759,6 +3023,20 @@
             return digitCount * (digitCount - 1) * (digitCount - 2);
         }
 
+        function getGroupTop3WinDigitsFromCuts(cutDigits, winDigitCount) {
+            const cutCount = Math.max(1, Math.min(3, 10 - winDigitCount));
+            const cutSet = new Set((cutDigits || []).slice(0, cutCount).map(Number));
+            return Array.from({ length: 10 }, (_, digit) => digit)
+                .filter(digit => !cutSet.has(digit));
+        }
+
+        function getGroupTop3WinDigitsByCount(stats, winDigitCount) {
+            if (!stats) return [];
+            if (winDigitCount === 9) return stats.winDigits9 || [];
+            if (winDigitCount === 8) return stats.winDigits8 || [];
+            return stats.winDigits7 || stats.winDigits || [];
+        }
+
         function buildGroupTop3Frequency(groupKey) {
             const group = getLotteryGroup(groupKey);
             const groupState = getGroupTop3State(groupKey);
@@ -2814,16 +3092,19 @@
             });
             const cutItems = selectRotatingGroupTop3CutItems(rankGroups, groupKey);
             const cutDigits = cutItems.map(item => item.digit);
-            const cutDigitSet = new Set(cutDigits);
-            const winDigits = digitCount
-                ? Array.from({ length: 10 }, (_, digit) => digit).filter(digit => !cutDigitSet.has(digit))
-                : [];
+            const winDigits7 = digitCount ? getGroupTop3WinDigitsFromCuts(cutDigits, 7) : [];
+            const winDigits8 = digitCount ? getGroupTop3WinDigitsFromCuts(cutDigits, 8) : [];
+            const winDigits9 = digitCount ? getGroupTop3WinDigitsFromCuts(cutDigits, 9) : [];
+            const winDigits = winDigits7;
             const winComboCount = getGroupTop3WinComboCount(winDigits.length, true);
 
             return {
                 ranked,
                 cutDigits,
                 winDigits,
+                winDigits7,
+                winDigits8,
+                winDigits9,
                 winComboCount,
                 scoredCutDigits,
                 cutItems,
@@ -2838,9 +3119,9 @@
             };
         }
 
-        function createGroupTop3StatsCard(groupKey) {
+        function createGroupTop3StatsCard(groupKey, providedStats = null) {
             const group = getLotteryGroup(groupKey);
-            const stats = buildGroupTop3Frequency(groupKey);
+            const stats = providedStats || buildGroupTop3Frequency(groupKey);
             const isHanoi = groupKey === 'hanoi';
             const accent = isHanoi
                 ? {
@@ -2863,13 +3144,21 @@
             const maxCount = stats.ranked[0]?.count || 1;
             const cutDigitSet = new Set(stats.cutDigits);
             const cutScoreByDigit = new Map((stats.scoredCutDigits || []).map(item => [item.digit, item]));
-            const winDigitsHtml = stats.winDigits.length
-                ? stats.winDigits.map(digit => `
+            const selectedWinDigitCount = [7, 8, 9].includes(state.groupTop3WinDigitCount)
+                ? state.groupTop3WinDigitCount
+                : 7;
+            const selectedWinDigits = getGroupTop3WinDigitsByCount(stats, selectedWinDigitCount);
+            const selectedCutDigitCount = Math.max(1, 10 - selectedWinDigitCount);
+            const selectedCutDigits = stats.cutDigits.slice(0, selectedCutDigitCount);
+            const selectedCutDigitSet = new Set(selectedCutDigits);
+            const selectedWinComboCount = getGroupTop3WinComboCount(selectedWinDigits.length, true);
+            const winDigitsHtml = selectedWinDigits.length
+                ? selectedWinDigits.map(digit => `
                     <span class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-emerald-600 text-white font-mono font-black text-base">${digit}</span>
                 `).join('')
                 : '<span class="text-sm font-semibold text-slate-400">-</span>';
-            const cutDigitsHtml = stats.cutDigits.length
-                ? stats.cutDigits.map(digit => {
+            const cutDigitsHtml = selectedCutDigits.length
+                ? selectedCutDigits.map(digit => {
                     const detail = cutScoreByDigit.get(digit);
                     const title = detail
                         ? `${detail.groupLabel} ตำแหน่ง ${detail.groupPosition}/${detail.groupSize} | ลำดับ #${detail.rank} | กระจาย ${detail.lotteryCount} ประเภท`
@@ -2883,7 +3172,7 @@
             const rowsHtml = stats.digitCount && stats.ranked.length
                 ? stats.ranked.map((item, index) => {
                     const width = Math.max((item.count / maxCount) * 100, 3);
-                    const isCutDigit = cutDigitSet.has(item.digit);
+                    const isCutDigit = selectedCutDigitSet.has(item.digit);
                     return `
                         <div class="grid grid-cols-[44px_56px_minmax(0,1fr)_84px] items-center gap-2 text-sm p-2 rounded-md ${isCutDigit ? 'bg-rose-50 ring-1 ring-rose-100' : index < 3 ? accent.soft : 'hover:bg-slate-50'}">
                             <div class="text-xs font-bold text-slate-400">#${index + 1}</div>
@@ -2935,15 +3224,15 @@
                     </div>
                     <div class="px-4 py-3 border-b border-emerald-100 bg-emerald-50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div>
-                            <div class="text-sm font-bold text-emerald-700">เลขวินคาดการณ์งวดต่อไป 7 ตัว</div>
-                            <div class="text-xs font-semibold text-emerald-600">เก็บเลขที่สูตรไม่ตัดออก วินรวมเบิ้ล/หาม ${stats.winComboCount} ชุด ไม่รวมตอง</div>
+                            <div class="text-sm font-bold text-emerald-700">เลขวินคาดการณ์งวดต่อไป ${selectedWinDigitCount} ตัว</div>
+                            <div class="text-xs font-semibold text-emerald-600">เก็บเลขที่สูตรไม่ตัดออก วินรวมเบิ้ล/หาม ${selectedWinComboCount} ชุด ไม่รวมตอง</div>
                         </div>
                         <div class="flex flex-wrap items-center gap-2">${winDigitsHtml}</div>
                     </div>
                     <div class="px-4 py-4 border-b border-rose-100 bg-rose-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div class="space-y-1.5">
                             <div class="text-sm font-bold text-rose-700 leading-5">เลขตัดวินสูตรกลุ่มละ 1 ตัว</div>
-                            <div class="text-xs font-semibold text-rose-500 leading-5">แบ่งร้อน #1-#3 / กลาง #4-#7 / เย็น #8-#10 เลือกกลุ่มละ 1 ตัว และหมุนรายวัน</div>
+                            <div class="text-xs font-semibold text-rose-500 leading-5">เลือกตัด ${selectedCutDigitCount} ตัวตามวิน ${selectedWinDigitCount}: วิน 7 ตัด 3 / วิน 8 ตัด 2 / วิน 9 ตัด 1</div>
                         </div>
                         <div class="flex items-center gap-2.5 sm:ml-4">${cutDigitsHtml}</div>
                     </div>
@@ -2958,10 +3247,14 @@
             const grid = document.getElementById('group-top3-stats-grid');
             const status = document.getElementById('group-top3-status');
             const daySelect = document.getElementById('group-top3-day-filter');
+            const winDigitSelect = document.getElementById('group-top3-win-digit-count');
             if (!grid) return;
 
             if (daySelect && daySelect.value !== String(state.groupTop3DayFilter)) {
                 daySelect.value = String(state.groupTop3DayFilter);
+            }
+            if (winDigitSelect && winDigitSelect.value !== String(state.groupTop3WinDigitCount)) {
+                winDigitSelect.value = String(state.groupTop3WinDigitCount);
             }
 
             const hanoiState = getGroupTop3State('hanoi');
@@ -2973,15 +3266,52 @@
                     : `เรียงสถิติตัวเลข 0-9 ที่อยู่ใน 3 ตัวบนจากมากไปน้อย: ${getDayLabel(state.groupTop3DayFilter)}`;
             }
 
+            const hanoiStats = buildGroupTop3Frequency('hanoi');
+            const laoStats = buildGroupTop3Frequency('lao');
+
             grid.innerHTML = `
-                ${createGroupTop3StatsCard('hanoi')}
-                ${createGroupTop3StatsCard('lao')}
+                ${createGroupTop3StatsCard('hanoi', hanoiStats)}
+                ${createGroupTop3StatsCard('lao', laoStats)}
             `;
+
+            if (!isLoading) {
+                syncGroupTop3PredictionToSheet('hanoi', hanoiStats);
+                syncGroupTop3PredictionToSheet('lao', laoStats);
+            }
         }
 
         function renderRecentDataTable() {
             const tableBody = document.getElementById('recent-data-table');
             if (!tableBody) return;
+            const viewKey = normalizeRecentResultView(state.recentResultView);
+            state.recentResultView = viewKey;
+            updateRecentResultControls(viewKey);
+            const viewMeta = getRecentResultViewMeta(viewKey);
+            const activeGroupKey = viewMeta.groupKey;
+
+            if (viewMeta.isGroupView) {
+                const groupState = getGroupTop3State(viewMeta.groupKey);
+                if (!groupState.loaded && !groupState.loading) {
+                    loadGroupTop3Stats();
+                }
+                if (groupState.loading && !groupState.loaded) {
+                    tableBody.innerHTML = `
+                        <div class="max-w-3xl mx-auto py-12 text-center">
+                            <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-sky-50 text-sky-600 mb-3">
+                                <i data-lucide="loader-2" class="w-6 h-6 animate-spin"></i>
+                            </div>
+                            <div class="text-lg font-bold text-slate-700">กำลังโหลดข้อมูล ${escapeHtml(viewMeta.title)}</div>
+                            <div class="mt-1 text-sm text-slate-500">ดึงข้อมูลจากตาราง Excel/cache ของทุกประเภทในกลุ่มนี้</div>
+                        </div>
+                    `;
+                    if (window.lucide) lucide.createIcons();
+                    return;
+                }
+            }
+
+            if (['hanoi', 'lao'].includes(activeGroupKey) && !state.groupTop3PredictionLoaded[activeGroupKey] && !state.groupTop3PredictionLoading[activeGroupKey]) {
+                loadGroupTop3Predictions(activeGroupKey).then(() => renderRecentDataTable());
+            }
 
             const cut3ColumnTitle = document.getElementById('cut3-result-column-title');
             if (cut3ColumnTitle) {
@@ -2998,9 +3328,6 @@
                     : 'เช็คเลขลบย้อนหลัง';
             }
 
-            const renderResultBadge = (isHit) => isHit
-                ? '<span class="inline-flex items-center justify-center min-w-16 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">ถูก</span>'
-                : '<span class="inline-flex items-center justify-center min-w-16 px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200 text-xs font-bold">ไม่ถูก</span>';
             const getCustomBacktestResult = (row) => {
                 if (!customDigits.length || !row || !row.top3) return null;
                 const cutSet = new Set(customDigits);
@@ -3012,74 +3339,9 @@
                     hitCutDigits,
                 };
             };
-            const renderCustomBacktest = (result) => {
-                if (!result) {
-                    return '<span class="inline-flex items-center justify-center min-w-16 px-2.5 py-1 rounded-full bg-slate-100 text-slate-400 border border-slate-200 text-xs font-bold">-</span>';
-                }
-                return `
-                    <div class="flex flex-col items-center gap-1">
-                        <span class="font-mono text-xs font-bold text-slate-600">${result.cutDigits.join(' ')}</span>
-                        ${renderResultBadge(result.isPass)}
-                    </div>
-                `;
-            };
-            const renderCut3Backtest = (result) => {
-                if (!result) {
-                    return '<span class="inline-flex items-center justify-center min-w-16 px-2.5 py-1 rounded-full bg-slate-100 text-slate-400 border border-slate-200 text-xs font-bold">-</span>';
-                }
-                if (result.isPaused) {
-                    return `
-                    <div class="flex flex-col items-center gap-1">
-                        <span class="font-mono text-xs font-bold text-amber-600">พักสูตร</span>
-                        <span class="text-[10px] font-semibold text-slate-400">${result.rankModeName || '-'} / ${result.rankStartName || '-'}</span>
-                        <span class="inline-flex items-center justify-center min-w-16 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold">งดตัด</span>
-                    </div>
-                `;
-                }
-
-                return `
-                    <div class="flex flex-col items-center gap-1">
-                        <span class="font-mono text-xs font-bold text-slate-600">${result.cutDigits.join(' ')}</span>
-                        <span class="text-[10px] font-semibold text-slate-400">${result.rankModeName || '-'} / ${result.rankStartName || '-'}</span>
-                        ${renderResultBadge(result.isPass)}
-                    </div>
-                `;
-            };
-            const buildStoredFormulaResult = (row, record) => {
-                const cutDigits = Array.isArray(record.cutDigits) ? record.cutDigits : [];
-                const cutSet = new Set(cutDigits);
-                const resultDigits = [...new Set(row.top3.split('').map(Number).filter(num => !isNaN(num)))];
-                const hitCutDigits = resultDigits.filter(digit => cutSet.has(digit));
-                return {
-                    cutDigits,
-                    rankModeName: record.rankModeName,
-                    rankStartName: record.rankStartName,
-                    isPass: hitCutDigits.length === 0,
-                    hitCutDigits,
-                };
-            };
-            const activeSlug = state.activeSheet && state.activeSheet.slug;
-            const useSavedFormulaRecords = getTop3CutRankStart() === null;
-            const cut3Results = state.data.map((row, index) => {
-                const savedRecord = useSavedFormulaRecords && activeSlug
-                    ? getSavedTop3CutFormulaRecord(activeSlug, row.date, getTop3CutCount())
-                    : null;
-                if (savedRecord) {
-                    return buildStoredFormulaResult(row, savedRecord);
-                }
-
-                if (
-                    useSavedFormulaRecords &&
-                    index === 0 &&
-                    state.lastTop3CutRecommendation &&
-                    state.lastTop3CutRecommendation.date === row.date
-                ) {
-                    return buildStoredFormulaResult(row, state.lastTop3CutRecommendation);
-                }
-
-                return getTop3CutBacktestResult(row, index);
-            });
-            const customBacktestResults = state.data.map(row => getCustomBacktestResult(row));
+            const recentRows = getRecentResultRowsForView(viewKey);
+            const displayRows = recentRows.map(item => item.row);
+            const customBacktestResults = displayRows.map(row => getCustomBacktestResult(row));
             const customBacktestSummary = document.getElementById('custom-cut-backtest-summary');
             if (customBacktestSummary) {
                 const testedResults = customBacktestResults.filter(Boolean);
@@ -3088,31 +3350,174 @@
                     ? (() => {
                         const size = customDigits.length;
                         const best = getCombinations(Array.from({ length: 10 }, (_, digit) => digit), size)
-                            .map(combo => ({ combo, passCount: scoreCustomCutDigits(state.data, combo) }))
+                            .map(combo => ({ combo, passCount: scoreCustomCutDigits(displayRows, combo) }))
                             .sort((a, b) =>
                                 b.passCount - a.passCount ||
                                 a.combo.join('').localeCompare(b.combo.join(''))
                             )[0];
-                        return best ? ` | สูงสุด ${best.combo.join('')} ${best.passCount}/${state.data.length}` : '';
+                        return best ? ` | สูงสุด ${best.combo.join('')} ${best.passCount}/${displayRows.length}` : '';
                     })()
                     : '';
                 customBacktestSummary.innerText = customDigits.length
                     ? `ถูก ${passCount}/${testedResults.length} งวด${bestText}`
                     : '';
             }
-            tableBody.innerHTML = state.data.map((row, index) => `
-                <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                    <td class="px-6 py-3 whitespace-nowrap">${row.date}</td>
-                    <td class="px-6 py-3 text-center font-mono font-bold text-blue-600 tracking-widest text-base">${row.top3}</td>
-                    <td class="px-6 py-3 text-center font-mono font-bold text-rose-500 tracking-widest text-base">${row.bot2}</td>
-                    <td class="px-6 py-3 text-center">
-                        ${renderCut3Backtest(cut3Results[index])}
-                    </td>
-                    <td class="px-6 py-3 text-center">
-                        ${renderCustomBacktest(customBacktestResults[index])}
-                    </td>
-                </tr>
-            `).join('');
+
+            const allDigits = Array.from({ length: 10 }, (_, digit) => digit);
+            const getSelectedWinDigitCount = () => {
+                const select = document.getElementById('recent-win-digit-count');
+                const count = select ? Number(select.value) : state.recentWinDigitCount;
+                return [7, 8, 9].includes(count) ? count : 7;
+            };
+            const applyWinDigitCount = (digits, count, fillMissing = true) => {
+                const uniqueDigits = [...new Set((digits || []).map(Number).filter(digit => Number.isInteger(digit) && digit >= 0 && digit <= 9))];
+                if (!fillMissing && uniqueDigits.length === 0) return [];
+                const withFallback = [
+                    ...uniqueDigits,
+                    ...(fillMissing ? allDigits.filter(digit => !uniqueDigits.includes(digit)) : []),
+                ];
+                return withFallback.slice(0, count).sort((a, b) => a - b);
+            };
+            const parsePredictionDigits = (value) => [...new Set(String(value || '').match(/\d/g) || [])].map(Number);
+            const getPredictionDigitsForRecord = (groupKey, date, dateObject, winDigitCount) => {
+                if (!['hanoi', 'lao'].includes(groupKey)) return [];
+                const rows = state.groupTop3PredictionRows[groupKey] || [];
+                const rowDayLabel = dateObject ? getDayLabel(dateObject.getUTCDay()) : '';
+                const prediction = rows.find(item =>
+                    item.date === date &&
+                    item.dayLabel === rowDayLabel
+                ) || rows.find(item => item.date === date);
+                if (!prediction) return [];
+                const digitText = winDigitCount === 9
+                    ? prediction.winDigits9
+                    : winDigitCount === 8
+                        ? prediction.winDigits8
+                        : prediction.winDigits7;
+                return parsePredictionDigits(digitText);
+            };
+            const getCurrentPredictionDigits = (groupKey, winDigitCount) => {
+                const selectedDateObject = parseDateInputValue(state.recentResultDateFilter);
+                if (selectedDateObject) {
+                    return getPredictionDigitsForRecord(
+                        groupKey,
+                        formatDateObjectForRowKey(selectedDateObject),
+                        selectedDateObject,
+                        winDigitCount
+                    );
+                }
+                if (['hanoi', 'lao'].includes(groupKey)) {
+                    const liveStats = buildGroupTop3Frequency(groupKey);
+                    const liveDigits = getGroupTop3WinDigitsByCount(liveStats, winDigitCount);
+                    if (liveDigits.length) return liveDigits;
+                }
+                const targetDayIndex = state.recentResultDayFilter !== -1
+                    ? state.recentResultDayFilter
+                    : state.groupTop3DayFilter;
+                const target = getGroupTop3PredictionTargetDate(targetDayIndex);
+                return getPredictionDigitsForRecord(groupKey, target.date, target.dateISO ? new Date(target.dateISO) : null, winDigitCount);
+            };
+            const formatDigitSet = (digits) => digits
+                .filter(digit => Number.isInteger(digit))
+                .sort((a, b) => a - b)
+                .join('');
+            const formatShortDate = (dateText) => {
+                const [day, month, yearText] = String(dateText || '').split('/').map(Number);
+                if (!day || !month || !yearText) return escapeHtml(dateText || '-');
+                const buddhistYear = yearText > 2400 ? yearText : yearText + 543;
+                return `${day}/${month}/${String(buddhistYear).slice(-2)}`;
+            };
+            const evaluateWinLine = (row, winDigits) => {
+                const winSet = new Set((winDigits || []).map(Number));
+                if (winSet.size < 3) return { isPass: null };
+                const topDigits = String(row.top3 || '').split('').map(Number).filter(num => !isNaN(num));
+                return {
+                    isPass: topDigits.length === 3 && topDigits.every(digit => winSet.has(digit)),
+                };
+            };
+            const renderWinStatus = (result) => {
+                if (result.isPass === null) {
+                    return '<span class="font-bold text-slate-400">รอผล</span>';
+                }
+                return result.isPass
+                    ? '<span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-violet-50 text-violet-700 text-2xl font-black leading-none">✓</span>'
+                    : '<span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-rose-50 text-rose-600 text-2xl font-black leading-none">×</span>';
+            };
+
+            const selectedWinDigitCount = getSelectedWinDigitCount();
+            const winDigitSelect = document.getElementById('recent-win-digit-count');
+            if (winDigitSelect && winDigitSelect.value !== String(selectedWinDigitCount)) {
+                winDigitSelect.value = String(selectedWinDigitCount);
+            }
+            const currentPredictionGroupKey = ['hanoi', 'lao'].includes(activeGroupKey) ? activeGroupKey : null;
+            const fallbackWinDigits = applyWinDigitCount(
+                getCurrentPredictionDigits(currentPredictionGroupKey, selectedWinDigitCount),
+                selectedWinDigitCount,
+                false
+            );
+            const lineItems = recentRows.map(item => {
+                const winDigits = applyWinDigitCount(
+                    getPredictionDigitsForRecord(item.groupKey, item.row.date, item.row.dateObject, selectedWinDigitCount),
+                    selectedWinDigitCount,
+                    false
+                );
+                const displayDigits = winDigits.length ? winDigits : [];
+                const result = evaluateWinLine(item.row, displayDigits);
+                return {
+                    ...item,
+                    digitsText: formatDigitSet(displayDigits),
+                    result,
+                };
+            });
+            const evaluatedLines = lineItems.filter(item => item.result.isPass !== null);
+            const passCount = evaluatedLines.filter(item => item.result.isPass).length;
+            const currentDigitsText = formatDigitSet(fallbackWinDigits);
+            const formulaDigitCount = selectedWinDigitCount;
+            const selectedDateObject = parseDateInputValue(state.recentResultDateFilter);
+            const selectedDateText = selectedDateObject ? formatShortDate(formatDateObjectForRowKey(selectedDateObject)) : '';
+            const dayFilterText = state.recentResultDayFilter !== -1 ? getDayLabel(state.recentResultDayFilter) : 'ทุกวัน';
+            const resultUnit = viewMeta.isGroupView ? 'รายการ' : 'รอบ';
+            const summarySuffix = selectedDateObject
+                ? `ของวันที่ ${selectedDateText}`
+                : state.recentResultDayFilter !== -1
+                    ? `ล่าสุด (${dayFilterText})`
+                    : 'ล่าสุด';
+            const waitingLabel = selectedDateObject ? 'เลขวินของวันที่เลือก' : 'กำลังรอผล';
+            const emptyMessage = selectedDateObject
+                ? `ไม่พบผลของวันที่ ${selectedDateText} ใน ${viewMeta.title}`
+                : `ยังไม่มีข้อมูลย้อนหลังสำหรับ ${viewMeta.title}`;
+
+            tableBody.innerHTML = `
+                <div class="max-w-3xl mx-auto">
+                    <div class="text-center pb-5 mb-5 border-b-2 border-slate-300">
+                        <div class="text-base font-semibold text-slate-500">${escapeHtml(viewMeta.title)}</div>
+                        <div class="mt-1 text-4xl font-bold text-slate-950 leading-tight">วิน 3 ตัวบน ${formulaDigitCount || '-'} ตัว</div>
+                        <div class="mt-2 text-2xl font-semibold text-slate-700">ถูก ${passCount} ครั้งจาก ${evaluatedLines.length} ${resultUnit}${summarySuffix}</div>
+                        <div class="mt-1 text-sm font-semibold text-slate-400">แสดงข้อมูล: ${escapeHtml(selectedDateObject ? `วันที่ ${selectedDateText}` : dayFilterText)}</div>
+                    </div>
+                    <div class="max-h-[560px] overflow-y-auto pr-1 space-y-2">
+                        <div class="flex flex-wrap items-center gap-x-2 gap-y-1 pb-3 text-xl md:text-2xl leading-snug text-slate-950">
+                            <span>${waitingLabel}</span>
+                            <span>=</span>
+                            <span class="font-mono border-4 border-rose-600 px-2 leading-tight">${currentDigitsText || '-'}</span>
+                            <span>=</span>
+                            <span>รอผล</span>
+                        </div>
+                        ${lineItems.length ? lineItems.map(item => `
+                            <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xl md:text-2xl leading-snug text-slate-950">
+                                ${viewMeta.isGroupView ? `<span class="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-sm md:text-base font-bold text-slate-600">${escapeHtml(item.sourceName)}</span>` : ''}
+                                <span class="font-mono">${formatShortDate(item.row.date)}</span>
+                                <span>=</span>
+                                <span class="font-mono">${item.digitsText || '-'}</span>
+                                <span>=</span>
+                                <span class="font-mono">${item.row.top3}</span>
+                                ${renderWinStatus(item.result)}
+                            </div>
+                        `).join('') : `
+                            <div class="py-10 text-center text-slate-400 font-bold">${escapeHtml(emptyMessage)}</div>
+                        `}
+                    </div>
+                </div>
+            `;
         }
 
         function createStatPanel(title, dataArr, mostFrequent, barColorClass, textColorClass, headerBgClass) {
@@ -3168,6 +3573,42 @@
         }
 
         // --- 6. Event Handlers ---
+        window.changeRecentResultView = function (viewKey) {
+            state.recentResultView = normalizeRecentResultView(viewKey);
+            renderRecentDataTable();
+            if (window.lucide) lucide.createIcons();
+        };
+
+        window.changeRecentResultDayFilter = function (dayIndex) {
+            state.recentResultDayFilter = Number.isInteger(dayIndex) && dayIndex >= -1 && dayIndex <= 6
+                ? dayIndex
+                : -1;
+            state.groupTop3DayFilter = state.recentResultDayFilter;
+            renderGroupTop3StatsPanel();
+            renderRecentDataTable();
+            if (window.lucide) lucide.createIcons();
+        };
+
+        window.changeRecentResultDateFilter = function (value) {
+            state.recentResultDateFilter = parseDateInputValue(value) ? value : '';
+            renderRecentDataTable();
+            if (window.lucide) lucide.createIcons();
+        };
+
+        window.clearRecentResultDateFilter = function () {
+            state.recentResultDateFilter = '';
+            renderRecentDataTable();
+            if (window.lucide) lucide.createIcons();
+        };
+
+        window.changeRecentWinDigitCount = function (count) {
+            state.recentWinDigitCount = [7, 8, 9].includes(count) ? count : 7;
+            state.groupTop3WinDigitCount = state.recentWinDigitCount;
+            renderGroupTop3StatsPanel();
+            renderRecentDataTable();
+            if (window.lucide) lucide.createIcons();
+        };
+
         window.changeSheet = function (index) {
             state.activeSheet = SHEETS[index];
             fetchSheetData();
@@ -3213,7 +3654,17 @@
             state.groupTop3DayFilter = Number.isInteger(dayIndex) && dayIndex >= -1 && dayIndex <= 6
                 ? dayIndex
                 : -1;
+            state.recentResultDayFilter = state.groupTop3DayFilter;
             renderGroupTop3StatsPanel();
+            renderRecentDataTable();
+            if (window.lucide) lucide.createIcons();
+        };
+
+        window.changeGroupTop3WinDigitCount = function (count) {
+            state.groupTop3WinDigitCount = [7, 8, 9].includes(count) ? count : 7;
+            state.recentWinDigitCount = state.groupTop3WinDigitCount;
+            renderGroupTop3StatsPanel();
+            renderRecentDataTable();
             if (window.lucide) lucide.createIcons();
         };
 
@@ -3222,7 +3673,9 @@
         };
 
         window.copyCombos = function () {
-            const text = document.getElementById('combo-hidden-text').value;
+            const hiddenText = document.getElementById('combo-hidden-text');
+            if (!hiddenText) return;
+            const text = hiddenText.value;
             const tempInput = document.createElement("textarea");
             tempInput.style.position = "absolute";
             tempInput.style.left = "-9999px";
@@ -3233,6 +3686,7 @@
             document.body.removeChild(tempInput);
 
             const btn = document.getElementById('btn-copy-combo');
+            if (!btn) return;
             const originalText = btn.innerHTML;
             btn.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5 mr-1"></i> คัดลอกสำเร็จ!';
             btn.classList.add('bg-emerald-100', 'text-emerald-700');
