@@ -274,6 +274,12 @@
                                 <option value="8">วิน 8</option>
                                 <option value="9">วิน 9</option>
                             </select>
+                            <label for="recent-include-repeat" class="font-bold text-slate-700 whitespace-nowrap">เบิ้ลหาม:</label>
+                            <select id="recent-include-repeat" onchange="window.changeRecentIncludeRepeat(this.value)"
+                                class="bg-white border border-slate-200 text-slate-700 text-sm rounded-md focus:ring-sky-500 focus:border-sky-500 p-2 font-bold outline-none shadow-sm cursor-pointer">
+                                <option value="yes">รวมเบิ้ลหาม</option>
+                                <option value="no">ไม่รวมเบิ้ลหาม</option>
+                            </select>
                             <label for="custom-cut-backtest-input" class="font-bold text-slate-700 whitespace-nowrap">เช็คเลขลบย้อนหลัง</label>
                             <input id="custom-cut-backtest-input" type="text" inputmode="numeric" maxlength="10"
                                 oninput="window.updateCustomCutBacktest(this.value)" placeholder="เช่น 012"
@@ -413,6 +419,7 @@
             top3CutRankStart: 'auto',
             lastTop3CutRecommendation: null,
             recentWinDigitCount: 7,
+            recentIncludeRepeat: true,
             recentResultView: 'single',
             recentResultDayFilter: -1,
             recentResultDateFilter: '',
@@ -3292,9 +3299,14 @@
                 const winSet = new Set((winDigits || []).map(Number));
                 if (winSet.size < 3) return { isPass: null };
                 const topDigits = String(row.top3 || '').split('').map(Number).filter(num => !isNaN(num));
-                return {
-                    isPass: topDigits.length === 3 && topDigits.every(digit => winSet.has(digit)),
-                };
+                const allInWinSet = topDigits.length === 3 && topDigits.every(digit => winSet.has(digit));
+                if (!allInWinSet) return { isPass: false };
+                // Check for repeated digits if "ไม่รวมเบิ้ลหาม" is selected
+                if (!state.recentIncludeRepeat) {
+                    const hasRepeat = new Set(topDigits).size < topDigits.length;
+                    if (hasRepeat) return { isPass: false };
+                }
+                return { isPass: true };
             };
             const renderWinStatus = (result) => {
                 if (result.isPass === null) {
@@ -3309,6 +3321,13 @@
             const winDigitSelect = document.getElementById('recent-win-digit-count');
             if (winDigitSelect && winDigitSelect.value !== String(selectedWinDigitCount)) {
                 winDigitSelect.value = String(selectedWinDigitCount);
+            }
+            const repeatSelect = document.getElementById('recent-include-repeat');
+            if (repeatSelect) {
+                const expectedRepeatValue = state.recentIncludeRepeat ? 'yes' : 'no';
+                if (repeatSelect.value !== expectedRepeatValue) {
+                    repeatSelect.value = expectedRepeatValue;
+                }
             }
             const currentPredictionGroupKey = ['hanoi', 'lao'].includes(activeGroupKey) ? activeGroupKey : null;
             const fallbackWinDigits = applyWinDigitCount(
@@ -3488,6 +3507,12 @@
             state.recentWinDigitCount = [7, 8, 9].includes(count) ? count : 7;
             state.groupTop3WinDigitCount = state.recentWinDigitCount;
             renderGroupTop3StatsPanel();
+            renderRecentDataTable();
+            if (window.lucide) lucide.createIcons();
+        };
+
+        window.changeRecentIncludeRepeat = function (value) {
+            state.recentIncludeRepeat = value !== 'no';
             renderRecentDataTable();
             if (window.lucide) lucide.createIcons();
         };
