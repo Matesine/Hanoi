@@ -196,22 +196,12 @@
                             <label for="top3-win-input"
                                 class="block text-sm font-bold text-indigo-800 mb-1">ใส่เลขสำหรับวิน 3 ตัวบน</label>
                             <input id="top3-win-input" type="text" inputmode="numeric"
-                                oninput="window.updateTop3WinNumbers()" placeholder="เช่น 1 2 3 4"
+                                oninput="window.handleTop3WinInputChange()" placeholder="เช่น 1 2 3 4"
                                 class="w-full bg-white border border-indigo-200 rounded-md px-3 py-2 text-sm font-bold text-indigo-800 outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
                         </div>
                         <div class="flex items-center justify-between lg:justify-end gap-3">
                             <div class="text-sm font-semibold text-indigo-800 whitespace-nowrap">ได้ <span
                                     id="top3-win-count" class="font-mono text-base">0</span> ชุด</div>
-                            <label for="top3-win-analysis-limit"
-                                class="text-xs bg-white text-indigo-700 border border-indigo-200 px-3 py-2 rounded-md flex items-center gap-2 transition font-bold">
-                                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-                                <select id="top3-win-analysis-limit"
-                                    onchange="analyzeTop3WinDigits(Number(this.value))"
-                                    class="bg-transparent text-indigo-700 text-xs font-bold outline-none cursor-pointer">
-                                    <option value="8">วิเคราะห์ 8 ตัว</option>
-                                    <option value="9">วิเคราะห์ 9 ตัว</option>
-                                </select>
-                            </label>
                             <button id="btn-copy-top3-win" type="button" onclick="copyTop3WinNumbers()"
                                 class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-md flex items-center transition font-bold">
                                 <i data-lucide="copy" class="w-3.5 h-3.5 mr-1"></i> คัดลอก
@@ -224,73 +214,12 @@
                             onchange="window.updateTop3WinNumbers(); renderRecentDataTable();">
                         รวมเลขเบิ้ล/หาม
                     </label>
-                    <label
-                        class="mt-3 ml-0 sm:ml-4 inline-flex items-center gap-2 text-sm font-semibold text-indigo-800 select-none cursor-pointer">
-                        ตัดเลขออกมากสุด
-                        <select id="top3-exclude-hottest-rank" onchange="window.reapplyTop3WinAnalysis()"
-                            class="bg-white border border-indigo-200 text-indigo-700 text-sm rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-1.5 font-bold outline-none shadow-sm cursor-pointer">
-                            <option value="0">ไม่ตัดเลข</option>
-                            <option value="1">อันดับ 1</option>
-                            <option value="2">อันดับ 2</option>
-                            <option value="3">อันดับ 3</option>
-                            <option value="4">อันดับ 4</option>
-                            <option value="5">อันดับ 5</option>
-                            <option value="6">อันดับ 6</option>
-                            <option value="7">อันดับ 7</option>
-                            <option value="8">อันดับ 8</option>
-                            <option value="9">อันดับ 9</option>
-                            <option value="10">อันดับ 10</option>
-                        </select>
-                        จำนวน 1 ตัว แล้วเติมเลขอันดับถัดไป
-                    </label>
-                    <label
-                        class="mt-3 ml-0 sm:ml-4 inline-flex items-center gap-2 text-sm font-semibold text-indigo-800 select-none cursor-pointer">
-                        สูตรแนะนำลบ
-                        <select id="top3-cut-count" onchange="window.changeTop3CutCount(Number(this.value))"
-                            class="bg-white border border-indigo-200 text-indigo-700 text-sm rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-1.5 font-bold outline-none shadow-sm cursor-pointer">
-                            <option value="3">3 ตัว</option>
-                            <option value="2">2 ตัว</option>
-                        </select>
-                    </label>
-                    <label
-                        class="mt-3 ml-0 sm:ml-4 inline-flex items-center gap-2 text-sm font-semibold text-indigo-800 select-none cursor-pointer">
-                        ลำดับสูตร
-                        <select id="top3-cut-rank-mode" onchange="window.changeTop3CutRankMode(this.value)"
-                            class="bg-white border border-indigo-200 text-indigo-700 text-sm rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-1.5 font-bold outline-none shadow-sm cursor-pointer">
-                            <option value="avoid-strong" selected>หลบเลขแรงหน้าแรก</option>
-                            <option value="day-rotate">ขยับตามวัน</option>
-                            <option value="score">เรียงคะแนน</option>
-                        </select>
-                    </label>
-                    <label
-                        class="mt-3 ml-0 sm:ml-4 inline-flex items-center gap-2 text-sm font-semibold text-indigo-800 select-none cursor-pointer">
-                        เริ่มที่
-                        <select id="top3-cut-rank-start" onchange="window.changeTop3CutRankStart(this.value)"
-                            class="bg-white border border-indigo-200 text-indigo-700 text-sm rounded-md focus:ring-indigo-500 focus:border-indigo-500 p-1.5 font-bold outline-none shadow-sm cursor-pointer">
-                            <option value="auto" selected>ตามวัน</option>
-                            <option value="1">อันดับ 1</option>
-                            <option value="2">อันดับ 2</option>
-                            <option value="3">อันดับ 3</option>
-                            <option value="4">อันดับ 4</option>
-                            <option value="5">อันดับ 5</option>
-                            <option value="6">อันดับ 6</option>
-                            <option value="7">อันดับ 7</option>
-                        </select>
-                    </label>
-                    <div class="mt-3 flex justify-start">
-                        <button id="btn-copy-top3-ai-summary" type="button" onclick="copyTop3AISummary()"
-                            class="text-xs bg-rose-600 hover:bg-rose-700 text-white px-3 py-2 rounded-md inline-flex items-center transition font-bold">
-                            <i data-lucide="bot" class="w-3.5 h-3.5 mr-1"></i> คัดลอกถาม AI
-                        </button>
-                    </div>
-                    <div id="top3-win-analysis" class="mt-3 text-sm font-semibold text-indigo-800 hidden-temp"></div>
                     <div id="top3-win-grid"
                         class="mt-3 grid grid-cols-4 sm:grid-cols-6 md:grid-cols-9 lg:grid-cols-12 gap-2 max-h-[180px] overflow-y-auto p-3 bg-slate-50 border border-slate-200 rounded-lg shadow-inner">
                         <div class="col-span-full text-center text-sm text-slate-400 py-2">ใส่เลขเพื่อสร้างวิน 3 ตัวบน
                         </div>
                     </div>
                     <input type="hidden" id="top3-win-hidden-text">
-                    <textarea id="top3-ai-summary-text" class="hidden-temp" aria-hidden="true"></textarea>
                 </div>
             </div>
 
@@ -482,8 +411,6 @@
             top3CutCount: 3,
             top3CutRankMode: 'avoid-strong',
             top3CutRankStart: 'auto',
-            useTop3CutKeepDigits: false,
-            lastTop3CutKeepDigits: [],
             lastTop3CutRecommendation: null,
             recentWinDigitCount: 7,
             recentResultView: 'single',
@@ -493,6 +420,7 @@
             exphuayCatalog: [],
             groupTop3WinDigitCount: 7,
             groupTop3DayFilter: -1,
+            top3WinSourceGroup: null,
             groupTop3RequestId: 0,
             groupTop3PredictionSaveKeys: new Set(),
             groupTop3PredictionRows: { hanoi: [], lao: [] },
@@ -1641,28 +1569,23 @@
         }
 
         function getExcludedHottestWinRank() {
-            const select = document.getElementById('top3-exclude-hottest-rank');
-            const rank = select ? Number(select.value) : 0;
-            return Number.isInteger(rank) && rank >= 1 && rank <= 10 ? rank : 0;
+            return 0;
         }
 
         function getTop3CutCount() {
-            const select = document.getElementById('top3-cut-count');
-            const count = select ? Number(select.value) : state.top3CutCount;
+            const count = state.top3CutCount;
             return count === 2 ? 2 : 3;
         }
 
         function getTop3CutRankMode() {
-            const select = document.getElementById('top3-cut-rank-mode');
-            const mode = select ? select.value : state.top3CutRankMode;
+            const mode = state.top3CutRankMode;
             if (mode === 'score') return 'score';
             if (mode === 'day-rotate') return 'day-rotate';
             return 'avoid-strong';
         }
 
         function getTop3CutRankStart() {
-            const select = document.getElementById('top3-cut-rank-start');
-            const value = select ? select.value : state.top3CutRankStart;
+            const value = state.top3CutRankStart;
             const rank = Number(value);
             return Number.isInteger(rank) && rank >= 1 ? rank - 1 : null;
         }
@@ -1827,6 +1750,37 @@
                     ${number}
                 </div>
             `).join('');
+        };
+
+        window.handleTop3WinInputChange = function () {
+            state.top3WinSourceGroup = null;
+            window.updateTop3WinNumbers();
+            renderGroupTop3StatsPanel();
+        };
+
+        window.applyGroupTop3WinDigitsToInput = function (groupKey, checked) {
+            if (!checked) {
+                if (state.top3WinSourceGroup === groupKey) {
+                    state.top3WinSourceGroup = null;
+                    renderGroupTop3StatsPanel();
+                }
+                return;
+            }
+
+            const stats = buildGroupTop3Frequency(groupKey);
+            const digits = getGroupTop3WinDigitsByCount(stats, 9)
+                .filter(digit => Number.isInteger(digit));
+            if (!digits.length) return;
+
+            const input = document.getElementById('top3-win-input');
+            if (input) {
+                input.value = digits.join(' ');
+            }
+            state.top3WinSourceGroup = groupKey;
+            state.lastTop3WinLimit = 9;
+            window.updateTop3WinNumbers();
+            renderGroupTop3StatsPanel();
+            if (window.lucide) lucide.createIcons();
         };
 
         function getDerivedDigitsFromLatestTop3() {
@@ -2469,18 +2423,6 @@
             };
         }
 
-        window.toggleTop3CutKeepDigits = function (checked) {
-            state.useTop3CutKeepDigits = checked;
-            if (!checked) return;
-
-            const input = document.getElementById('top3-win-input');
-            if (!input || !state.lastTop3CutKeepDigits.length) return;
-
-            input.value = state.lastTop3CutKeepDigits.join(' ');
-            window.updateTop3WinNumbers();
-            renderRecentDataTable();
-        };
-
         window.changeTop3CutCount = function (count) {
             state.top3CutCount = count === 2 ? 2 : 3;
             window.reapplyTop3WinAnalysis();
@@ -2566,50 +2508,13 @@
 
         window.analyzeTop3WinDigits = function (limit = 7) {
             const input = document.getElementById('top3-win-input');
-            const analysis = document.getElementById('top3-win-analysis');
-            const analysisLimitSelect = document.getElementById('top3-win-analysis-limit');
-            if (!input || !analysis) return;
+            if (!input) return;
             state.lastTop3WinLimit = limit;
-            if (analysisLimitSelect) {
-                analysisLimitSelect.value = String(limit);
-            }
-            const cutCountSelect = document.getElementById('top3-cut-count');
-            if (cutCountSelect) {
-                cutCountSelect.value = String(state.top3CutCount || 3);
-            }
-            const rankModeSelect = document.getElementById('top3-cut-rank-mode');
-            if (rankModeSelect) {
-                rankModeSelect.value = state.top3CutRankMode || 'avoid-strong';
-            }
-            const rankStartSelect = document.getElementById('top3-cut-rank-start');
-            if (rankStartSelect) {
-                rankStartSelect.value = state.top3CutRankStart || 'auto';
-            }
+            state.top3WinSourceGroup = null;
             state.top3CutCount = getTop3CutCount();
             state.top3CutRankMode = getTop3CutRankMode();
-            if (rankStartSelect) {
-                state.top3CutRankStart = rankStartSelect.value || 'auto';
-            }
-            const excludedHotRank = getExcludedHottestWinRank();
 
             const { rankedDigits, digits, returnDigits, excludedHotDigits } = selectTop3WinDigits(limit);
-            const formulaDigits = getDerivedDigitsFromLatestTop3();
-            const hotDigits = rankedDigits.hotDigits;
-            const trendingDigits = rankedDigits.trendingDigits;
-            const staleDigits = rankedDigits.staleDigits;
-            const sameDayDigits = rankedDigits.sameDayDigits;
-            const patternDigits = [...new Set([
-                ...rankedDigits.previousPatterns.follow,
-                ...rankedDigits.previousPatterns.shuffle,
-                ...rankedDigits.previousPatterns.run,
-                ...rankedDigits.previousPatterns.sum,
-                ...rankedDigits.previousPatterns.calendar,
-            ])];
-            const formatRankedDigits = (items) => items
-                .map(item => `${item.digit}(${item.count})`)
-                .join(' ');
-            const omittedDigits = Array.from({ length: 10 }, (_, digit) => digit)
-                .filter(digit => !digits.includes(digit));
             const allDayData = state.allDayData && state.allDayData.length
                 ? state.allDayData
                 : state.data;
@@ -2617,13 +2522,6 @@
             const currentDayContext = getTop3CurrentDayContextData();
             const currentDayOmittedDigits = getTop3OmittedDigitsForData(currentDayContext.data, limit);
             const previousAllDayOmittedDigits = getTop3OmittedDigitsForData(allDayData.slice(1, state.period + 1), limit);
-            const currentDayIndex = new Date().getDay();
-            const previousCurrentDayData = Number.isInteger(currentDayIndex)
-                ? allDayData
-                    .filter(row => row.dateObject && row.dateObject.getUTCDay() === currentDayIndex)
-                    .slice(1, state.period + 1)
-                : state.data.slice(1, state.period + 1);
-            const previousCurrentDayOmittedDigits = getTop3OmittedDigitsForData(previousCurrentDayData, limit);
             const combinedOmittedSet = new Set([...allDayOmittedDigits, ...currentDayOmittedDigits]);
             let inputDigits = limit === 9
                 ? digits.filter(digit => !combinedOmittedSet.has(digit))
@@ -2635,23 +2533,10 @@
                 excludedHotDigits,
                 returnDigits,
             });
-            state.lastTop3CutKeepDigits = cutRecommendation.keepDigits;
-            if (state.useTop3CutKeepDigits) {
-                inputDigits = cutRecommendation.keepDigits;
-            }
-
-            const dayText = state.dayFilter !== -1
-                ? `เฉพาะ${DAYS_OF_WEEK.find(day => day.index === state.dayFilter).name}`
-                : 'รวมทุกวัน';
-            const fixedCutFormulaText = 'กันเลขแรง/เลขกลับก่อนตัด: กัน Pattern วันเดียวกันที่เป็น 0 เป็นหลัก ส่วน Trending Top 4, Hot Top 3 และ Trend >= 10 พร้อมมี Pattern วันเดียวกัน จะเป็นคะแนนเสี่ยง จากนั้นตัด 3 ตัวจากคะแนนอ่อนรวม Hot/Trend/ค้าง/Pattern';
-            const fixedCutFormulaDetail = lastTop3CutFormulaParts.length
-                ? lastTop3CutFormulaParts.map(part => `${part.label}: ${part.digit}`).join(' | ')
-                : fixedCutFormulaText;
             const activeLotteryName = state.activeSheet && state.activeSheet.name
                 ? state.activeSheet.name
                 : 'หวย';
             const cutCount = getTop3CutCount();
-            const keepCount = 10 - cutCount;
             const cutRankModeName = getTop3CutRankModeName();
             const cutRankStartName = getTop3CutRankStartName();
             const formulaTargetDate = getTop3CutFormulaTargetDate();
@@ -2674,44 +2559,8 @@
                 period: state.period,
                 limit,
             });
-            const aiSummaryText = [
-                `${activeLotteryName} วันที่ ${formulaTargetDate} สูตรแนะนำลบออก ${cutCount} ตัวจาก 10 ตัว: ${cutRecommendation.cutDigits.join(' ') || '-'}`,
-                `ลำดับสูตร: ${cutRankModeName}`,
-                `เริ่มที่: ${cutRankStartName}`,
-                `Hot Numbers ${state.period} งวด: ${formatRankedDigits(hotDigits) || '-'}`,
-                `Trending Numbers ล่าสุด ${rankedDigits.trendWindow} งวด: ${formatRankedDigits(trendingDigits) || '-'}`,
-                `เลขค้าง/หายไปนาน (${state.period} งวดล่าสุด): ${formatRankedDigits(staleDigits) || '-'}`,
-                `Pattern วันเดียวกัน (${state.period} งวดล่าสุด): ${formatRankedDigits(sameDayDigits) || '-'}`,
-            ].join('\n');
-            const aiSummaryTextArea = document.getElementById('top3-ai-summary-text');
-            if (aiSummaryTextArea) {
-                aiSummaryTextArea.value = aiSummaryText;
-            }
 
             input.value = inputDigits.join(' ');
-            analysis.innerHTML = `
-                <span class="block mt-1 text-xs text-indigo-600">ตัดเลขออกมากสุด${excludedHotRank ? `อันดับ ${excludedHotRank} จำนวน 1 ตัว` : ''}: <span class="font-mono">${excludedHotDigits.join(' ') || '-'}</span></span>
-                <span class="block mt-1 text-xs text-rose-600">เลขที่ตัดออกจริง แสดงวัน ทั้งหมด: <span class="font-mono">${allDayOmittedDigits.join(' ') || '-'}</span></span>
-                <span class="block mt-1 text-xs text-amber-700 font-bold">รายละเอียดสูตรลบ ${cutCount} ตัว: <span class="font-normal text-amber-600">${fixedCutFormulaDetail}</span></span>
-                <span class="block mt-2 text-xs text-rose-700 font-bold">${activeLotteryName} วันที่ ${formulaTargetDate} สูตรแนะนำลบออก ${cutCount} ตัวจาก 10 ตัว: <span class="font-mono text-sm">${cutRecommendation.cutDigits.join(' ') || '-'}</span></span>
-                <span class="inline-flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-xs text-sky-700 bg-sky-50 border border-sky-100 rounded-md px-2 py-1">
-                    <span class="font-bold">ลำดับสูตรที่ใช้ตอนนี้:</span>
-                    <span>ลำดับสูตร: <span class="font-bold text-sky-900">${cutRankModeName}</span></span>
-                    <span>|</span>
-                    <span>เริ่มที่: <span class="font-bold text-sky-900">${cutRankStartName}</span></span>
-                </span>
-                <label class="block mt-2 w-fit text-xs text-emerald-700 font-bold cursor-pointer select-none">
-                    <input id="top3-use-cut-keep-digits" type="checkbox" class="w-4 h-4 accent-emerald-600"
-                        ${state.useTop3CutKeepDigits ? 'checked' : ''}
-                        onchange="window.toggleTop3CutKeepDigits(this.checked)">
-                    <span class="inline-flex items-center gap-2 ml-1">เลขที่เหลือ ${keepCount} ตัว: <span class="font-mono text-sm">${cutRecommendation.keepDigits.join(' ') || '-'}</span></span>
-                </label>
-                <span class="block mt-1 text-xs text-indigo-600">Hot Numbers ${state.period} งวด: <span class="font-mono">${formatRankedDigits(hotDigits) || '-'}</span></span>
-                <span class="block mt-1 text-xs text-indigo-600">Trending Numbers ล่าสุด ${rankedDigits.trendWindow} งวด: <span class="font-mono">${formatRankedDigits(trendingDigits) || '-'}</span></span>
-                <span class="block mt-1 text-xs text-indigo-600">เลขค้าง/หายไปนาน (${state.period} งวดล่าสุด): <span class="font-mono">${formatRankedDigits(staleDigits) || '-'}</span></span>
-                <span class="block mt-1 text-xs text-indigo-600">Pattern วันเดียวกัน (${state.period} งวดล่าสุด): <span class="font-mono">${formatRankedDigits(sameDayDigits) || '-'}</span></span>
-            `;
-            analysis.classList.remove('hidden-temp');
             window.updateTop3WinNumbers();
         };
 
@@ -3147,13 +2996,14 @@
             const selectedWinDigitCount = [7, 8, 9].includes(state.groupTop3WinDigitCount)
                 ? state.groupTop3WinDigitCount
                 : 7;
-            const selectedWinDigits = getGroupTop3WinDigitsByCount(stats, selectedWinDigitCount);
+            const inputWinDigits = getGroupTop3WinDigitsByCount(stats, 9);
             const selectedCutDigitCount = Math.max(1, 10 - selectedWinDigitCount);
             const selectedCutDigits = stats.cutDigits.slice(0, selectedCutDigitCount);
             const selectedCutDigitSet = new Set(selectedCutDigits);
-            const selectedWinComboCount = getGroupTop3WinComboCount(selectedWinDigits.length, true);
-            const winDigitsHtml = selectedWinDigits.length
-                ? selectedWinDigits.map(digit => `
+            const inputWinComboCount = getGroupTop3WinComboCount(inputWinDigits.length, true);
+            const isInputSource = state.top3WinSourceGroup === groupKey;
+            const winDigitsHtml = inputWinDigits.length
+                ? inputWinDigits.map(digit => `
                     <span class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-emerald-600 text-white font-mono font-black text-base">${digit}</span>
                 `).join('')
                 : '<span class="text-sm font-semibold text-slate-400">-</span>';
@@ -3224,8 +3074,15 @@
                     </div>
                     <div class="px-4 py-3 border-b border-emerald-100 bg-emerald-50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div>
-                            <div class="text-sm font-bold text-emerald-700">เลขวินคาดการณ์งวดต่อไป ${selectedWinDigitCount} ตัว</div>
-                            <div class="text-xs font-semibold text-emerald-600">เก็บเลขที่สูตรไม่ตัดออก วินรวมเบิ้ล/หาม ${selectedWinComboCount} ชุด ไม่รวมตอง</div>
+                            <label class="inline-flex items-center gap-2 text-sm font-bold text-emerald-700 cursor-pointer select-none">
+                                <input type="checkbox"
+                                    data-group-top3-win-source="${groupKey}"
+                                    class="w-4 h-4 accent-emerald-600"
+                                    ${isInputSource ? 'checked' : ''}
+                                    onchange="window.applyGroupTop3WinDigitsToInput('${groupKey}', this.checked)">
+                                <span>เลขวินคาดการณ์งวดต่อไป 9 ตัว</span>
+                            </label>
+                            <div class="text-xs font-semibold text-emerald-600">ติ๊กเพื่อส่งเลขชุดนี้ไปช่องวิน 3 ตัวบน / วินรวมเบิ้ล-หาม ${inputWinComboCount} ชุด ไม่รวมตอง</div>
                         </div>
                         <div class="flex flex-wrap items-center gap-2">${winDigitsHtml}</div>
                     </div>
@@ -3726,36 +3583,6 @@
                 btn.innerHTML = originalText;
                 btn.classList.remove('bg-emerald-600');
                 btn.classList.add('bg-indigo-600');
-                if (window.lucide) lucide.createIcons();
-            }, 2000);
-        };
-
-        window.copyTop3AISummary = function () {
-            const summary = document.getElementById('top3-ai-summary-text');
-            const text = summary ? summary.value : '';
-            if (!text) return;
-
-            const tempInput = document.createElement("textarea");
-            tempInput.style.position = "absolute";
-            tempInput.style.left = "-9999px";
-            tempInput.value = text;
-            document.body.appendChild(tempInput);
-            tempInput.select();
-            document.execCommand("copy");
-            document.body.removeChild(tempInput);
-
-            const btn = document.getElementById('btn-copy-top3-ai-summary');
-            if (!btn) return;
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5 mr-1"></i> คัดลอกแล้ว';
-            btn.classList.add('bg-emerald-600');
-            btn.classList.remove('bg-rose-600');
-            if (window.lucide) lucide.createIcons();
-
-            setTimeout(() => {
-                btn.innerHTML = originalText;
-                btn.classList.remove('bg-emerald-600');
-                btn.classList.add('bg-rose-600');
                 if (window.lucide) lucide.createIcons();
             }, 2000);
         };
