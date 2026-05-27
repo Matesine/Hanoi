@@ -226,12 +226,13 @@
             <!-- 3-Digit Combinations -->
             <!-- Recent Data Table (Preview) -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mt-8">
-                <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
-                    <div class="flex items-center space-x-2">
-                        <i data-lucide="calendar-days" class="w-5 h-5 text-slate-500"></i>
-                        <h3 class="font-bold text-slate-700" id="table-title">ข้อมูลที่ใช้คำนวณ</h3>
-                    </div>
-                    <div class="flex flex-col xl:flex-row xl:items-center gap-3">
+                <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 space-y-3">
+                    <!-- Row 1: Title + Tabs -->
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="calendar-days" class="w-5 h-5 text-slate-500"></i>
+                            <h3 class="font-bold text-slate-700" id="table-title">ข้อมูลที่ใช้คำนวณ</h3>
+                        </div>
                         <div class="flex flex-wrap items-center gap-1 rounded-lg bg-white border border-slate-200 p-1 shadow-sm"
                             role="tablist" aria-label="เลือกรูปแบบข้อมูลย้อนหลัง">
                             <button type="button" data-recent-result-view="single" onclick="window.changeRecentResultView('single')"
@@ -247,7 +248,11 @@
                                 ลาวรวม 14
                             </button>
                         </div>
-                        <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 text-xs text-slate-600">
+                    </div>
+
+                    <!-- Row 2: Date Filters -->
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
+                        <div class="flex items-center gap-1.5">
                             <label for="recent-result-day-filter" class="font-bold text-slate-700 whitespace-nowrap">ดูวัน:</label>
                             <select id="recent-result-day-filter" onchange="window.changeRecentResultDayFilter(Number(this.value))"
                                 class="bg-white border border-slate-200 text-slate-700 text-sm rounded-md focus:ring-sky-500 focus:border-sky-500 p-2 font-bold outline-none shadow-sm cursor-pointer">
@@ -260,6 +265,8 @@
                                 <option value="5">วันศุกร์</option>
                                 <option value="6">วันเสาร์</option>
                             </select>
+                        </div>
+                        <div class="flex items-center gap-1.5">
                             <label for="recent-result-date-filter" class="font-bold text-slate-700 whitespace-nowrap">วันที่:</label>
                             <input id="recent-result-date-filter" type="date" onchange="window.changeRecentResultDateFilter(this.value)"
                                 class="bg-white border border-slate-200 rounded-md px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400">
@@ -267,6 +274,12 @@
                                 class="bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 px-3 py-2 rounded-md font-bold transition whitespace-nowrap">
                                 ล้างวันที่
                             </button>
+                        </div>
+                    </div>
+
+                    <!-- Row 3: Win + Repeat + Backtest -->
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
+                        <div class="flex items-center gap-1.5">
                             <label for="recent-win-digit-count" class="font-bold text-slate-700 whitespace-nowrap">เลือกวิน:</label>
                             <select id="recent-win-digit-count" onchange="window.changeRecentWinDigitCount(Number(this.value))"
                                 class="bg-white border border-slate-200 text-slate-700 text-sm rounded-md focus:ring-sky-500 focus:border-sky-500 p-2 font-bold outline-none shadow-sm cursor-pointer">
@@ -274,16 +287,21 @@
                                 <option value="8">วิน 8</option>
                                 <option value="9">วิน 9</option>
                             </select>
+                        </div>
+                        <div class="flex items-center gap-1.5">
                             <label for="recent-include-repeat" class="font-bold text-slate-700 whitespace-nowrap">เบิ้ลหาม:</label>
                             <select id="recent-include-repeat" onchange="window.changeRecentIncludeRepeat(this.value)"
                                 class="bg-white border border-slate-200 text-slate-700 text-sm rounded-md focus:ring-sky-500 focus:border-sky-500 p-2 font-bold outline-none shadow-sm cursor-pointer">
                                 <option value="yes">รวมเบิ้ลหาม</option>
                                 <option value="no">ไม่รวมเบิ้ลหาม</option>
                             </select>
+                        </div>
+                        <div class="w-px h-6 bg-slate-300 hidden sm:block"></div>
+                        <div class="flex items-center gap-1.5">
                             <label for="custom-cut-backtest-input" class="font-bold text-slate-700 whitespace-nowrap">เช็คเลขลบย้อนหลัง</label>
                             <input id="custom-cut-backtest-input" type="text" inputmode="numeric" maxlength="10"
                                 oninput="window.updateCustomCutBacktest(this.value)" placeholder="เช่น 012"
-                                class="w-full sm:w-32 bg-white border border-slate-200 rounded-md px-3 py-2 text-sm font-mono font-bold text-slate-700 outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400">
+                                class="w-24 bg-white border border-slate-200 rounded-md px-3 py-2 text-sm font-mono font-bold text-slate-700 outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400">
                             <button type="button" onclick="window.findBestCustomCutBacktest()"
                                 class="bg-sky-600 hover:bg-sky-700 text-white px-3 py-2 rounded-md font-bold transition whitespace-nowrap">
                                 หาเลขดีที่สุด
