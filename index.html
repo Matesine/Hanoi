@@ -445,6 +445,7 @@
             exphuayCatalog: [],
             groupTop3WinDigitCount: 7,
             groupTop3DayFilter: -1,
+            groupTop3SheetFilter: { hanoi: 'all', lao: 'all' },
             top3WinSourceGroup: null,
             groupTop3RequestId: 0,
             groupTop3PredictionSaveKeys: new Set(),
@@ -1059,15 +1060,30 @@
 
         function getRecentResultViewMeta(viewKey) {
             if (viewKey === 'hanoi') {
-                return { title: 'หวยฮานอยทั้งหมด 9 ประเภท', groupKey: 'hanoi', isGroupView: true };
+                const selectedSheetSlug = getGroupTop3SelectedSheetSlug('hanoi');
+                const selectedSheet = getLotteryGroup('hanoi')?.sheets.find(sheet => sheet.slug === selectedSheetSlug);
+                return {
+                    title: selectedSheet ? selectedSheet.name : 'หวยฮานอยทั้งหมด 9 ประเภท',
+                    groupKey: 'hanoi',
+                    isGroupView: true,
+                    selectedSheetSlug,
+                };
             }
             if (viewKey === 'lao') {
-                return { title: 'หวยลาวทั้งหมด 14 ประเภท', groupKey: 'lao', isGroupView: true };
+                const selectedSheetSlug = getGroupTop3SelectedSheetSlug('lao');
+                const selectedSheet = getLotteryGroup('lao')?.sheets.find(sheet => sheet.slug === selectedSheetSlug);
+                return {
+                    title: selectedSheet ? selectedSheet.name : 'หวยลาวทั้งหมด 14 ประเภท',
+                    groupKey: 'lao',
+                    isGroupView: true,
+                    selectedSheetSlug,
+                };
             }
             return {
                 title: state.activeSheet && state.activeSheet.name ? state.activeSheet.name : 'สูตรวินย้อนหลัง',
                 groupKey: state.activeSheet && state.activeSheet.group,
                 isGroupView: false,
+                selectedSheetSlug: state.activeSheet && state.activeSheet.slug,
             };
         }
 
@@ -1122,7 +1138,11 @@
             const group = getLotteryGroup(viewKey);
             if (!group) return [];
             const groupState = getGroupTop3State(viewKey);
-            return group.sheets
+            const selectedSheetSlug = getGroupTop3SelectedSheetSlug(viewKey);
+            const visibleSheets = selectedSheetSlug === 'all'
+                ? group.sheets
+                : group.sheets.filter(sheet => sheet.slug === selectedSheetSlug);
+            return visibleSheets
                 .flatMap((sheet, sheetOrder) => filterRows(groupState.rowsBySlug[sheet.slug] || []).map(row => ({
                     row,
                     groupKey: viewKey,
@@ -1828,10 +1848,12 @@
                 return;
             }
 
+            const stats = buildGroupTop3Frequency(groupKey, {
+                sheetSlug: getGroupTop3SelectedSheetSlug(groupKey),
+            });
             const selectedWinDigitCount = [7, 8, 9].includes(state.groupTop3WinDigitCount)
                 ? state.groupTop3WinDigitCount
                 : 7;
-            const stats = buildGroupTop3Frequency(groupKey);
             const digits = getGroupTop3WinDigitsByCount(stats, selectedWinDigitCount)
                 .filter(digit => Number.isInteger(digit));
             if (!digits.length) return;
@@ -2870,14 +2892,17 @@
             `).join('');
         }
 
-        function getGroupTop3DailyStep(groupKey, dateObject = null) {
+        function getGroupTop3DailyStep(groupKey, dateObject = null, dayFilter = state.groupTop3DayFilter) {
             const sourceDate = dateObject && !isNaN(dateObject) ? dateObject : new Date();
             const dayStart = new Date(sourceDate.getFullYear(), sourceDate.getMonth(), sourceDate.getDate());
             const dayNumber = Math.floor(dayStart.getTime() / 86400000);
+            const selectedDayOffset = Number.isInteger(dayFilter) && dayFilter >= 0 && dayFilter <= 6
+                ? (dayFilter + 1) * 17
+                : 0;
             const groupOffset = String(groupKey || '')
                 .split('')
                 .reduce((total, char) => total + char.charCodeAt(0), 0);
-            return dayNumber + groupOffset;
+            return dayNumber + groupOffset + selectedDayOffset;
         }
 
         function getPingPongIndex(step, length) {
@@ -2913,8 +2938,8 @@
             }));
         }
 
-        function selectRotatingGroupTop3CutItems(rankGroups, groupKey, dateObject = null) {
-            const dailyStep = getGroupTop3DailyStep(groupKey, dateObject);
+        function selectRotatingGroupTop3CutItems(rankGroups, groupKey, dateObject = null, dayFilter = state.groupTop3DayFilter) {
+            const dailyStep = getGroupTop3DailyStep(groupKey, dateObject, dayFilter);
             const groupOrder = Array.from({ length: rankGroups.length }, (_, index) =>
                 (index + dailyStep) % rankGroups.length
             );
@@ -2950,23 +2975,41 @@
             return stats.winDigits7 || stats.winDigits || [];
         }
 
+        function getGroupTop3SelectedSheetSlug(groupKey) {
+            const group = getLotteryGroup(groupKey);
+            const selected = state.groupTop3SheetFilter && state.groupTop3SheetFilter[groupKey]
+                ? state.groupTop3SheetFilter[groupKey]
+                : 'all';
+            if (!group || selected === 'all') return 'all';
+            return group.sheets.some(sheet => sheet.slug === selected) ? selected : 'all';
+        }
+
         function buildGroupTop3Frequency(groupKey, options = {}) {
             const group = getLotteryGroup(groupKey);
             const groupState = getGroupTop3State(groupKey);
             const dayFilter = Number.isInteger(options.dayFilter) ? options.dayFilter : state.groupTop3DayFilter;
+            const selectedSheetSlug = options.sheetSlug && options.sheetSlug !== 'all'
+                ? options.sheetSlug
+                : null;
+            const selectedSheets = selectedSheetSlug
+                ? group.sheets.filter(sheet => sheet.slug === selectedSheetSlug)
+                : group.sheets;
             const targetDateObject = options.targetDateObject && !isNaN(options.targetDateObject)
                 ? options.targetDateObject
                 : null;
             const rotationDateObject = options.rotationDateObject && !isNaN(options.rotationDateObject)
                 ? options.rotationDateObject
                 : targetDateObject;
+            const rotationDayFilter = Number.isInteger(options.rotationDayFilter)
+                ? options.rotationDayFilter
+                : dayFilter;
             const counts = Array(10).fill(0);
             const lotteriesByDigit = Array.from({ length: 10 }, () => new Set());
             let drawCount = 0;
             let digitCount = 0;
             let sheetWithDataCount = 0;
 
-            group.sheets.forEach(sheet => {
+            selectedSheets.forEach(sheet => {
                 const rows = sortUniqueRows(groupState.rowsBySlug[sheet.slug] || []);
                 const beforeTargetRows = targetDateObject
                     ? rows.filter(row => row.dateObject < targetDateObject)
@@ -3013,7 +3056,7 @@
                 item.cutGroupLabel = scoreItem ? scoreItem.groupLabel : '';
                 item.cutGroupPosition = scoreItem ? scoreItem.groupPosition : 0;
             });
-            const cutItems = selectRotatingGroupTop3CutItems(rankGroups, groupKey, rotationDateObject);
+            const cutItems = selectRotatingGroupTop3CutItems(rankGroups, groupKey, rotationDateObject, rotationDayFilter);
             const cutDigits = cutItems.map(item => item.digit);
             const winDigits7 = digitCount ? getGroupTop3WinDigitsFromCuts(cutDigits, 7) : [];
             const winDigits8 = digitCount ? getGroupTop3WinDigitsFromCuts(cutDigits, 8) : [];
@@ -3034,8 +3077,13 @@
                 formulaName: 'สูตรกลุ่มละ 1 ตัวหมุนรายวัน',
                 drawCount,
                 digitCount,
-                sheetCount: group.sheets.length,
+                sheetCount: selectedSheets.length,
+                totalSheetCount: group.sheets.length,
                 sheetWithDataCount,
+                selectedSheetSlug: selectedSheetSlug || 'all',
+                selectedSheetName: selectedSheetSlug
+                    ? selectedSheets[0]?.name || ''
+                    : '',
                 errorCount: Object.keys(groupState.errorsBySlug || {}).length,
                 loading: groupState.loading,
                 loaded: groupState.loaded,
@@ -3046,6 +3094,18 @@
             const group = getLotteryGroup(groupKey);
             const stats = providedStats || buildGroupTop3Frequency(groupKey);
             const isHanoi = groupKey === 'hanoi';
+            const selectedSheetSlug = stats.selectedSheetSlug || getGroupTop3SelectedSheetSlug(groupKey);
+            const selectedSheetName = stats.selectedSheetName || '';
+            const groupState = getGroupTop3State(groupKey);
+            const loadedSheetCount = group.sheets.filter(sheet =>
+                sortUniqueRows(groupState.rowsBySlug[sheet.slug] || []).length
+            ).length;
+            const sheetOptionsHtml = [
+                `<option value="all"${selectedSheetSlug === 'all' ? ' selected' : ''}>ทั้งหมด (${loadedSheetCount}/${group.sheets.length} ประเภท)</option>`,
+                ...group.sheets.map(sheet => `
+                    <option value="${escapeHtml(sheet.slug)}"${selectedSheetSlug === sheet.slug ? ' selected' : ''}>${escapeHtml(sheet.name)}</option>
+                `),
+            ].join('');
             const accent = isHanoi
                 ? {
                     header: 'bg-violet-50 border-violet-100',
@@ -3063,14 +3123,16 @@
                     bar: 'bg-teal-500',
                     soft: 'bg-teal-50',
                 };
-            const title = isHanoi ? 'หวยฮานอยทั้งหมด' : 'หวยลาวทั้งหมด';
+            const title = selectedSheetSlug !== 'all' && selectedSheetName
+                ? selectedSheetName
+                : isHanoi ? 'หวยฮานอยทั้งหมด' : 'หวยลาวทั้งหมด';
             const maxCount = stats.ranked[0]?.count || 1;
             const cutDigitSet = new Set(stats.cutDigits);
             const cutScoreByDigit = new Map((stats.scoredCutDigits || []).map(item => [item.digit, item]));
             const selectedWinDigitCount = [7, 8, 9].includes(state.groupTop3WinDigitCount)
                 ? state.groupTop3WinDigitCount
                 : 7;
-            const inputWinDigits = getGroupTop3WinDigitsByCount(stats, 9);
+            const inputWinDigits = getGroupTop3WinDigitsByCount(stats, selectedWinDigitCount);
             const selectedCutDigitCount = Math.max(1, 10 - selectedWinDigitCount);
             const selectedCutDigits = stats.cutDigits.slice(0, selectedCutDigitCount);
             const selectedCutDigitSet = new Set(selectedCutDigits);
@@ -3128,9 +3190,10 @@
                                 <div class="text-xs font-semibold text-slate-500">นับเลขโดดจาก 3 ตัวบน / ${getDayLabel(state.groupTop3DayFilter)} / ${state.period} งวดล่าสุดต่อหวย</div>
                             </div>
                         </div>
-                        <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full border text-xs font-bold ${accent.badge}">
-                            ${stats.sheetWithDataCount}/${stats.sheetCount} ประเภท
-                        </span>
+                        <select onchange="window.changeGroupTop3SheetFilter('${groupKey}', this.value)"
+                            class="max-w-full sm:max-w-44 rounded-full border px-2.5 py-1 text-xs font-bold outline-none cursor-pointer ${accent.badge}">
+                            ${sheetOptionsHtml}
+                        </select>
                     </div>
                     <div class="px-4 py-3 border-b border-slate-100 grid grid-cols-3 gap-2 text-center">
                         <div>
@@ -3199,10 +3262,16 @@
 
             const hanoiStats = buildGroupTop3Frequency('hanoi');
             const laoStats = buildGroupTop3Frequency('lao');
+            const hanoiDisplayStats = buildGroupTop3Frequency('hanoi', {
+                sheetSlug: getGroupTop3SelectedSheetSlug('hanoi'),
+            });
+            const laoDisplayStats = buildGroupTop3Frequency('lao', {
+                sheetSlug: getGroupTop3SelectedSheetSlug('lao'),
+            });
 
             grid.innerHTML = `
-                ${createGroupTop3StatsCard('hanoi', hanoiStats)}
-                ${createGroupTop3StatsCard('lao', laoStats)}
+                ${createGroupTop3StatsCard('hanoi', hanoiDisplayStats)}
+                ${createGroupTop3StatsCard('lao', laoDisplayStats)}
             `;
 
             if (!isLoading) {
@@ -3326,8 +3395,31 @@
                         : prediction.winDigits7;
                 return parsePredictionDigits(digitText);
             };
+            const getSheetFilteredDigitsForRecord = (groupKey, sheetSlug, dateObject, winDigitCount) => {
+                if (!['hanoi', 'lao'].includes(groupKey) || !sheetSlug || sheetSlug === 'all' || !dateObject || isNaN(dateObject)) return [];
+                const stats = buildGroupTop3Frequency(groupKey, {
+                    sheetSlug,
+                    targetDateObject: dateObject,
+                    rotationDateObject: dateObject,
+                    dayFilter: state.groupTop3DayFilter,
+                });
+                return getGroupTop3WinDigitsByCount(stats, winDigitCount);
+            };
             const getCurrentPredictionDigits = (groupKey, winDigitCount) => {
+                const selectedSheetSlug = ['hanoi', 'lao'].includes(groupKey)
+                    ? getGroupTop3SelectedSheetSlug(groupKey)
+                    : 'all';
                 const selectedDateObject = parseDateInputValue(state.recentResultDateFilter);
+                if (selectedSheetSlug !== 'all') {
+                    if (selectedDateObject) {
+                        return getSheetFilteredDigitsForRecord(groupKey, selectedSheetSlug, selectedDateObject, winDigitCount);
+                    }
+                    const liveStats = buildGroupTop3Frequency(groupKey, {
+                        sheetSlug: selectedSheetSlug,
+                    });
+                    return getGroupTop3WinDigitsByCount(liveStats, winDigitCount);
+                }
+
                 if (selectedDateObject) {
                     const selectedDate = formatDateObjectForRowKey(selectedDateObject);
                     let digits = getPredictionDigitsForRecord(groupKey, selectedDate, selectedDateObject, winDigitCount);
@@ -3413,20 +3505,29 @@
             const todayTargetDate = todayTarget.date; // e.g. "27/05/2026"
             // Cache live digits per group for today's rows
             const liveDigitsCache = {};
-            const getLiveDigitsForGroup = (groupKey) => {
+            const getLiveDigitsForGroup = (groupKey, sheetSlug = 'all') => {
                 if (!['hanoi', 'lao'].includes(groupKey)) return [];
-                if (!liveDigitsCache[groupKey]) {
-                    const liveStats = buildGroupTop3Frequency(groupKey);
-                    liveDigitsCache[groupKey] = getGroupTop3WinDigitsByCount(liveStats, selectedWinDigitCount);
+                const cacheKey = `${groupKey}:${sheetSlug || 'all'}`;
+                if (!liveDigitsCache[cacheKey]) {
+                    const liveStats = buildGroupTop3Frequency(groupKey, {
+                        sheetSlug: sheetSlug && sheetSlug !== 'all' ? sheetSlug : undefined,
+                    });
+                    liveDigitsCache[cacheKey] = getGroupTop3WinDigitsByCount(liveStats, selectedWinDigitCount);
                 }
-                return liveDigitsCache[groupKey];
+                return liveDigitsCache[cacheKey];
             };
             const lineItems = recentRows.map(item => {
                 const isToday = item.row.date === todayTargetDate;
+                const selectedSheetSlug = ['hanoi', 'lao'].includes(item.groupKey)
+                    ? getGroupTop3SelectedSheetSlug(item.groupKey)
+                    : 'all';
                 let rawDigits;
                 if (isToday && ['hanoi', 'lao'].includes(item.groupKey)) {
                     // Today's rows: use live calculation (matches stats panel)
-                    rawDigits = getLiveDigitsForGroup(item.groupKey);
+                    rawDigits = getLiveDigitsForGroup(item.groupKey, selectedSheetSlug !== 'all' ? item.sourceSlug : 'all');
+                } else if (selectedSheetSlug !== 'all' && ['hanoi', 'lao'].includes(item.groupKey)) {
+                    // Single-lottery view: calculate from that lottery's own history for the row date.
+                    rawDigits = getSheetFilteredDigitsForRecord(item.groupKey, item.sourceSlug, item.row.dateObject, selectedWinDigitCount);
                 } else {
                     // Past rows: use saved prediction
                     rawDigits = getPredictionDigitsForRecord(item.groupKey, item.row.date, item.row.dateObject, selectedWinDigitCount);
@@ -3471,7 +3572,7 @@
                         <div class="mt-1 text-sm font-semibold text-slate-400">แสดงข้อมูล: ${escapeHtml(selectedDateObject ? `วันที่ ${selectedDateText}` : dayFilterText)}</div>
                     </div>
                     <div class="max-h-[560px] overflow-auto pr-1 space-y-2">
-                        <div class="inline-flex items-center gap-x-1.5 sm:gap-x-2 pb-3 text-base sm:text-xl md:text-2xl leading-snug text-slate-950 whitespace-nowrap min-w-max">
+                        <div class="flex flex-nowrap items-center gap-x-1.5 sm:gap-x-2 pb-3 text-base sm:text-xl md:text-2xl leading-snug text-slate-950 whitespace-nowrap w-max">
                             <span>${waitingLabel}</span>
                             <span>=</span>
                             <span class="font-mono border-4 border-rose-600 px-2 leading-tight">${currentDigitsText || '-'}</span>
@@ -3479,7 +3580,7 @@
                             <span>รอผล</span>
                         </div>
                         ${lineItems.length ? lineItems.map(item => `
-                            <div class="inline-flex items-center gap-x-1.5 sm:gap-x-2 text-base sm:text-xl md:text-2xl leading-snug text-slate-950 whitespace-nowrap min-w-max">
+                            <div class="flex flex-nowrap items-center gap-x-1.5 sm:gap-x-2 text-base sm:text-xl md:text-2xl leading-snug text-slate-950 whitespace-nowrap w-max">
                                 ${viewMeta.isGroupView ? `<span class="inline-flex shrink-0 items-center max-w-28 sm:max-w-none truncate px-2 py-1 rounded bg-slate-100 text-xs sm:text-sm md:text-base font-bold text-slate-600">${escapeHtml(item.sourceName)}</span>` : ''}
                                 <span class="font-mono">${formatShortDate(item.row.date)}</span>
                                 <span>=</span>
@@ -3645,6 +3746,26 @@
         window.changeGroupTop3WinDigitCount = function (count) {
             state.groupTop3WinDigitCount = [7, 8, 9].includes(count) ? count : 7;
             state.recentWinDigitCount = state.groupTop3WinDigitCount;
+            renderGroupTop3StatsPanel();
+            renderRecentDataTable();
+            if (window.lucide) lucide.createIcons();
+        };
+
+        window.changeGroupTop3SheetFilter = function (groupKey, sheetSlug) {
+            if (!['hanoi', 'lao'].includes(groupKey)) return;
+            const nextSlug = sheetSlug === 'all'
+                ? 'all'
+                : getLotteryGroup(groupKey)?.sheets.some(sheet => sheet.slug === sheetSlug)
+                    ? sheetSlug
+                    : 'all';
+            state.groupTop3SheetFilter[groupKey] = nextSlug;
+
+            if (state.top3WinSourceGroup === groupKey) {
+                window.applyGroupTop3WinDigitsToInput(groupKey, true);
+                renderRecentDataTable();
+                return;
+            }
+
             renderGroupTop3StatsPanel();
             renderRecentDataTable();
             if (window.lucide) lucide.createIcons();
