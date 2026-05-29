@@ -310,7 +310,7 @@
                         </div>
                     </div>
                 </div>
-                <div id="recent-data-table" class="px-6 py-5">
+                <div id="recent-data-table" class="px-3 sm:px-6 py-5">
                     <!-- รายการย้อนหลังจะถูกแทรกด้วย JS -->
                 </div>
             </div>
@@ -1137,18 +1137,18 @@
                 );
         }
 
-        function buildGroupTop3PredictionPayload(groupKey, stats) {
+        function buildGroupTop3PredictionPayload(groupKey, stats, targetOverride = null) {
             if (!stats || stats.loading || stats.winDigits7.length !== 7 || stats.winDigits8.length !== 8 || stats.winDigits9.length !== 9) return null;
             if (stats.sheetCount && stats.sheetWithDataCount < stats.sheetCount) return null;
 
-            const target = getGroupTop3PredictionTargetDate();
+            const target = targetOverride || getGroupTop3PredictionTargetDate();
             return {
                 groupKey,
                 groupName: getGroupTop3DisplayName(groupKey),
                 date: target.date,
                 dateISO: target.dateISO,
                 dayLabel: target.dayLabel,
-                dayFilter: state.groupTop3DayFilter,
+                dayFilter: Number.isInteger(target.dayFilter) ? target.dayFilter : state.groupTop3DayFilter,
                 period: state.period,
                 sheetWithDataCount: stats.sheetWithDataCount,
                 sheetCount: stats.sheetCount,
@@ -1195,8 +1195,7 @@
             state.groupTop3PredictionLoaded[prediction.groupKey] = true;
         }
 
-        async function syncGroupTop3PredictionToSheet(groupKey, stats) {
-            const prediction = buildGroupTop3PredictionPayload(groupKey, stats);
+        async function syncGroupTop3PredictionPayloadToSheet(prediction) {
             if (!prediction) return;
 
             const saveKey = getGroupTop3PredictionSaveKey(prediction);
@@ -1208,6 +1207,43 @@
             if (!saved) {
                 state.groupTop3PredictionSaveKeys.delete(saveKey);
             }
+        }
+
+        async function syncGroupTop3PredictionToSheet(groupKey, stats) {
+            const prediction = buildGroupTop3PredictionPayload(groupKey, stats);
+            return syncGroupTop3PredictionPayloadToSheet(prediction);
+        }
+
+        function buildGroupTop3PredictionPayloadForDate(groupKey, dateObject) {
+            if (!['hanoi', 'lao'].includes(groupKey) || !dateObject || isNaN(dateObject)) return null;
+            const target = {
+                date: formatDateObjectForRowKey(dateObject),
+                dateISO: dateObject.toISOString(),
+                dayLabel: getDayLabel(dateObject.getUTCDay()),
+                dayFilter: state.groupTop3DayFilter,
+            };
+            const stats = buildGroupTop3Frequency(groupKey, {
+                targetDateObject: dateObject,
+                rotationDateObject: dateObject,
+                dayFilter: state.groupTop3DayFilter,
+            });
+            return buildGroupTop3PredictionPayload(groupKey, stats, target);
+        }
+
+        function ensureGroupTop3PredictionForRecord(groupKey, row) {
+            if (!['hanoi', 'lao'].includes(groupKey) || !row || !row.date || !row.dateObject) return null;
+            const rows = state.groupTop3PredictionRows[groupKey] || [];
+            const rowDayLabel = getDayLabel(row.dateObject.getUTCDay());
+            const existing = rows.find(item =>
+                item.date === row.date &&
+                item.dayLabel === rowDayLabel
+            ) || rows.find(item => item.date === row.date);
+            if (existing) return existing;
+
+            const prediction = buildGroupTop3PredictionPayloadForDate(groupKey, row.dateObject);
+            if (!prediction) return null;
+            syncGroupTop3PredictionPayloadToSheet(prediction);
+            return deserializeGroupTop3Predictions([prediction])[0] || null;
         }
 
         async function loadGroupSheetRows(slug) {
@@ -2834,9 +2870,9 @@
             `).join('');
         }
 
-        function getGroupTop3DailyStep(groupKey) {
-            const today = new Date();
-            const dayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        function getGroupTop3DailyStep(groupKey, dateObject = null) {
+            const sourceDate = dateObject && !isNaN(dateObject) ? dateObject : new Date();
+            const dayStart = new Date(sourceDate.getFullYear(), sourceDate.getMonth(), sourceDate.getDate());
             const dayNumber = Math.floor(dayStart.getTime() / 86400000);
             const groupOffset = String(groupKey || '')
                 .split('')
@@ -2877,8 +2913,8 @@
             }));
         }
 
-        function selectRotatingGroupTop3CutItems(rankGroups, groupKey) {
-            const dailyStep = getGroupTop3DailyStep(groupKey);
+        function selectRotatingGroupTop3CutItems(rankGroups, groupKey, dateObject = null) {
+            const dailyStep = getGroupTop3DailyStep(groupKey, dateObject);
             const groupOrder = Array.from({ length: rankGroups.length }, (_, index) =>
                 (index + dailyStep) % rankGroups.length
             );
@@ -2914,9 +2950,16 @@
             return stats.winDigits7 || stats.winDigits || [];
         }
 
-        function buildGroupTop3Frequency(groupKey) {
+        function buildGroupTop3Frequency(groupKey, options = {}) {
             const group = getLotteryGroup(groupKey);
             const groupState = getGroupTop3State(groupKey);
+            const dayFilter = Number.isInteger(options.dayFilter) ? options.dayFilter : state.groupTop3DayFilter;
+            const targetDateObject = options.targetDateObject && !isNaN(options.targetDateObject)
+                ? options.targetDateObject
+                : null;
+            const rotationDateObject = options.rotationDateObject && !isNaN(options.rotationDateObject)
+                ? options.rotationDateObject
+                : targetDateObject;
             const counts = Array(10).fill(0);
             const lotteriesByDigit = Array.from({ length: 10 }, () => new Set());
             let drawCount = 0;
@@ -2925,9 +2968,12 @@
 
             group.sheets.forEach(sheet => {
                 const rows = sortUniqueRows(groupState.rowsBySlug[sheet.slug] || []);
-                const filteredRows = state.groupTop3DayFilter !== -1
-                    ? rows.filter(row => row.dateObject.getUTCDay() === state.groupTop3DayFilter)
+                const beforeTargetRows = targetDateObject
+                    ? rows.filter(row => row.dateObject < targetDateObject)
                     : rows;
+                const filteredRows = dayFilter !== -1
+                    ? beforeTargetRows.filter(row => row.dateObject.getUTCDay() === dayFilter)
+                    : beforeTargetRows;
                 const periodRows = filteredRows.slice(0, state.period);
                 if (periodRows.length) sheetWithDataCount++;
                 drawCount += periodRows.length;
@@ -2967,7 +3013,7 @@
                 item.cutGroupLabel = scoreItem ? scoreItem.groupLabel : '';
                 item.cutGroupPosition = scoreItem ? scoreItem.groupPosition : 0;
             });
-            const cutItems = selectRotatingGroupTop3CutItems(rankGroups, groupKey);
+            const cutItems = selectRotatingGroupTop3CutItems(rankGroups, groupKey, rotationDateObject);
             const cutDigits = cutItems.map(item => item.digit);
             const winDigits7 = digitCount ? getGroupTop3WinDigitsFromCuts(cutDigits, 7) : [];
             const winDigits8 = digitCount ? getGroupTop3WinDigitsFromCuts(cutDigits, 8) : [];
@@ -3024,7 +3070,7 @@
             const selectedWinDigitCount = [7, 8, 9].includes(state.groupTop3WinDigitCount)
                 ? state.groupTop3WinDigitCount
                 : 7;
-            const inputWinDigits = getGroupTop3WinDigitsByCount(stats, selectedWinDigitCount);
+            const inputWinDigits = getGroupTop3WinDigitsByCount(stats, 9);
             const selectedCutDigitCount = Math.max(1, 10 - selectedWinDigitCount);
             const selectedCutDigits = stats.cutDigits.slice(0, selectedCutDigitCount);
             const selectedCutDigitSet = new Set(selectedCutDigits);
@@ -3283,12 +3329,18 @@
             const getCurrentPredictionDigits = (groupKey, winDigitCount) => {
                 const selectedDateObject = parseDateInputValue(state.recentResultDateFilter);
                 if (selectedDateObject) {
-                    return getPredictionDigitsForRecord(
-                        groupKey,
-                        formatDateObjectForRowKey(selectedDateObject),
-                        selectedDateObject,
-                        winDigitCount
-                    );
+                    const selectedDate = formatDateObjectForRowKey(selectedDateObject);
+                    let digits = getPredictionDigitsForRecord(groupKey, selectedDate, selectedDateObject, winDigitCount);
+                    if (!digits.length && ['hanoi', 'lao'].includes(groupKey)) {
+                        ensureGroupTop3PredictionForRecord(groupKey, {
+                            date: selectedDate,
+                            dateObject: selectedDateObject,
+                            top3: '000',
+                            bot2: '00',
+                        });
+                        digits = getPredictionDigitsForRecord(groupKey, selectedDate, selectedDateObject, winDigitCount);
+                    }
+                    return digits;
                 }
                 // Use live calculation first (matches the stats panel)
                 if (['hanoi', 'lao'].includes(groupKey)) {
@@ -3331,8 +3383,8 @@
                     return '<span class="font-bold text-slate-400">รอผล</span>';
                 }
                 return result.isPass
-                    ? '<span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-violet-50 text-violet-700 text-2xl font-black leading-none">✓</span>'
-                    : '<span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-rose-50 text-rose-600 text-2xl font-black leading-none">×</span>';
+                    ? '<span class="inline-flex shrink-0 items-center justify-center w-7 h-7 md:w-8 md:h-8 rounded-full bg-violet-50 text-violet-700 text-xl md:text-2xl font-black leading-none">✓</span>'
+                    : '<span class="inline-flex shrink-0 items-center justify-center w-7 h-7 md:w-8 md:h-8 rounded-full bg-rose-50 text-rose-600 text-xl md:text-2xl font-black leading-none">×</span>';
             };
 
             const selectedWinDigitCount = getSelectedWinDigitCount();
@@ -3378,6 +3430,10 @@
                 } else {
                     // Past rows: use saved prediction
                     rawDigits = getPredictionDigitsForRecord(item.groupKey, item.row.date, item.row.dateObject, selectedWinDigitCount);
+                    if (!rawDigits.length && ['hanoi', 'lao'].includes(item.groupKey)) {
+                        ensureGroupTop3PredictionForRecord(item.groupKey, item.row);
+                        rawDigits = getPredictionDigitsForRecord(item.groupKey, item.row.date, item.row.dateObject, selectedWinDigitCount);
+                    }
                 }
                 const winDigits = applyWinDigitCount(rawDigits, selectedWinDigitCount, false);
                 const displayDigits = winDigits.length ? winDigits : [];
@@ -3414,8 +3470,8 @@
                         <div class="mt-2 text-2xl font-semibold text-slate-700">ถูก ${passCount} ครั้งจาก ${evaluatedLines.length} ${resultUnit}${summarySuffix}</div>
                         <div class="mt-1 text-sm font-semibold text-slate-400">แสดงข้อมูล: ${escapeHtml(selectedDateObject ? `วันที่ ${selectedDateText}` : dayFilterText)}</div>
                     </div>
-                    <div class="max-h-[560px] overflow-y-auto pr-1 space-y-2">
-                        <div class="flex flex-wrap items-center gap-x-2 gap-y-1 pb-3 text-xl md:text-2xl leading-snug text-slate-950">
+                    <div class="max-h-[560px] overflow-auto pr-1 space-y-2">
+                        <div class="inline-flex items-center gap-x-1.5 sm:gap-x-2 pb-3 text-base sm:text-xl md:text-2xl leading-snug text-slate-950 whitespace-nowrap min-w-max">
                             <span>${waitingLabel}</span>
                             <span>=</span>
                             <span class="font-mono border-4 border-rose-600 px-2 leading-tight">${currentDigitsText || '-'}</span>
@@ -3423,8 +3479,8 @@
                             <span>รอผล</span>
                         </div>
                         ${lineItems.length ? lineItems.map(item => `
-                            <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xl md:text-2xl leading-snug text-slate-950">
-                                ${viewMeta.isGroupView ? `<span class="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-sm md:text-base font-bold text-slate-600">${escapeHtml(item.sourceName)}</span>` : ''}
+                            <div class="inline-flex items-center gap-x-1.5 sm:gap-x-2 text-base sm:text-xl md:text-2xl leading-snug text-slate-950 whitespace-nowrap min-w-max">
+                                ${viewMeta.isGroupView ? `<span class="inline-flex shrink-0 items-center max-w-28 sm:max-w-none truncate px-2 py-1 rounded bg-slate-100 text-xs sm:text-sm md:text-base font-bold text-slate-600">${escapeHtml(item.sourceName)}</span>` : ''}
                                 <span class="font-mono">${formatShortDate(item.row.date)}</span>
                                 <span>=</span>
                                 <span class="font-mono">${item.digitsText || '-'}</span>
