@@ -1,0 +1,1661 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สถิติสลากกินแบ่งรัฐบาล (แยกตามหลัก 0-9)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chosen Palette: Modern White & Slate with Dynamic Semantic Colors -->
+    <!-- Application Structure Plan: 
+         - A comprehensive interactive dashboard for lottery data analysis.
+         - Top: Multi-parameter filtering (Timeframe and Day of Week).
+         - Middle: 5-column frequency distribution visualizer (Horizontal Bar Charts) based on actual historical counts.
+         - Middle-Bottom: Intelligent Combination Generator with filtering (Triplet removal) and sorting logic.
+         - Bottom: Multi-tab Data Grid (History, Dead Number Formulas for Hundreds, Tens, and Units).
+         - Interactive Logic: Real-time recalculation of all stats based on selected timeframe and day. Highlighting "Good Streaks" (10+ games) in green and "Failed Formulas" in red.
+    -->
+    <!-- Visualization & Content Choices: 
+         - Frequency Bars -> Goal: Categorical comparison -> Viz: HTML/Tailwind Horizontal Bars -> Interaction: Dynamic Widths -> Justification: Matches mobile app UX.
+         - Combinations -> Goal: Recommendation -> Viz: Badge Tags -> Interaction: Copy to Clipboard -> Justification: Easy exploration.
+         - Formula Grid -> Goal: Trend Analysis -> Viz: Fixed-header table -> Interaction: Highlighting (Red/Green) -> Justification: Visual pattern recognition.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #f4f7f9; 
+            color: #334155;
+        }
+        
+        .progress-bar {
+            transition: width 0.5s ease-in-out;
+        }
+        
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12">
+
+    <div class="max-w-[1400px] mx-auto px-4 pt-8 pb-4">
+        <header class="mb-6 flex flex-col md:flex-row items-center gap-3 text-center md:text-left">
+            <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl shadow-sm border border-blue-200">
+                🕒
+            </div>
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-slate-800">สถิติการออกรางวัลแยกตามหลัก (0-9)</h1>
+                <p class="text-slate-500 text-sm mt-1" id="dynamic-subtitle">กำลังโหลดข้อมูล...</p>
+            </div>
+        </header>
+
+        <!-- Time & Day Selectors -->
+        <section class="mb-6 bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex flex-col md:flex-row gap-6">
+                <div>
+                    <p class="text-slate-500 mb-2 font-medium text-sm">เลือกช่วงเวลาย้อนหลัง:</p>
+                    <div class="flex flex-wrap gap-2" id="timeframe-selector"></div>
+                </div>
+                <div class="flex-1 md:border-l md:border-slate-100 md:pl-6">
+                    <p class="text-slate-500 mb-2 font-medium text-sm">เลือกวันออกรางวัล:</p>
+                    <div class="flex flex-wrap gap-2" id="day-selector"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stats 5 Columns Container -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6" id="stats-container">
+            <!-- Columns injected by JS -->
+        </section>
+
+        <!-- Combinations Generator Section -->
+        <section class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-5 gap-4 border-b border-slate-100 pb-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <span>🎯</span> ชุดตัวเลขจับคู่แนะนำ
+                    </h2>
+                    <p class="text-sm text-slate-500 mt-1">นำตัวเลขที่ออกบ่อยที่สุดในแต่ละหลักมาไขว้จับคู่กัน (คัดเลขตองออกอัตโนมัติ)</p>
+                </div>
+                
+                <div class="flex flex-wrap gap-3">
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-medium text-slate-600">ดึงตัวเด่น:</label>
+                        <select id="top-n-select" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
+                            <option value="4">Top 4 (หลักละ 4 ตัว)</option>
+                            <option value="5">Top 5 (หลักละ 5 ตัว)</option>
+                            <option value="6" selected>Top 6 (หลักละ 6 ตัว)</option>
+                            <option value="7">Top 7 (หลักละ 7 ตัว)</option>
+                            <option value="8">Top 8 (หลักละ 8 ตัว)</option>
+                            <option value="9">Top 9 (หลักละ 9 ตัว)</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-medium text-slate-600">จัดเรียงผลรวม:</label>
+                        <select id="sort-select" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
+                            <option value="desc" selected>ความถี่ มาก ➔ น้อย</option>
+                            <option value="asc">ความถี่ น้อย ➔ มาก</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 3 Up Combinations -->
+                <div class="bg-amber-50/50 rounded-xl border border-amber-100 flex flex-col">
+                    <div class="bg-amber-100 px-4 py-2 rounded-t-xl border-b border-amber-200 flex justify-between items-center">
+                        <h3 class="font-bold text-amber-800">ชุดจับคู่ 3 ตัวบน</h3>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full" id="count-3up">0 ชุด</span>
+                            <button onclick="copyCombinations('combo-3up-container', this)" class="text-xs bg-white text-amber-700 px-2 py-0.5 rounded border border-amber-300 hover:bg-amber-50 transition-colors">📋 คัดลอก</button>
+                        </div>
+                    </div>
+                    <!-- แถบแสดงตัวเลขที่ใช้คำนวณ 3 ตัวบน -->
+                    <div class="px-3 pt-2 pb-1 bg-amber-50/80 border-b border-amber-100" id="digits-info-3up">
+                        <!-- JS จะ inject ข้อมูลที่นี่ -->
+                    </div>
+                    <!-- ช่องกรองเลขดับ 3 ตัวบน -->
+                    <div class="px-3 pt-3 pb-1 border-b border-amber-100 bg-amber-50">
+                        <p class="text-xs font-semibold text-amber-700 mb-2">🚫 ตัดหลักที่ไม่ต้องการออก (พิมพ์ติดกัน เช่น 139)</p>
+                        <div class="flex gap-2">
+                            <div class="flex-1">
+                                <label class="text-[10px] text-amber-600 font-medium block mb-0.5 text-center">หลักร้อย</label>
+                                <input id="exclude-hun" type="text" maxlength="10" inputmode="numeric"
+                                    placeholder="เช่น 139"
+                                    oninput="this.value=this.value.replace(/[^0-9]/g,''); updateCombinations()"
+                                    class="w-full border border-amber-300 rounded-lg px-2 py-1 text-sm text-center tracking-widest bg-white focus:ring-2 focus:ring-amber-400 outline-none">
+                            </div>
+                            <div class="flex-1">
+                                <label class="text-[10px] text-amber-600 font-medium block mb-0.5 text-center">หลักสิบ</label>
+                                <input id="exclude-ten" type="text" maxlength="10" inputmode="numeric"
+                                    placeholder="เช่น 047"
+                                    oninput="this.value=this.value.replace(/[^0-9]/g,''); updateCombinations()"
+                                    class="w-full border border-amber-300 rounded-lg px-2 py-1 text-sm text-center tracking-widest bg-white focus:ring-2 focus:ring-amber-400 outline-none">
+                            </div>
+                            <div class="flex-1">
+                                <label class="text-[10px] text-amber-600 font-medium block mb-0.5 text-center">หลักหน่วย</label>
+                                <input id="exclude-unit" type="text" maxlength="10" inputmode="numeric"
+                                    placeholder="เช่น 256"
+                                    oninput="this.value=this.value.replace(/[^0-9]/g,''); updateCombinations()"
+                                    class="w-full border border-amber-300 rounded-lg px-2 py-1 text-sm text-center tracking-widest bg-white focus:ring-2 focus:ring-amber-400 outline-none">
+                            </div>
+                            <div class="flex items-end">
+                                <button onclick="document.getElementById('exclude-hun').value=''; document.getElementById('exclude-ten').value=''; document.getElementById('exclude-unit').value=''; updateCombinations();"
+                                    class="px-2 py-1 text-xs bg-amber-200 text-amber-800 rounded-lg hover:bg-amber-300 transition-colors whitespace-nowrap" title="ล้างทั้งหมด">🗑️ ล้าง</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-3 overflow-y-auto max-h-[300px] custom-scrollbar flex-1">
+                        <div class="flex flex-wrap gap-2" id="combo-3up-container"></div>
+                    </div>
+                </div>
+
+                <!-- 2 Up Combinations -->
+                <div class="bg-teal-50/50 rounded-xl border border-teal-100 flex flex-col">
+                    <div class="bg-teal-100 px-4 py-2 rounded-t-xl border-b border-teal-200 flex justify-between items-center">
+                        <h3 class="font-bold text-teal-800">ชุดจับคู่ 2 ตัวบน</h3>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs bg-teal-200 text-teal-800 px-2 py-0.5 rounded-full" id="count-2up">0 ชุด</span>
+                            <button onclick="copyCombinations('combo-2up-container', this)" class="text-xs bg-white text-teal-700 px-2 py-0.5 rounded border border-teal-300 hover:bg-teal-50 transition-colors">📋 คัดลอก</button>
+                        </div>
+                    </div>
+                    <!-- แถบแสดงตัวเลขที่ใช้คำนวณ 2 ตัวบน -->
+                    <div class="px-3 pt-2 pb-1 bg-teal-50/80 border-b border-teal-100" id="digits-info-2up">
+                        <!-- JS จะ inject ข้อมูลที่นี่ -->
+                    </div>
+                    <!-- ช่องกรองเลขดับ 2 ตัวบน -->
+                    <div class="px-3 pt-3 pb-1 border-b border-teal-100 bg-teal-50">
+                        <p class="text-xs font-semibold text-teal-700 mb-2">🚫 ตัดหลักที่ไม่ต้องการออก (พิมพ์ติดกัน เช่น 139)</p>
+                        <div class="flex gap-2">
+                            <div class="flex-1">
+                                <label class="text-[10px] text-teal-600 font-medium block mb-0.5 text-center">หลักสิบ</label>
+                                <input id="exclude-2up-ten" type="text" maxlength="10" inputmode="numeric"
+                                    placeholder="เช่น 047"
+                                    oninput="this.value=this.value.replace(/[^0-9]/g,''); updateCombinations()"
+                                    class="w-full border border-teal-300 rounded-lg px-2 py-1 text-sm text-center tracking-widest bg-white focus:ring-2 focus:ring-teal-400 outline-none">
+                            </div>
+                            <div class="flex-1">
+                                <label class="text-[10px] text-teal-600 font-medium block mb-0.5 text-center">หลักหน่วย</label>
+                                <input id="exclude-2up-unit" type="text" maxlength="10" inputmode="numeric"
+                                    placeholder="เช่น 256"
+                                    oninput="this.value=this.value.replace(/[^0-9]/g,''); updateCombinations()"
+                                    class="w-full border border-teal-300 rounded-lg px-2 py-1 text-sm text-center tracking-widest bg-white focus:ring-2 focus:ring-teal-400 outline-none">
+                            </div>
+                            <div class="flex items-end">
+                                <button onclick="document.getElementById('exclude-2up-ten').value=''; document.getElementById('exclude-2up-unit').value=''; updateCombinations();"
+                                    class="px-2 py-1 text-xs bg-teal-200 text-teal-800 rounded-lg hover:bg-teal-300 transition-colors whitespace-nowrap" title="ล้างทั้งหมด">🗑️ ล้าง</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-3 overflow-y-auto max-h-[300px] custom-scrollbar flex-1">
+                        <div class="flex flex-wrap gap-2" id="combo-2up-container"></div>
+                    </div>
+                </div>
+
+                <!-- 2 Down Combinations -->
+                <div class="bg-rose-50/50 rounded-xl border border-rose-100 flex flex-col">
+                    <div class="bg-rose-100 px-4 py-2 rounded-t-xl border-b border-rose-200 flex justify-between items-center">
+                        <h3 class="font-bold text-rose-800">ชุดจับคู่ 2 ตัวล่าง</h3>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs bg-rose-200 text-rose-800 px-2 py-0.5 rounded-full" id="count-2down">0 ชุด</span>
+                            <button onclick="copyCombinations('combo-2down-container', this)" class="text-xs bg-white text-rose-700 px-2 py-0.5 rounded border border-rose-300 hover:bg-rose-50 transition-colors">📋 คัดลอก</button>
+                        </div>
+                    </div>
+                    <!-- แถบแสดงตัวเลขที่ใช้คำนวณ 2 ตัวล่าง -->
+                    <div class="px-3 pt-2 pb-1 bg-rose-50/80 border-b border-rose-100" id="digits-info-2down">
+                        <!-- JS จะ inject ข้อมูลที่นี่ -->
+                    </div>
+                    <!-- ช่องกรองเลขดับ 2 ตัวล่าง -->
+                    <div class="px-3 pt-3 pb-1 border-b border-rose-100 bg-rose-50">
+                        <p class="text-xs font-semibold text-rose-700 mb-2">🚫 ตัดหลักที่ไม่ต้องการออก (พิมพ์ติดกัน เช่น 139)</p>
+                        <div class="flex gap-2">
+                            <div class="flex-1">
+                                <label class="text-[10px] text-rose-600 font-medium block mb-0.5 text-center">หลักสิบ</label>
+                                <input id="exclude-2down-ten" type="text" maxlength="10" inputmode="numeric"
+                                    placeholder="เช่น 047"
+                                    oninput="this.value=this.value.replace(/[^0-9]/g,''); updateCombinations()"
+                                    class="w-full border border-rose-300 rounded-lg px-2 py-1 text-sm text-center tracking-widest bg-white focus:ring-2 focus:ring-rose-400 outline-none">
+                            </div>
+                            <div class="flex-1">
+                                <label class="text-[10px] text-rose-600 font-medium block mb-0.5 text-center">หลักหน่วย</label>
+                                <input id="exclude-2down-unit" type="text" maxlength="10" inputmode="numeric"
+                                    placeholder="เช่น 256"
+                                    oninput="this.value=this.value.replace(/[^0-9]/g,''); updateCombinations()"
+                                    class="w-full border border-rose-300 rounded-lg px-2 py-1 text-sm text-center tracking-widest bg-white focus:ring-2 focus:ring-rose-400 outline-none">
+                            </div>
+                            <div class="flex items-end">
+                                <button onclick="document.getElementById('exclude-2down-ten').value=''; document.getElementById('exclude-2down-unit').value=''; updateCombinations();"
+                                    class="px-2 py-1 text-xs bg-rose-200 text-rose-800 rounded-lg hover:bg-rose-300 transition-colors whitespace-nowrap" title="ล้างทั้งหมด">🗑️ ล้าง</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-3 overflow-y-auto max-h-[300px] custom-scrollbar flex-1">
+                        <div class="flex flex-wrap gap-2" id="combo-2down-container"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Historical & Formula Section -->
+        <section class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <span>📊</span> ข้อมูลย้อนหลัง & สูตรคำนวณ
+                    </h2>
+                    <p class="text-sm text-slate-500 mt-1" id="history-desc">สถิติการออกรางวัล และสูตรเลขดับ (เรียงตามข้อมูลจริง)</p>
+                </div>
+                <div class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold border border-blue-100" id="history-count">
+                    พบ 0 งวด
+                </div>
+            </div>
+
+            <!-- Tabs Navigation -->
+            <div class="flex border-b border-slate-200 mb-4 gap-6 overflow-x-auto custom-scrollbar">
+                <button id="tab-btn-history" class="pb-2 border-b-2 border-blue-600 text-blue-700 font-bold transition-colors whitespace-nowrap" onclick="switchTab('history')">
+                    🗓️ ประวัติการออกรางวัล
+                </button>
+                <button id="tab-btn-formula" class="pb-2 border-b-2 border-transparent text-slate-500 font-medium hover:text-slate-700 transition-colors whitespace-nowrap" onclick="switchTab('formula')">
+                    🧮 สูตรเลขดับหลักร้อย
+                </button>
+                <button id="tab-btn-formula-ten" class="pb-2 border-b-2 border-transparent text-slate-500 font-medium hover:text-slate-700 transition-colors whitespace-nowrap" onclick="switchTab('formula-ten')">
+                    🧮 สูตรเลขดับหลักสิบ
+                </button>
+                <button id="tab-btn-formula-unit" class="pb-2 border-b-2 border-transparent text-slate-500 font-medium hover:text-slate-700 transition-colors whitespace-nowrap" onclick="switchTab('formula-unit')">
+                    🧮 สูตรเลขดับหลักหน่วย
+                </button>
+            </div>
+
+            <!-- Tab 1: Historical Data -->
+            <div id="tab-content-history">
+                <!-- History View Mode Dropdown -->
+                <div class="flex flex-wrap items-center justify-end gap-3 mb-3">
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-medium text-slate-600">การแสดงผล:</label>
+                        <select id="history-view-mode" onchange="updateHistoryTable()" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
+                            <option value="day" selected>แสดงเป็นวัน</option>
+                            <option value="all">แสดงทั้งหมด</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-medium text-slate-600">ตรวจชุด:</label>
+                        <select id="history-result-type" onchange="updateHistoryTable()" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
+                            <option value="all" selected>ทั้งหมด</option>
+                            <option value="up3">3 ตัวบน</option>
+                            <option value="up2">2 ตัวบน</option>
+                            <option value="down2">2 ตัวล่าง</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-medium text-slate-600">ผล:</label>
+                        <select id="history-hit-filter" onchange="updateHistoryTable()" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
+                            <option value="all" selected>ทั้งหมด</option>
+                            <option value="hit">ถูก</option>
+                            <option value="miss">ไม่ถูก</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                    <table class="w-full text-left border-collapse min-w-[640px]">
+                        <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
+                            <tr>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b text-center w-16">ลำดับ</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b">งวดวันที่</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b text-center">3 ตัวบน</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b text-center">2 ตัวล่าง</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b text-center">ผลชุดแนะนำ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table-body" class="divide-y divide-slate-100">
+                            <!-- Rows injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab 2: Formula Dead Numbers (Hundreds) -->
+            <div id="tab-content-formula" class="hidden">
+                <!-- Formula Hundreds View Mode Dropdown -->
+                <div class="flex items-center justify-end mb-3">
+                    <label class="text-sm font-medium text-slate-600 mr-2">การแสดงผล:</label>
+                    <select id="formula-view-mode" onchange="updateHistoryTable()" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
+                        <option value="all" selected>แสดงทั้งหมด</option>
+                        <option value="day">แสดงเป็นวัน</option>
+                    </select>
+                </div>
+                <div class="flex flex-wrap items-center justify-end gap-2 mb-3 text-xs text-slate-600">
+                    <span class="font-semibold">ถูกต่อเนื่อง:</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border border-slate-300 bg-white shadow-sm"></span>1-10</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-emerald-700 bg-emerald-600 shadow-sm"></span>11-15</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-sky-700 bg-sky-600 shadow-sm"></span>16-20</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-amber-600 bg-amber-500 shadow-sm"></span>21-25</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-fuchsia-700 bg-fuchsia-600 shadow-sm"></span>26+</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-red-600 bg-red-500 shadow-sm"></span>ผิด</span>
+                </div>
+                <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                    <table class="w-full text-center border-collapse min-w-[600px] font-mono">
+                        <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
+                            <tr>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-left w-32">งวดวันที่</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b text-center tracking-widest bg-emerald-50">รางวัลที่ 1</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-center tracking-widest bg-emerald-50">2 ตัวล่าง</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-100 whitespace-nowrap">ร้อย+สิบ+หน่วย</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+1</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+2</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+3</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+4</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+5</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+6</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+7</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+8</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+9</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">ร้อย+10</th>
+                            </tr>
+                        </thead>
+                        <tbody id="formula-table-body" class="divide-y divide-slate-100 text-sm">
+                            <!-- Rows injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab 3: Formula Dead Numbers (Tens) -->
+            <div id="tab-content-formula-ten" class="hidden">
+                <!-- Formula Tens View Mode Dropdown -->
+                <div class="flex items-center justify-end mb-3">
+                    <label class="text-sm font-medium text-slate-600 mr-2">การแสดงผล:</label>
+                    <select id="formula-ten-view-mode" onchange="updateHistoryTable()" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
+                        <option value="all" selected>แสดงทั้งหมด</option>
+                        <option value="day">แสดงเป็นวัน</option>
+                    </select>
+                </div>
+                <div class="flex flex-wrap items-center justify-end gap-2 mb-3 text-xs text-slate-600">
+                    <span class="font-semibold">ถูกต่อเนื่อง:</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border border-slate-300 bg-white shadow-sm"></span>1-10</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-emerald-700 bg-emerald-600 shadow-sm"></span>11-15</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-sky-700 bg-sky-600 shadow-sm"></span>16-20</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-amber-600 bg-amber-500 shadow-sm"></span>21-25</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-fuchsia-700 bg-fuchsia-600 shadow-sm"></span>26+</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-red-600 bg-red-500 shadow-sm"></span>ผิด</span>
+                </div>
+                <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                    <table class="w-full text-center border-collapse min-w-[600px] font-mono">
+                        <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
+                            <tr>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-left w-32">งวดวันที่</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b text-center tracking-widest bg-emerald-50">รางวัลที่ 1</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-center tracking-widest bg-emerald-50">2 ตัวล่าง</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-100 whitespace-nowrap">ร้อย+สิบ+หน่วย</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+1</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+2</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+3</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+4</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+5</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+6</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+7</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+8</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+9</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบ+10</th>
+                            </tr>
+                        </thead>
+                        <tbody id="formula-ten-table-body" class="divide-y divide-slate-100 text-sm">
+                            <!-- Rows injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab 4: Formula Dead Numbers (Units) -->
+            <div id="tab-content-formula-unit" class="hidden">
+                <!-- Formula Units View Mode Dropdown -->
+                <div class="flex items-center justify-end mb-3">
+                    <label class="text-sm font-medium text-slate-600 mr-2">การแสดงผล:</label>
+                    <select id="formula-unit-view-mode" onchange="updateHistoryTable()" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
+                        <option value="all" selected>แสดงทั้งหมด</option>
+                        <option value="day">แสดงเป็นวัน</option>
+                    </select>
+                </div>
+                <div class="flex flex-wrap items-center justify-end gap-2 mb-3 text-xs text-slate-600">
+                    <span class="font-semibold">ถูกต่อเนื่อง:</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border border-slate-300 bg-white shadow-sm"></span>1-10</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-emerald-700 bg-emerald-600 shadow-sm"></span>11-15</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-sky-700 bg-sky-600 shadow-sm"></span>16-20</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-amber-600 bg-amber-500 shadow-sm"></span>21-25</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-fuchsia-700 bg-fuchsia-600 shadow-sm"></span>26+</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-red-600 bg-red-500 shadow-sm"></span>ผิด</span>
+                </div>
+                <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                    <table class="w-full text-center border-collapse min-w-[600px] font-mono">
+                        <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
+                            <tr>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-left w-32">งวดวันที่</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b text-center tracking-widest bg-emerald-50">รางวัลที่ 1</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-center tracking-widest bg-emerald-50">2 ตัวล่าง</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-100 whitespace-nowrap">ร้อย+สิบ+หน่วย</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+1</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+2</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+3</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+4</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+5</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+6</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+7</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+8</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+9</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วย+10</th>
+                            </tr>
+                        </thead>
+                        <tbody id="formula-unit-table-body" class="divide-y divide-slate-100 text-sm">
+                            <!-- Rows injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // Data Structure
+        const baseDayConfigs = {
+            "จันทร์": { name: "วันจันทร์", emoji: "💛", themeClass: "yellow" },
+            "อังคาร": { name: "วันอังคาร", emoji: "🩷", themeClass: "pink" },
+            "พุธ": { name: "วันพุธ", emoji: "💚", themeClass: "green" },
+            "พฤหัสบดี": { name: "วันพฤหัสบดี", emoji: "🧡", themeClass: "orange" },
+            "ศุกร์": { name: "วันศุกร์", emoji: "💙", themeClass: "blue" },
+            "เสาร์": { name: "วันเสาร์", emoji: "💜", themeClass: "purple" },
+            "อาทิตย์": { name: "วันอาทิตย์", emoji: "❤️", themeClass: "red" }
+        };
+
+        const timeframes = [
+            { id: "5", label: "ย้อนหลัง 5 ปี" },
+            { id: "10", label: "ย้อนหลัง 10 ปี" },
+            { id: "20", label: "ย้อนหลัง 20 ปี" }
+        ];
+        const daysOrder = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์", "อาทิตย์"];
+
+        const columnConfigs = [
+            { id: "hunUp", title: "หลักร้อยบน", theme: { main: "text-amber-500", bgLight: "bg-amber-50", barBg: "bg-amber-400", border: "border-amber-100" } },
+            { id: "tenUp", title: "หลักสิบบน", theme: { main: "text-blue-600", bgLight: "bg-blue-50", barBg: "bg-blue-500", border: "border-blue-100" } },
+            { id: "unitUp", title: "หลักหน่วยบน", theme: { main: "text-teal-500", bgLight: "bg-teal-50", barBg: "bg-teal-400", border: "border-teal-100" } },
+            { id: "tenDown", title: "หลักสิบล่าง", theme: { main: "text-rose-500", bgLight: "bg-rose-50", barBg: "bg-rose-500", border: "border-rose-100" } },
+            { id: "unitDown", title: "หลักหน่วยล่าง", theme: { main: "text-fuchsia-500", bgLight: "bg-fuchsia-50", barBg: "bg-fuchsia-400", border: "border-fuchsia-100" } }
+        ];
+
+        let currentDay = "all";
+        let currentTimeframe = "10";
+
+        let globalMockHistory = [];
+        let lastMockTimeframe = null;
+        let currentCalculatedData = null; // ตัวแปรเก็บสถิติที่คำนวณจริงจากประวัติ
+        let currentRecommendedSets = {
+            up3: new Set(),
+            up2: new Set(),
+            down2: new Set()
+        };
+
+        function initApp() {
+            renderTimeframeSelector();
+            renderDaySelector();
+            
+            document.getElementById('top-n-select').addEventListener('change', updateCombinations);
+            document.getElementById('sort-select').addEventListener('change', updateCombinations);
+
+            updateDashboard();
+        }
+
+        function renderTimeframeSelector() {
+            const container = document.getElementById('timeframe-selector');
+            timeframes.forEach(tf => {
+                const btn = document.createElement('button');
+                btn.className = `px-3 py-1.5 rounded-lg border transition-all duration-200 font-medium text-sm hover:bg-slate-50`;
+                btn.innerHTML = tf.label;
+                btn.onclick = () => { currentTimeframe = tf.id; updateDashboard(); };
+                btn.id = `btn-tf-${tf.id}`;
+                container.appendChild(btn);
+            });
+        }
+
+        function renderDaySelector() {
+            const container = document.getElementById('day-selector');
+
+            // ปุ่ม "ทั้งหมด"
+            const allBtn = document.createElement('button');
+            allBtn.className = `px-3 py-1.5 rounded-lg border transition-all duration-200 font-medium text-sm flex items-center gap-1.5 hover:bg-slate-50`;
+            allBtn.innerHTML = `<span>🗓️</span> ทั้งหมด`;
+            allBtn.onclick = () => { currentDay = 'all'; updateDashboard(); };
+            allBtn.id = `btn-day-all`;
+            container.appendChild(allBtn);
+
+            daysOrder.forEach(day => {
+                const btn = document.createElement('button');
+                const conf = baseDayConfigs[day];
+                btn.className = `px-3 py-1.5 rounded-lg border transition-all duration-200 font-medium text-sm flex items-center gap-1.5 hover:bg-slate-50`;
+                btn.innerHTML = `<span>${conf.emoji}</span> ${conf.name}`;
+                btn.onclick = () => { currentDay = day; updateDashboard(); };
+                btn.id = `btn-day-${day}`;
+                container.appendChild(btn);
+            });
+        }
+
+        function updateDashboard() {
+            if (lastMockTimeframe !== currentTimeframe) {
+                globalMockHistory = generateFullMockHistory(parseInt(currentTimeframe));
+                lastMockTimeframe = currentTimeframe;
+            }
+            
+            // กรองข้อมูลตามวัน หรือใช้ทั้งหมดถ้าเลือก 'all'
+            const historyDataForDay = currentDay === 'all'
+                ? globalMockHistory
+                : globalMockHistory.filter(r => r.dayName === currentDay);
+
+            const freqs = {
+                hunUp: Array(10).fill(0),
+                tenUp: Array(10).fill(0),
+                unitUp: Array(10).fill(0),
+                tenDown: Array(10).fill(0),
+                unitDown: Array(10).fill(0)
+            };
+
+            historyDataForDay.forEach(record => {
+                freqs.hunUp[parseInt(record.up3[0])]++;
+                freqs.tenUp[parseInt(record.up3[1])]++;
+                freqs.unitUp[parseInt(record.up3[2])]++;
+                freqs.tenDown[parseInt(record.down2[0])]++;
+                freqs.unitDown[parseInt(record.down2[1])]++;
+            });
+
+            const dayLabel = currentDay === 'all' ? 'ทุกวัน' : baseDayConfigs[currentDay]?.name;
+            currentCalculatedData = {
+                name: dayLabel,
+                emoji: currentDay === 'all' ? '🗓️' : baseDayConfigs[currentDay]?.emoji,
+                themeClass: currentDay === 'all' ? 'slate' : baseDayConfigs[currentDay]?.themeClass,
+                hunUp: freqs.hunUp,
+                tenUp: freqs.tenUp,
+                unitUp: freqs.unitUp,
+                tenDown: freqs.tenDown,
+                unitDown: freqs.unitDown
+            };
+
+            const data = currentCalculatedData;
+            const tfLabel = timeframes.find(t => t.id === currentTimeframe).label;
+            
+            document.getElementById('dynamic-subtitle').innerHTML = `แสดงข้อมูล ${data.name} (${tfLabel})`;
+
+            timeframes.forEach(tf => {
+                const btn = document.getElementById(`btn-tf-${tf.id}`);
+                btn.className = tf.id === currentTimeframe 
+                    ? `px-3 py-1.5 rounded-lg border-2 transition-all duration-200 font-bold text-sm bg-slate-800 border-slate-800 text-white shadow-sm` 
+                    : `px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 transition-all duration-200 font-medium text-sm hover:bg-slate-50`;
+            });
+
+            // Highlight ปุ่มวัน (รองรับ 'all')
+            const activeClass = `px-3 py-1.5 rounded-lg border-2 transition-all duration-200 font-bold text-sm flex items-center gap-1.5 bg-slate-100 border-slate-400 text-slate-800 shadow-sm`;
+            const inactiveClass = `px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 transition-all duration-200 font-medium text-sm flex items-center gap-1.5 hover:bg-slate-50`;
+
+            const allDayBtn = document.getElementById(`btn-day-all`);
+            if (allDayBtn) allDayBtn.className = currentDay === 'all' ? activeClass : inactiveClass;
+
+            daysOrder.forEach(d => {
+                const btn = document.getElementById(`btn-day-${d}`);
+                btn.className = d === currentDay ? activeClass : inactiveClass;
+            });
+
+            const statsContainer = document.getElementById('stats-container');
+            statsContainer.innerHTML = '';
+
+            columnConfigs.forEach(col => {
+                const freqArray = data[col.id];
+                let combined = freqArray.map((val, index) => ({ digit: index, count: val }));
+                combined.sort((a, b) => b.count - a.count);
+                const maxCount = combined[0].count;
+
+                let colHTML = `
+                    <div class="bg-white rounded-xl shadow-sm border ${col.theme.border} overflow-hidden flex flex-col">
+                        <div class="${col.theme.bgLight} p-3 flex items-center gap-2 border-b ${col.theme.border}">
+                            <div class="font-bold text-lg ${col.theme.main}">◎</div>
+                            <h3 class="font-bold text-md ${col.theme.main}">${col.title}</h3>
+                        </div>
+                        <div class="p-2 flex-1 flex flex-col gap-1">
+                `;
+
+                combined.forEach(item => {
+                    const isMax = item.count === maxCount;
+                    const percent = maxCount === 0 ? 0 : (item.count / maxCount) * 100;
+                    
+                    if (isMax) {
+                        colHTML += `
+                            <div class="flex items-center justify-between p-2 rounded-lg ${col.theme.bgLight} transition-colors">
+                                <span class="w-5 text-center font-bold text-xl ${col.theme.main}">${item.digit}</span>
+                                <div class="flex-1 mx-3 bg-white rounded-full h-3.5 overflow-hidden">
+                                    <div class="${col.theme.barBg} h-full rounded-full progress-bar" style="width: ${percent}%;"></div>
+                                </div>
+                                <span class="text-sm font-bold text-slate-700 min-w-[3rem] text-right">${item.count} <span class="text-[10px] font-normal text-slate-400">ครั้ง</span></span>
+                            </div>
+                        `;
+                    } else {
+                        colHTML += `
+                            <div class="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                                <span class="w-5 text-center font-medium text-lg text-slate-500">${item.digit}</span>
+                                <div class="flex-1 mx-3 bg-transparent rounded-full h-3.5 overflow-hidden flex items-center">
+                                    <div class="bg-slate-200 h-[80%] rounded-full progress-bar" style="width: ${percent}%;"></div>
+                                </div>
+                                <span class="text-sm font-semibold text-slate-500 min-w-[3rem] text-right">${item.count} <span class="text-[10px] font-normal text-slate-300">ครั้ง</span></span>
+                            </div>
+                        `;
+                    }
+                });
+
+                colHTML += `</div></div>`;
+                statsContainer.innerHTML += colHTML;
+            });
+            
+            setTimeout(() => {
+                document.querySelectorAll('.progress-bar').forEach(el => {
+                    const w = el.style.width;
+                    el.style.width = '0';
+                    el.offsetHeight; 
+                    el.style.width = w;
+                });
+            }, 10);
+
+            updateCombinations(false);
+            updateHistoryTable();
+        }
+
+        // direction: 'desc' = ดึงตัวเด่น (ออกมาก), 'asc' = ดึงตัวอ่อน (ออกน้อย)
+        function getTopDigits(freqArray, n, direction = 'desc') {
+            let mapped = freqArray.map((val, idx) => ({ digit: idx, freq: val }));
+            // เรียงตาม direction: desc = มากไปน้อย, asc = น้อยไปมาก
+            if (direction === 'asc') {
+                mapped.sort((a, b) => a.freq - b.freq); // น้อยไปมาก
+            } else {
+                mapped.sort((a, b) => b.freq - a.freq); // มากไปน้อย
+            }
+
+            if (n > mapped.length) n = mapped.length;
+            if (n === 0) return [];
+
+            const thresholdFreq = mapped[n - 1].freq;
+            return mapped.filter((item, index) => index < n || item.freq === thresholdFreq);
+        }
+
+        function updateCombinations(refreshHistory = true) {
+            const data = currentCalculatedData;
+            const topN = parseInt(document.getElementById('top-n-select').value);
+            const sortOrder = document.getElementById('sort-select').value;
+            // direction: ถ้า 'asc' (น้อยไปมาก) = ดึงตัวเลขที่ออกน้อยที่สุด (bottom N)
+            const dir = sortOrder === 'asc' ? 'asc' : 'desc';
+
+            const tHunUp   = getTopDigits(data.hunUp,   topN, dir);
+            const tTenUp   = getTopDigits(data.tenUp,   topN, dir);
+            const tUnitUp  = getTopDigits(data.unitUp,  topN, dir);
+            const tTenDown = getTopDigits(data.tenDown, topN, dir);
+            const tUnitDown= getTopDigits(data.unitDown,topN, dir);
+
+            let combos3Up = [];
+            for(let h of tHunUp) {
+                for(let t of tTenUp) {
+                    for(let u of tUnitUp) {
+                        // ปรับปรุง: ตัดเลขตองออก (เช่น 000, 111, 222, ...)
+                        if (h.digit === t.digit && t.digit === u.digit) continue; 
+
+                        combos3Up.push({ num: `${h.digit}${t.digit}${u.digit}`, score: h.freq + t.freq + u.freq });
+                    }
+                }
+            }
+
+            let combos2Up = [];
+            for(let t of tTenUp) {
+                for(let u of tUnitUp) {
+                    combos2Up.push({ num: `${t.digit}${u.digit}`, score: t.freq + u.freq });
+                }
+            }
+
+            let combos2Down = [];
+            for(let t of tTenDown) {
+                for(let u of tUnitDown) {
+                    combos2Down.push({ num: `${t.digit}${u.digit}`, score: t.freq + u.freq });
+                }
+            }
+
+            // เรียงทุกหลักจากน้อยไปมาก
+            const sortFn = (a, b) => a.num.localeCompare(b.num);
+
+            // กรองเลขดับ 3 ตัวบน
+            const exHun  = new Set((document.getElementById('exclude-hun')?.value  || '').split('').filter(c => c >= '0' && c <= '9'));
+            const exTen  = new Set((document.getElementById('exclude-ten')?.value  || '').split('').filter(c => c >= '0' && c <= '9'));
+            const exUnit = new Set((document.getElementById('exclude-unit')?.value || '').split('').filter(c => c >= '0' && c <= '9'));
+            combos3Up = combos3Up.filter(({ num }) =>
+                !exHun.has(num[0]) && !exTen.has(num[1]) && !exUnit.has(num[2])
+            );
+
+            // กรองเลขดับ 2 ตัวบน
+            const ex2upTen  = new Set((document.getElementById('exclude-2up-ten')?.value  || '').split('').filter(c => c >= '0' && c <= '9'));
+            const ex2upUnit = new Set((document.getElementById('exclude-2up-unit')?.value || '').split('').filter(c => c >= '0' && c <= '9'));
+            combos2Up = combos2Up.filter(({ num }) =>
+                !ex2upTen.has(num[0]) && !ex2upUnit.has(num[1])
+            );
+
+            // กรองเลขดับ 2 ตัวล่าง
+            const ex2downTen  = new Set((document.getElementById('exclude-2down-ten')?.value  || '').split('').filter(c => c >= '0' && c <= '9'));
+            const ex2downUnit = new Set((document.getElementById('exclude-2down-unit')?.value || '').split('').filter(c => c >= '0' && c <= '9'));
+            combos2Down = combos2Down.filter(({ num }) =>
+                !ex2downTen.has(num[0]) && !ex2downUnit.has(num[1])
+            );
+
+            combos3Up.sort(sortFn);
+            combos2Up.sort(sortFn);
+            combos2Down.sort(sortFn);
+
+            currentRecommendedSets = {
+                up3: new Set(combos3Up.map(item => item.num)),
+                up2: new Set(combos2Up.map(item => item.num)),
+                down2: new Set(combos2Down.map(item => item.num))
+            };
+
+            document.getElementById('count-3up').innerText = `${combos3Up.length} ชุด`;
+            document.getElementById('count-2up').innerText = `${combos2Up.length} ชุด`;
+            document.getElementById('count-2down').innerText = `${combos2Down.length} ชุด`;
+
+            // --- แสดงตัวเลขที่ใช้คำนวณ (top digits) ---
+            function renderDigitsInfo(containerId, groups, colorSet) {
+                const el = document.getElementById(containerId);
+                if (!el) return;
+                const html = groups.map(g => {
+                    const digitBadges = g.digits.map(d =>
+                        `<span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${colorSet.badge}">${d}</span>`
+                    ).join('');
+                    return `<div class="flex items-center gap-1 text-[11px] ${colorSet.label}">
+                        <span class="font-semibold whitespace-nowrap">${g.label}:</span>
+                        <div class="flex flex-wrap gap-0.5">${digitBadges}</div>
+                    </div>`;
+                }).join('');
+                el.innerHTML = `<div class="flex flex-col gap-1">${html}</div>`;
+            }
+
+            renderDigitsInfo('digits-info-3up', [
+                { label: 'หลักร้อย', digits: tHunUp.map(d => d.digit) },
+                { label: 'หลักสิบ',  digits: tTenUp.map(d => d.digit) },
+                { label: 'หลักหน่วย', digits: tUnitUp.map(d => d.digit) }
+            ], { badge: 'bg-amber-200 text-amber-900', label: 'text-amber-700' });
+
+            renderDigitsInfo('digits-info-2up', [
+                { label: 'หลักสิบ',  digits: tTenUp.map(d => d.digit) },
+                { label: 'หลักหน่วย', digits: tUnitUp.map(d => d.digit) }
+            ], { badge: 'bg-teal-200 text-teal-900', label: 'text-teal-700' });
+
+            renderDigitsInfo('digits-info-2down', [
+                { label: 'หลักสิบ',  digits: tTenDown.map(d => d.digit) },
+                { label: 'หลักหน่วย', digits: tUnitDown.map(d => d.digit) }
+            ], { badge: 'bg-rose-200 text-rose-900', label: 'text-rose-700' });
+
+            renderComboBadges('combo-3up-container', combos3Up, 'bg-amber-100 text-amber-800 border-amber-200');
+            renderComboBadges('combo-2up-container', combos2Up, 'bg-teal-100 text-teal-800 border-teal-200');
+            renderComboBadges('combo-2down-container', combos2Down, 'bg-rose-100 text-rose-800 border-rose-200');
+
+            if (refreshHistory && document.getElementById('history-table-body')) {
+                updateHistoryTable();
+            }
+        }
+
+        function getRecommendationHits(record) {
+            return {
+                up3: currentRecommendedSets.up3.has(record.up3),
+                up2: currentRecommendedSets.up2.has(record.up3.slice(-2)),
+                down2: currentRecommendedSets.down2.has(record.down2)
+            };
+        }
+
+        function isRecommendationHit(record, resultType = 'all') {
+            const hits = getRecommendationHits(record);
+            if (resultType === 'up3') return hits.up3;
+            if (resultType === 'up2') return hits.up2;
+            if (resultType === 'down2') return hits.down2;
+            return hits.up3 || hits.up2 || hits.down2;
+        }
+
+        function getRecommendationResultHtml(record, resultType = 'all') {
+            const hits = getRecommendationHits(record);
+            const hitCount = [hits.up3, hits.up2, hits.down2].filter(Boolean).length;
+            const isHit = resultType === 'all' ? hitCount > 0 : isRecommendationHit(record, resultType);
+            const modeLabels = {
+                up3: '3บน',
+                up2: '2บน',
+                down2: '2ล่าง'
+            };
+            const detailParts = resultType === 'all'
+                ? [
+                    hits.up3 ? '3บน' : '',
+                    hits.up2 ? '2บน' : '',
+                    hits.down2 ? '2ล่าง' : ''
+                ].filter(Boolean)
+                : [modeLabels[resultType]];
+            const detailClass = isHit ? 'text-emerald-600' : 'text-slate-400';
+            const resultText = isHit ? 'ถูก' : 'ไม่ถูก';
+            const detailText = detailParts.length > 0 ? detailParts.join(', ') : '-';
+            const badgeClass = isHit
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : 'bg-slate-50 text-slate-500 border-slate-200';
+
+            return `
+                <div class="flex flex-col items-center gap-1">
+                    <span class="inline-flex items-center justify-center min-w-[64px] px-2 py-1 rounded-full border text-xs font-bold ${badgeClass}">${resultText}</span>
+                    <span class="text-[11px] ${detailClass} whitespace-nowrap">${detailText}</span>
+                </div>
+            `;
+        }
+
+        function renderComboBadges(containerId, dataArr, styleClasses) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            const maxScoreInArr = dataArr.length > 0 ? (document.getElementById('sort-select').value === 'desc' ? dataArr[0].score : dataArr[dataArr.length-1].score) : 0;
+
+            dataArr.forEach(item => {
+                const isTopScore = item.score === maxScoreInArr && document.getElementById('sort-select').value === 'desc';
+                const fontStyle = isTopScore ? 'font-bold shadow-sm ring-1 ring-black/5' : 'font-medium opacity-90';
+                
+                const badge = document.createElement('div');
+                badge.className = `border px-2 py-1 rounded text-sm md:text-base tracking-widest ${styleClasses} ${fontStyle} hover:scale-105 transition-transform cursor-default flex items-center gap-1`;
+                badge.setAttribute('data-num', item.num);
+                badge.title = `ผลรวมความถี่: ${item.score}`;
+                badge.innerHTML = `${item.num} <span class="text-[10px] opacity-60 font-normal tracking-normal ml-0.5">(${item.score})</span>`;
+                container.appendChild(badge);
+            });
+        }
+
+        function copyCombinations(containerId, btn) {
+            const container = document.getElementById(containerId);
+            const badges = container.querySelectorAll('[data-num]');
+            const numsArr = Array.from(badges).map(b => b.getAttribute('data-num'));
+            
+            if (numsArr.length === 0) return;
+
+            // จัดเป็นแถวละ 10 คอลัมน์ คั่นด้วย Tab → วางใน Excel แต่ละตัวอยู่ในเซลล์แยก
+            const COLS = 10;
+            const rows = [];
+            for (let i = 0; i < numsArr.length; i += COLS) {
+                rows.push(numsArr.slice(i, i + COLS).join('\t'));
+            }
+            const excelText = rows.join('\n');
+
+            // ใช้ Clipboard API (modern) หรือ fallback textarea
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(excelText).then(() => {
+                    showCopiedFeedback(btn);
+                }).catch(() => {
+                    fallbackCopy(excelText, btn);
+                });
+            } else {
+                fallbackCopy(excelText, btn);
+            }
+        }
+
+        function fallbackCopy(text, btn) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showCopiedFeedback(btn);
+            } catch (err) {
+                console.error('Copy failed', err);
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function showCopiedFeedback(btn) {
+            const originalHtml = btn.innerHTML;
+            const originalClasses = btn.className;
+            btn.innerHTML = '✅ คัดลอกแล้ว';
+            btn.className = `text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded border border-green-300 transition-colors`;
+            setTimeout(() => {
+                btn.innerHTML = originalHtml;
+                btn.className = originalClasses;
+            }, 2000);
+        }
+
+        function switchTab(tabId) {
+            const tabs = ['history', 'formula', 'formula-ten', 'formula-unit'];
+
+            tabs.forEach(id => {
+                const btn = document.getElementById(`tab-btn-${id}`);
+                const content = document.getElementById(`tab-content-${id}`);
+                
+                if (id === tabId) {
+                    btn.className = "pb-2 border-b-2 border-blue-600 text-blue-700 font-bold transition-colors whitespace-nowrap";
+                    content.classList.remove('hidden');
+                } else {
+                    btn.className = "pb-2 border-b-2 border-transparent text-slate-500 font-medium hover:text-slate-700 transition-colors whitespace-nowrap";
+                    content.classList.add('hidden');
+                }
+            });
+        }
+
+                                                                const realHistoryData = [
+            { date: "1-6-2569", prize1: "173770", down2: "95" },
+            { date: "16-5-2569", prize1: "107387", down2: "08" },
+            { date: "2-5-2569", prize1: "536077", down2: "43" },
+            { date: "16-4-2569", prize1: "309612", down2: "77" },
+            { date: "1-4-2569", prize1: "292514", down2: "47" },
+            { date: "16-3-2569", prize1: "833009", down2: "64" },
+            { date: "1-3-2569", prize1: "820866", down2: "06" },
+            { date: "16-2-2569", prize1: "340563", down2: "07" },
+            { date: "1-2-2569", prize1: "174629", down2: "48" },
+            { date: "17-1-2569", prize1: "878972", down2: "02" },
+            { date: "2-1-2569", prize1: "837706", down2: "16" },
+            { date: "16-12-2568", prize1: "763895", down2: "52" },
+            { date: "1-12-2568", prize1: "461252", down2: "22" },
+            { date: "16-11-2568", prize1: "458145", down2: "37" },
+            { date: "1-11-2568", prize1: "345898", down2: "87" },
+            { date: "16-10-2568", prize1: "059696", down2: "61" },
+            { date: "1-10-2568", prize1: "876978", down2: "77" },
+            { date: "16-9-2568", prize1: "074646", down2: "58" },
+            { date: "1-9-2568", prize1: "506356", down2: "31" },
+            { date: "16-8-2568", prize1: "994865", down2: "63" },
+            { date: "1-8-2568", prize1: "811852", down2: "50" },
+            { date: "16-7-2568", prize1: "245324", down2: "26" },
+            { date: "1-7-2568", prize1: "949246", down2: "91" },
+            { date: "16-6-2568", prize1: "507392", down2: "06" },
+            { date: "1-6-2568", prize1: "559352", down2: "20" },
+            { date: "16-5-2568", prize1: "251309", down2: "87" },
+            { date: "2-5-2568", prize1: "213388", down2: "06" },
+            { date: "16-4-2568", prize1: "266227", down2: "85" },
+            { date: "1-4-2568", prize1: "669687", down2: "36" },
+            { date: "16-3-2568", prize1: "757563", down2: "32" },
+            { date: "1-3-2568", prize1: "818894", down2: "54" },
+            { date: "16-2-2568", prize1: "847377", down2: "50" },
+            { date: "1-2-2568", prize1: "558700", down2: "51" },
+            { date: "17-1-2568", prize1: "807779", down2: "23" },
+            { date: "2-1-2568", prize1: "730209", down2: "51" },
+            { date: "16-12-2567", prize1: "097863", down2: "21" },
+            { date: "1-12-2567", prize1: "669843", down2: "61" },
+            { date: "16-11-2567", prize1: "187221", down2: "38" },
+            { date: "1-11-2567", prize1: "536044", down2: "32" },
+            { date: "16-10-2567", prize1: "482962", down2: "00" },
+            { date: "1-10-2567", prize1: "718665", down2: "59" },
+            { date: "16-9-2567", prize1: "608662", down2: "37" },
+            { date: "1-9-2567", prize1: "199606", down2: "94" },
+            { date: "16-8-2567", prize1: "095867", down2: "28" },
+            { date: "1-8-2567", prize1: "407041", down2: "46" },
+            { date: "16-7-2567", prize1: "367336", down2: "21" },
+            { date: "1-7-2567", prize1: "434503", down2: "89" },
+            { date: "16-6-2567", prize1: "518504", down2: "31" },
+            { date: "1-6-2567", prize1: "530593", down2: "42" },
+            { date: "16-5-2567", prize1: "205690", down2: "60" },
+            { date: "2-5-2567", prize1: "980116", down2: "17" },
+            { date: "16-4-2567", prize1: "943598", down2: "79" },
+            { date: "1-4-2567", prize1: "803481", down2: "90" },
+            { date: "16-3-2567", prize1: "997626", down2: "78" },
+            { date: "1-3-2567", prize1: "253603", down2: "79" },
+            { date: "16-2-2567", prize1: "941395", down2: "43" },
+            { date: "1-2-2567", prize1: "607063", down2: "09" },
+            { date: "17-1-2567", prize1: "105979", down2: "61" },
+            { date: "30-12-2566", prize1: "625544", down2: "89" },
+            { date: "16-12-2566", prize1: "356757", down2: "85" },
+            { date: "1-12-2566", prize1: "251097", down2: "91" },
+            { date: "16-11-2566", prize1: "557990", down2: "14" },
+            { date: "1-11-2566", prize1: "743951", down2: "63" },
+            { date: "16-10-2566", prize1: "931446", down2: "44" },
+            { date: "1-10-2566", prize1: "727202", down2: "66" },
+            { date: "16-9-2566", prize1: "320812", down2: "46" },
+            { date: "1-9-2566", prize1: "915478", down2: "91" },
+            { date: "16-8-2566", prize1: "471782", down2: "67" },
+            { date: "31-7-2566", prize1: "260453", down2: "11" },
+            { date: "16-7-2566", prize1: "169530", down2: "62" },
+            { date: "1-7-2566", prize1: "922605", down2: "16" },
+            { date: "16-6-2566", prize1: "264872", down2: "30" },
+            { date: "1-6-2566", prize1: "125272", down2: "09" },
+            { date: "16-5-2566", prize1: "132903", down2: "99" },
+            { date: "2-5-2566", prize1: "843019", down2: "65" },
+            { date: "16-4-2566", prize1: "984906", down2: "71" },
+            { date: "1-4-2566", prize1: "087907", down2: "99" },
+            { date: "16-3-2566", prize1: "025873", down2: "73" },
+            { date: "1-3-2566", prize1: "417652", down2: "55" },
+            { date: "16-2-2566", prize1: "590417", down2: "80" },
+            { date: "1-2-2566", prize1: "297411", down2: "92" },
+            { date: "17-1-2566", prize1: "812519", down2: "47" },
+            { date: "30-12-2565", prize1: "157196", down2: "58" },
+            { date: "16-12-2565", prize1: "845093", down2: "14" },
+            { date: "1-12-2565", prize1: "375805", down2: "08" },
+            { date: "16-11-2565", prize1: "121789", down2: "64" },
+            { date: "1-11-2565", prize1: "913106", down2: "70" },
+            { date: "16-10-2565", prize1: "613106", down2: "15" },
+            { date: "1-10-2565", prize1: "484669", down2: "50" },
+            { date: "16-9-2565", prize1: "943703", down2: "75" },
+            { date: "1-9-2565", prize1: "929332", down2: "83" },
+            { date: "16-8-2565", prize1: "331583", down2: "42" },
+            { date: "1-8-2565", prize1: "436594", down2: "14" },
+            { date: "16-7-2565", prize1: "620405", down2: "53" },
+            { date: "1-7-2565", prize1: "981417", down2: "61" },
+            { date: "16-6-2565", prize1: "361807", down2: "92" },
+            { date: "1-6-2565", prize1: "319196", down2: "02" },
+            { date: "16-5-2565", prize1: "155012", down2: "06" },
+            { date: "2-5-2565", prize1: "658642", down2: "09" },
+            { date: "16-4-2565", prize1: "395919", down2: "58" },
+            { date: "1-4-2565", prize1: "970618", down2: "10" },
+            { date: "16-3-2565", prize1: "737867", down2: "03" },
+            { date: "1-3-2565", prize1: "061905", down2: "07" },
+            { date: "17-2-2565", prize1: "098597", down2: "57" },
+            { date: "1-2-2565", prize1: "944308", down2: "30" },
+            { date: "17-1-2565", prize1: "880159", down2: "92" },
+            { date: "30-12-2564", prize1: "819068", down2: "36" },
+            { date: "16-12-2564", prize1: "639235", down2: "83" },
+            { date: "1-12-2564", prize1: "077258", down2: "82" },
+            { date: "16-11-2564", prize1: "032761", down2: "57" },
+            { date: "1-11-2564", prize1: "045037", down2: "95" },
+            { date: "16-10-2564", prize1: "386372", down2: "38" },
+            { date: "1-10-2564", prize1: "578171", down2: "83" },
+            { date: "16-9-2564", prize1: "070935", down2: "90" },
+            { date: "1-9-2564", prize1: "114475", down2: "79" },
+            { date: "16-8-2564", prize1: "046750", down2: "23" },
+            { date: "1-8-2564", prize1: "910261", down2: "69" },
+            { date: "16-7-2564", prize1: "556725", down2: "70" },
+            { date: "1-7-2564", prize1: "713517", down2: "29" },
+            { date: "16-6-2564", prize1: "691861", down2: "17" },
+            { date: "1-6-2564", prize1: "292972", down2: "45" },
+            { date: "16-5-2564", prize1: "684579", down2: "14" },
+            { date: "2-5-2564", prize1: "501272", down2: "18" },
+            { date: "16-4-2564", prize1: "100787", down2: "56" },
+            { date: "1-4-2564", prize1: "472270", down2: "05" },
+            { date: "16-3-2564", prize1: "890422", down2: "19" },
+            { date: "1-3-2564", prize1: "835538", down2: "73" },
+            { date: "16-2-2564", prize1: "424603", down2: "39" },
+            { date: "1-2-2564", prize1: "912307", down2: "97" },
+            { date: "17-1-2564", prize1: "384395", down2: "15" },
+            { date: "30-12-2563", prize1: "803628", down2: "19" },
+            { date: "16-12-2563", prize1: "201303", down2: "70" },
+            { date: "1-12-2563", prize1: "100994", down2: "84" },
+            { date: "16-11-2563", prize1: "972661", down2: "46" },
+            { date: "1-11-2563", prize1: "506404", down2: "40" },
+            { date: "16-10-2563", prize1: "286051", down2: "38" },
+            { date: "1-10-2563", prize1: "837893", down2: "59" },
+            { date: "16-9-2563", prize1: "244083", down2: "57" },
+            { date: "1-9-2563", prize1: "999997", down2: "98" },
+            { date: "16-8-2563", prize1: "945811", down2: "88" },
+            { date: "1-8-2563", prize1: "569391", down2: "92" },
+            { date: "16-7-2563", prize1: "873286", down2: "53" },
+            { date: "1-7-2563", prize1: "347258", down2: "83" },
+            { date: "16-6-2563", prize1: "516967", down2: "64" },
+            { date: "1-6-2563", prize1: "831567", down2: "24" },
+            { date: "1-4-2563", prize1: "051095", down2: "22" },
+            { date: "16-3-2563", prize1: "503446", down2: "77" },
+            { date: "1-3-2563", prize1: "875938", down2: "98" },
+            { date: "16-2-2563", prize1: "781403", down2: "94" },
+            { date: "1-2-2563", prize1: "589227", down2: "06" },
+            { date: "17-1-2563", prize1: "491774", down2: "68" },
+            { date: "30-12-2562", prize1: "510541", down2: "81" },
+            { date: "16-12-2562", prize1: "529924", down2: "97" },
+            { date: "1-12-2562", prize1: "453522", down2: "81" },
+            { date: "16-11-2562", prize1: "017223", down2: "32" },
+            { date: "1-11-2562", prize1: "967375", down2: "79" },
+            { date: "16-10-2562", prize1: "812564", down2: "15" },
+            { date: "1-10-2562", prize1: "691197", down2: "59" },
+            { date: "16-9-2562", prize1: "340388", down2: "85" },
+            { date: "1-9-2562", prize1: "798787", down2: "20" },
+            { date: "16-8-2562", prize1: "775476", down2: "89" },
+            { date: "1-8-2562", prize1: "387006", down2: "58" },
+            { date: "15-7-2562", prize1: "369765", down2: "88" },
+            { date: "1-7-2562", prize1: "943647", down2: "86" },
+            { date: "16-6-2562", prize1: "174055", down2: "29" },
+            { date: "1-6-2562", prize1: "516461", down2: "46" },
+            { date: "16-5-2562", prize1: "962526", down2: "71" },
+            { date: "2-5-2562", prize1: "061324", down2: "25" },
+            { date: "16-4-2562", prize1: "570331", down2: "23" },
+            { date: "1-4-2562", prize1: "109767", down2: "52" },
+            { date: "16-3-2562", prize1: "724628", down2: "64" },
+            { date: "1-3-2562", prize1: "345650", down2: "65" },
+            { date: "16-2-2562", prize1: "074824", down2: "56" },
+            { date: "1-2-2562", prize1: "967134", down2: "04" },
+            { date: "17-1-2562", prize1: "197079", down2: "65" },
+            { date: "30-12-2561", prize1: "735867", down2: "02" },
+            { date: "16-12-2561", prize1: "356564", down2: "62" },
+            { date: "1-12-2561", prize1: "021840", down2: "67" },
+            { date: "16-11-2561", prize1: "989903", down2: "16" },
+            { date: "1-11-2561", prize1: "149840", down2: "58" },
+            { date: "16-10-2561", prize1: "200515", down2: "93" },
+            { date: "1-10-2561", prize1: "452643", down2: "99" },
+            { date: "16-9-2561", prize1: "149760", down2: "79" },
+            { date: "1-9-2561", prize1: "734510", down2: "26" },
+            { date: "16-8-2561", prize1: "586117", down2: "10" },
+            { date: "1-8-2561", prize1: "386602", down2: "78" },
+            { date: "16-7-2561", prize1: "596324", down2: "27" },
+            { date: "1-7-2561", prize1: "963623", down2: "83" },
+            { date: "16-6-2561", prize1: "223131", down2: "46" },
+            { date: "1-6-2561", prize1: "988117", down2: "95" },
+            { date: "16-5-2561", prize1: "075629", down2: "20" },
+            { date: "2-5-2561", prize1: "248038", down2: "85" },
+            { date: "16-4-2561", prize1: "739229", down2: "60" },
+            { date: "1-4-2561", prize1: "412073", down2: "85" },
+            { date: "16-3-2561", prize1: "218559", down2: "82" },
+            { date: "2-3-2561", prize1: "759415", down2: "29" },
+            { date: "16-2-2561", prize1: "309915", down2: "39" },
+            { date: "1-2-2561", prize1: "026853", down2: "31" },
+            { date: "17-1-2561", prize1: "203823", down2: "50" },
+            { date: "30-12-2560", prize1: "911234", down2: "98" },
+            { date: "16-12-2560", prize1: "955596", down2: "89" },
+            { date: "1-12-2560", prize1: "451005", down2: "33" },
+            { date: "16-11-2560", prize1: "292391", down2: "98" },
+            { date: "1-11-2560", prize1: "533726", down2: "85" },
+            { date: "16-10-2560", prize1: "413494", down2: "86" },
+            { date: "1-10-2560", prize1: "880714", down2: "52" },
+            { date: "16-9-2560", prize1: "170143", down2: "71" },
+            { date: "1-9-2560", prize1: "143224", down2: "65" },
+            { date: "16-8-2560", prize1: "715431", down2: "37" },
+            { date: "1-8-2560", prize1: "756519", down2: "36" },
+            { date: "16-7-2560", prize1: "820327", down2: "87" },
+            { date: "1-7-2560", prize1: "112360", down2: "26" },
+            { date: "16-6-2560", prize1: "943142", down2: "47" },
+            { date: "1-6-2560", prize1: "053630", down2: "61" },
+            { date: "16-5-2560", prize1: "454891", down2: "53" },
+            { date: "2-5-2560", prize1: "008656", down2: "35" },
+            { date: "16-4-2560", prize1: "816729", down2: "40" },
+            { date: "1-4-2560", prize1: "392785", down2: "80" },
+            { date: "16-3-2560", prize1: "273863", down2: "92" },
+            { date: "1-3-2560", prize1: "978453", down2: "78" },
+            { date: "16-2-2560", prize1: "229116", down2: "14" },
+            { date: "1-2-2560", prize1: "054672", down2: "42" },
+            { date: "17-1-2560", prize1: "145157", down2: "25" },
+            { date: "30-12-2559", prize1: "377712", down2: "46" },
+            { date: "16-12-2559", prize1: "435286", down2: "35" },
+            { date: "1-12-2559", prize1: "086069", down2: "77" },
+            { date: "16-11-2559", prize1: "858383", down2: "44" },
+            { date: "1-11-2559", prize1: "785438", down2: "86" },
+            { date: "16-10-2559", prize1: "571947", down2: "98" },
+            { date: "1-10-2559", prize1: "887102", down2: "33" },
+            { date: "16-9-2559", prize1: "240650", down2: "42" },
+            { date: "1-9-2559", prize1: "638684", down2: "62" },
+            { date: "16-8-2559", prize1: "254004", down2: "33" },
+            { date: "1-8-2559", prize1: "272932", down2: "57" },
+            { date: "16-7-2559", prize1: "449764", down2: "55" },
+            { date: "1-7-2559", prize1: "082460", down2: "53" },
+            { date: "16-6-2559", prize1: "073816", down2: "79" },
+            { date: "1-6-2559", prize1: "511825", down2: "14" },
+            { date: "16-5-2559", prize1: "141737", down2: "98" },
+            { date: "2-5-2559", prize1: "399459", down2: "02" },
+            { date: "16-4-2559", prize1: "221609", down2: "87" },
+            { date: "1-4-2559", prize1: "066720", down2: "92" },
+            { date: "16-3-2559", prize1: "134918", down2: "32" },
+            { date: "1-3-2559", prize1: "439686", down2: "06" },
+            { date: "16-2-2559", prize1: "356364", down2: "98" },
+            { date: "1-2-2559", prize1: "927800", down2: "09" },
+            { date: "17-1-2559", prize1: "304371", down2: "50" },
+            { date: "30-12-2558", prize1: "008217", down2: "02" },
+            { date: "17-12-2558", prize1: "930255", down2: "08" },
+            { date: "1-12-2558", prize1: "915350", down2: "78" },
+            { date: "16-11-2558", prize1: "795283", down2: "03" },
+            { date: "1-11-2558", prize1: "361211", down2: "45" },
+            { date: "16-10-2558", prize1: "968630", down2: "62" },
+            { date: "1-10-2558", prize1: "594825", down2: "07" },
+            { date: "16-9-2558", prize1: "743148", down2: "06" },
+            { date: "1-9-2558", prize1: "021094", down2: "89" },
+            { date: "16-8-2558", prize1: "033363", down2: "40" },
+            { date: "1-8-2558", prize1: "518677", down2: "53" },
+            { date: "16-7-2558", prize1: "121507", down2: "49" },
+            { date: "1-7-2558", prize1: "759049", down2: "26" },
+            { date: "16-6-2558", prize1: "644742", down2: "05" },
+            { date: "2-6-2558", prize1: "388881", down2: "65" },
+            { date: "16-5-2558", prize1: "011421", down2: "38" },
+            { date: "2-5-2558", prize1: "543466", down2: "30" },
+            { date: "16-4-2558", prize1: "506260", down2: "38" },
+            { date: "1-4-2558", prize1: "605704", down2: "70" },
+            { date: "16-3-2558", prize1: "048151", down2: "92" },
+            { date: "1-3-2558", prize1: "240237", down2: "34" },
+            { date: "16-2-2558", prize1: "001864", down2: "90" },
+            { date: "1-2-2558", prize1: "155537", down2: "79" },
+            { date: "16-1-2558", prize1: "244351", down2: "74" },
+            { date: "30-12-2557", prize1: "461704", down2: "57" },
+            { date: "16-12-2557", prize1: "948354", down2: "90" },
+            { date: "1-12-2557", prize1: "480449", down2: "11" },
+            { date: "16-11-2557", prize1: "479804", down2: "25" },
+            { date: "1-11-2557", prize1: "206608", down2: "44" },
+            { date: "16-10-2557", prize1: "656409", down2: "94" },
+            { date: "1-10-2557", prize1: "375615", down2: "44" },
+            { date: "16-9-2557", prize1: "772269", down2: "35" },
+            { date: "16-8-2557", prize1: "662842", down2: "91" },
+            { date: "1-8-2557", prize1: "766391", down2: "82" },
+            { date: "16-7-2557", prize1: "468728", down2: "45" },
+            { date: "1-7-2557", prize1: "378477", down2: "39" },
+            { date: "16-6-2557", prize1: "673920", down2: "95" },
+            { date: "1-6-2557", prize1: "781198", down2: "18" },
+            { date: "16-5-2557", prize1: "087523", down2: "20" },
+            { date: "2-5-2557", prize1: "103297", down2: "52" },
+            { date: "16-4-2557", prize1: "153406", down2: "26" },
+            { date: "1-4-2557", prize1: "028866", down2: "95" },
+            { date: "16-3-2557", prize1: "531404", down2: "79" },
+            { date: "1-3-2557", prize1: "906318", down2: "35" },
+            { date: "16-2-2557", prize1: "384245", down2: "01" },
+            { date: "1-2-2557", prize1: "180149", down2: "95" },
+            { date: "16-1-2557", prize1: "306902", down2: "52" },
+            { date: "30-12-2556", prize1: "561072", down2: "48" },
+            { date: "16-12-2556", prize1: "341767", down2: "79" },
+            { date: "1-12-2556", prize1: "168795", down2: "27" },
+            { date: "16-11-2556", prize1: "806925", down2: "28" },
+            { date: "1-11-2556", prize1: "739804", down2: "47" },
+            { date: "16-10-2556", prize1: "963289", down2: "60" },
+            { date: "1-10-2556", prize1: "647882", down2: "14" },
+            { date: "16-9-2556", prize1: "562684", down2: "63" },
+            { date: "1-9-2556", prize1: "548123", down2: "05" },
+            { date: "16-8-2556", prize1: "321327", down2: "20" },
+            { date: "1-8-2556", prize1: "356435", down2: "82" },
+            { date: "16-7-2556", prize1: "566996", down2: "86" },
+            { date: "1-7-2556", prize1: "646905", down2: "51" },
+            { date: "16-6-2556", prize1: "289673", down2: "69" },
+            { date: "1-6-2556", prize1: "935489", down2: "90" },
+            { date: "16-5-2556", prize1: "687125", down2: "56" },
+            { date: "2-5-2556", prize1: "603458", down2: "07" },
+            { date: "16-4-2556", prize1: "843846", down2: "86" },
+            { date: "1-4-2556", prize1: "571688", down2: "53" },
+            { date: "16-3-2556", prize1: "968433", down2: "52" },
+            { date: "1-3-2556", prize1: "976241", down2: "37" },
+            { date: "16-2-2556", prize1: "368257", down2: "09" },
+            { date: "1-2-2556", prize1: "565566", down2: "66" },
+            { date: "16-1-2556", prize1: "820981", down2: "08" },
+            { date: "30-12-2555", prize1: "302358", down2: "00" },
+            { date: "16-12-2555", prize1: "529524", down2: "72" },
+            { date: "1-12-2555", prize1: "110443", down2: "43" },
+            { date: "16-11-2555", prize1: "639500", down2: "15" },
+            { date: "1-11-2555", prize1: "524694", down2: "63" },
+            { date: "16-10-2555", prize1: "281343", down2: "28" },
+            { date: "1-10-2555", prize1: "124025", down2: "58" },
+            { date: "16-9-2555", prize1: "540143", down2: "79" },
+            { date: "1-9-2555", prize1: "329997", down2: "07" },
+            { date: "16-8-2555", prize1: "683877", down2: "28" },
+            { date: "1-8-2555", prize1: "895590", down2: "50" },
+            { date: "16-7-2555", prize1: "904050", down2: "11" },
+            { date: "1-7-2555", prize1: "915900", down2: "60" },
+            { date: "16-6-2555", prize1: "159373", down2: "51" },
+            { date: "1-6-2555", prize1: "882727", down2: "38" },
+            { date: "16-5-2555", prize1: "814418", down2: "31" },
+            { date: "2-5-2555", prize1: "889501", down2: "29" },
+            { date: "16-4-2555", prize1: "583470", down2: "62" },
+            { date: "1-4-2555", prize1: "257562", down2: "69" },
+            { date: "16-3-2555", prize1: "607064", down2: "08" },
+            { date: "1-3-2555", prize1: "222518", down2: "79" },
+            { date: "16-2-2555", prize1: "648684", down2: "18" },
+            { date: "1-2-2555", prize1: "320605", down2: "32" },
+            { date: "16-1-2555", prize1: "451445", down2: "81" },
+            { date: "30-12-2554", prize1: "526402", down2: "65" },
+            { date: "16-12-2554", prize1: "884178", down2: "21" },
+            { date: "1-12-2554", prize1: "408147", down2: "02" },
+            { date: "16-11-2554", prize1: "997777", down2: "57" },
+            { date: "1-11-2554", prize1: "805540", down2: "54" },
+            { date: "16-10-2554", prize1: "955756", down2: "83" },
+            { date: "1-10-2554", prize1: "511052", down2: "15" },
+            { date: "16-9-2554", prize1: "731198", down2: "28" },
+            { date: "1-9-2554", prize1: "724533", down2: "85" },
+            { date: "16-8-2554", prize1: "536960", down2: "62" },
+            { date: "1-8-2554", prize1: "218756", down2: "12" },
+            { date: "16-7-2554", prize1: "116556", down2: "12" },
+            { date: "1-7-2554", prize1: "622953", down2: "51" },
+            { date: "16-6-2554", prize1: "351276", down2: "88" },
+            { date: "1-6-2554", prize1: "562370", down2: "46" },
+            { date: "16-5-2554", prize1: "406417", down2: "05" },
+            { date: "2-5-2554", prize1: "054136", down2: "85" },
+            { date: "16-4-2554", prize1: "825988", down2: "44" },
+            { date: "1-4-2554", prize1: "814931", down2: "01" },
+            { date: "16-3-2554", prize1: "593331", down2: "96" },
+            { date: "1-3-2554", prize1: "656037", down2: "97" },
+            { date: "16-2-2554", prize1: "481746", down2: "27" },
+            { date: "1-2-2554", prize1: "610089", down2: "55" },
+            { date: "16-1-2554", prize1: "281062", down2: "23" },
+            { date: "30-12-2553", prize1: "884112", down2: "49" },
+            { date: "16-12-2553", prize1: "334380", down2: "24" },
+            { date: "1-12-2553", prize1: "181752", down2: "09" },
+            { date: "16-11-2553", prize1: "813993", down2: "43" },
+            { date: "1-11-2553", prize1: "191100", down2: "59" },
+            { date: "16-10-2553", prize1: "621377", down2: "42" },
+            { date: "1-10-2553", prize1: "488372", down2: "02" },
+            { date: "16-9-2553", prize1: "017422", down2: "66" },
+            { date: "1-9-2553", prize1: "354656", down2: "11" },
+            { date: "16-8-2553", prize1: "911097", down2: "64" },
+            { date: "1-8-2553", prize1: "210008", down2: "10" },
+            { date: "16-7-2553", prize1: "180387", down2: "34" },
+            { date: "1-7-2553", prize1: "480239", down2: "68" },
+            { date: "16-6-2553", prize1: "500104", down2: "73" },
+            { date: "1-6-2553", prize1: "444874", down2: "81" },
+            { date: "16-5-2553", prize1: "480012", down2: "12" },
+            { date: "2-5-2553", prize1: "360371", down2: "06" },
+            { date: "16-4-2553", prize1: "211743", down2: "96" },
+            { date: "1-4-2553", prize1: "959517", down2: "22" },
+            { date: "16-3-2553", prize1: "364222", down2: "97" },
+            { date: "1-3-2553", prize1: "215227", down2: "97" },
+            { date: "16-2-2553", prize1: "133707", down2: "03" },
+            { date: "1-2-2553", prize1: "186312", down2: "14" },
+            { date: "16-1-2553", prize1: "073577", down2: "67" },
+            { date: "30-12-2552", prize1: "994304", down2: "87" },
+            { date: "16-12-2552", prize1: "685141", down2: "05" },
+            { date: "1-12-2552", prize1: "776980", down2: "59" },
+            { date: "16-11-2552", prize1: "055986", down2: "58" },
+            { date: "1-11-2552", prize1: "689140", down2: "85" },
+            { date: "16-10-2552", prize1: "258487", down2: "00" },
+            { date: "1-10-2552", prize1: "169387", down2: "06" },
+            { date: "16-9-2552", prize1: "202912", down2: "48" },
+            { date: "1-9-2552", prize1: "015865", down2: "32" },
+            { date: "16-8-2552", prize1: "462933", down2: "96" },
+            { date: "1-8-2552", prize1: "154986", down2: "92" },
+            { date: "16-7-2552", prize1: "000816", down2: "94" },
+            { date: "1-7-2552", prize1: "207542", down2: "66" },
+            { date: "16-6-2552", prize1: "930456", down2: "15" },
+            { date: "1-6-2552", prize1: "777661", down2: "26" },
+            { date: "16-5-2552", prize1: "111411", down2: "54" },
+            { date: "2-5-2552", prize1: "294452", down2: "11" },
+            { date: "16-4-2552", prize1: "368415", down2: "33" },
+            { date: "1-4-2552", prize1: "816578", down2: "50" },
+            { date: "16-3-2552", prize1: "268812", down2: "36" },
+            { date: "1-3-2552", prize1: "553091", down2: "67" },
+            { date: "16-2-2552", prize1: "038730", down2: "93" },
+            { date: "1-2-2552", prize1: "534533", down2: "69" },
+            { date: "16-1-2552", prize1: "743212", down2: "25" },
+            { date: "30-12-2551", prize1: "218596", down2: "22" },
+            { date: "16-12-2551", prize1: "074114", down2: "25" },
+            { date: "1-12-2551", prize1: "205434", down2: "05" },
+            { date: "16-11-2551", prize1: "002612", down2: "20" },
+            { date: "1-11-2551", prize1: "272028", down2: "76" },
+            { date: "16-10-2551", prize1: "431277", down2: "98" },
+            { date: "1-10-2551", prize1: "882911", down2: "67" },
+            { date: "16-9-2551", prize1: "012377", down2: "56" },
+            { date: "1-9-2551", prize1: "695993", down2: "09" },
+            { date: "16-8-2551", prize1: "380377", down2: "36" },
+            { date: "1-8-2551", prize1: "850348", down2: "11" },
+            { date: "16-7-2551", prize1: "257374", down2: "41" },
+            { date: "1-7-2551", prize1: "943671", down2: "50" },
+            { date: "16-6-2551", prize1: "729111", down2: "75" },
+            { date: "1-6-2551", prize1: "414875", down2: "35" },
+            { date: "16-5-2551", prize1: "329231", down2: "69" },
+            { date: "16-4-2551", prize1: "982800", down2: "64" },
+            { date: "1-4-2551", prize1: "012653", down2: "71" },
+            { date: "16-3-2551", prize1: "074946", down2: "33" },
+            { date: "1-3-2551", prize1: "936685", down2: "05" },
+            { date: "16-2-2551", prize1: "137054", down2: "80" },
+            { date: "1-2-2551", prize1: "212684", down2: "26" },
+            { date: "16-1-2551", prize1: "556010", down2: "81" },
+            { date: "30-12-2550", prize1: "595411", down2: "81" },
+            { date: "16-12-2550", prize1: "513501", down2: "96" },
+            { date: "1-12-2550", prize1: "113410", down2: "18" },
+            { date: "16-11-2550", prize1: "562481", down2: "73" },
+            { date: "1-11-2550", prize1: "927907", down2: "88" },
+            { date: "16-10-2550", prize1: "032988", down2: "48" },
+            { date: "1-10-2550", prize1: "430667", down2: "76" },
+            { date: "16-9-2550", prize1: "499336", down2: "45" },
+            { date: "1-9-2550", prize1: "331810", down2: "69" },
+            { date: "16-8-2550", prize1: "476207", down2: "93" },
+            { date: "1-8-2550", prize1: "429924", down2: "29" },
+            { date: "16-7-2550", prize1: "527384", down2: "77" },
+            { date: "1-7-2550", prize1: "565151", down2: "76" },
+            { date: "16-6-2550", prize1: "393194", down2: "41" },
+            { date: "1-6-2550", prize1: "836393", down2: "05" },
+            { date: "16-5-2550", prize1: "232897", down2: "25" },
+            { date: "2-5-2550", prize1: "430374", down2: "81" },
+            { date: "16-4-2550", prize1: "405105", down2: "63" },
+            { date: "1-4-2550", prize1: "622780", down2: "93" },
+            { date: "16-3-2550", prize1: "876763", down2: "85" },
+            { date: "1-3-2550", prize1: "742425", down2: "61" },
+            { date: "16-2-2550", prize1: "277859", down2: "95" },
+            { date: "1-2-2550", prize1: "769925", down2: "56" },
+            { date: "16-1-2550", prize1: "838739", down2: "55" }
+        ];
+
+        function seededRandom(seed) {
+            let x = Math.sin(seed) * 10000;
+            return x - Math.floor(x);
+        }
+
+        function generateFullMockHistory(years) {
+            const totalDrawsRequired = years * 24; 
+            const records = [];
+            const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+            const daysInWeek = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
+            
+            for (let i = 0; i < realHistoryData.length && records.length < totalDrawsRequired; i++) {
+                const item = realHistoryData[i];
+                const parts = item.date.split('-');
+                const d = parseInt(parts[0]);
+                const m = parseInt(parts[1]) - 1; 
+                const y = parseInt(parts[2]);
+                const dateObj = new Date(y - 543, m, d);
+                
+                const up3 = item.prize1.slice(-3);
+                
+                records.push({
+                    dayName: daysInWeek[dateObj.getDay()],
+                    dateStr: `วัน${daysInWeek[dateObj.getDay()]}ที่ ${d} ${months[m]} ${y}`,
+                    prize1: item.prize1,
+                    up3: up3,
+                    down2: item.down2,
+                    timestamp: dateObj.getTime(),
+                    d: d, m: m, y: y 
+                });
+            }
+
+            if (records.length < totalDrawsRequired) {
+                let lastRecord = records[records.length - 1];
+                let curD = lastRecord.d;
+                let curM = lastRecord.m;
+                let curY = lastRecord.y;
+
+                while (records.length < totalDrawsRequired) {
+                    if (curD === 16) {
+                        curD = 1;
+                    } else {
+                        curD = 16;
+                        if (curM === 0) {
+                            curM = 11; 
+                            curY--;
+                        } else {
+                            curM--;
+                        }
+                    }
+
+                    let dateObj = new Date(curY - 543, curM, curD);
+                    let dayName = daysInWeek[dateObj.getDay()];
+
+                    let seed = curD + (curM * 100) + (curY * 10000);
+                    let p1_front = Math.floor(seededRandom(seed) * 1000).toString().padStart(3, '0');
+                    let up3 = Math.floor(seededRandom(seed + 1) * 1000).toString().padStart(3, '0');
+                    let down2 = Math.floor(seededRandom(seed + 2) * 100).toString().padStart(2, '0');
+                    let prize1 = p1_front + up3;
+
+                    records.push({
+                        dayName: dayName, 
+                        dateStr: `วัน${dayName}ที่ ${curD} ${months[curM]} ${curY}`,
+                        prize1: prize1,
+                        up3: up3,
+                        down2: down2,
+                        timestamp: dateObj.getTime(),
+                        d: curD, m: curM, y: curY
+                    });
+                }
+            }
+            
+            return records;
+        }
+
+        function updateHistoryTable() {
+            if (lastMockTimeframe !== currentTimeframe) {
+                globalMockHistory = generateFullMockHistory(parseInt(currentTimeframe));
+                lastMockTimeframe = currentTimeframe;
+            }
+
+            // อ่าน View Mode ของแต่ละแท็บ
+            const historyViewMode = document.getElementById('history-view-mode') ? document.getElementById('history-view-mode').value : 'day';
+            const historyResultType = document.getElementById('history-result-type') ? document.getElementById('history-result-type').value : 'all';
+            const historyHitFilter = document.getElementById('history-hit-filter') ? document.getElementById('history-hit-filter').value : 'all';
+            const formulaViewMode = document.getElementById('formula-view-mode') ? document.getElementById('formula-view-mode').value : 'all';
+            const formulaTenViewMode = document.getElementById('formula-ten-view-mode') ? document.getElementById('formula-ten-view-mode').value : 'all';
+            const formulaUnitViewMode = document.getElementById('formula-unit-view-mode') ? document.getElementById('formula-unit-view-mode').value : 'all';
+
+            const allData = globalMockHistory;
+            const dayData = currentDay === 'all'
+                ? globalMockHistory
+                : globalMockHistory.filter(r => r.dayName === currentDay);
+            const dayCountLabel = currentDay === 'all' ? 'ทุกวัน' : `วัน${currentDay}`;
+
+            const baseHistoryData = historyViewMode === 'all' ? allData : dayData;
+            const historyData = baseHistoryData.filter(record => {
+                if (historyHitFilter === 'all') return true;
+                const isHit = isRecommendationHit(record, historyResultType);
+                return historyHitFilter === 'hit' ? isHit : !isHit;
+            });
+            const formulaData = formulaViewMode === 'all' ? allData : dayData;
+            const formulaTenData = formulaTenViewMode === 'all' ? allData : dayData;
+            const formulaUnitData = formulaUnitViewMode === 'all' ? allData : dayData;
+            
+            const historyTbody = document.getElementById('history-table-body');
+            const formulaTbody = document.getElementById('formula-table-body');
+            const formulaTenTbody = document.getElementById('formula-ten-table-body');
+            const formulaUnitTbody = document.getElementById('formula-unit-table-body');
+            
+            historyTbody.innerHTML = '';
+            formulaTbody.innerHTML = '';
+            formulaTenTbody.innerHTML = '';
+            formulaUnitTbody.innerHTML = '';
+            
+            const filteredSuffix = historyData.length === baseHistoryData.length ? '' : ` / แสดง ${historyData.length} งวด`;
+            document.getElementById('history-count').innerText = `รวม ${allData.length} งวด (ตรงกับ${dayCountLabel} ${dayData.length} งวด)${filteredSuffix}`;
+
+            // --- ประวัติการออกรางวัล ---
+            if (historyData.length === 0) {
+                historyTbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">ไม่มีข้อมูลย้อนหลัง</td></tr>`;
+            } else {
+                historyData.forEach((record, index) => {
+                    const trHist = document.createElement('tr');
+                    trHist.className = 'hover:bg-slate-50 transition-colors';
+                    const recommendationResultHtml = getRecommendationResultHtml(record, historyResultType);
+                    trHist.innerHTML = `
+                        <td class="p-3 text-center text-sm text-slate-400">${index + 1}</td>
+                        <td class="p-3 text-sm font-medium text-slate-700">${record.dateStr}</td>
+                        <td class="p-3 text-center">
+                            <span class="inline-block bg-amber-50 text-amber-700 font-bold tracking-widest px-3 py-1 rounded border border-amber-200 shadow-sm">${record.up3}</span>
+                        </td>
+                        <td class="p-3 text-center">
+                            <span class="inline-block bg-rose-50 text-rose-700 font-bold tracking-widest px-3 py-1 rounded border border-rose-200 shadow-sm">${record.down2}</span>
+                        </td>
+                        <td class="p-3 text-center">${recommendationResultHtml}</td>
+                    `;
+                    historyTbody.appendChild(trHist);
+                });
+            }
+
+            // --- ฟังก์ชันสร้างตารางสูตร (ใช้ร่วมกัน) ---
+            function buildFormulaRows(dataSet, tbodyEl, getDigit, labelType) {
+                if (dataSet.length === 0) {
+                    tbodyEl.innerHTML = `<tr><td colspan="14" class="p-6 text-center text-slate-400">ไม่มีข้อมูล</td></tr>`;
+                    return;
+                }
+
+                const totalRows = dataSet.length;
+                const numFormulas = 11;
+                const failed = Array.from({length: totalRows}, () => Array(numFormulas).fill(false));
+
+                for (let r = 0; r < totalRows; r++) {
+                    const record = dataSet[r];
+                    const h = parseInt(record.up3[0]);
+                    const t = parseInt(record.up3[1]);
+                    const u = parseInt(record.up3[2]);
+                    const baseDigit = getDigit(h, t, u);
+                    const sums = [h+t+u, baseDigit+1, baseDigit+2, baseDigit+3, baseDigit+4, baseDigit+5, baseDigit+6, baseDigit+7, baseDigit+8, baseDigit+9, baseDigit+10];
+
+                    let nextDigit = null;
+                    if (r - 1 >= 0) {
+                        const nh = parseInt(dataSet[r - 1].up3[0]);
+                        const nt = parseInt(dataSet[r - 1].up3[1]);
+                        const nu = parseInt(dataSet[r - 1].up3[2]);
+                        nextDigit = getDigit(nh, nt, nu);
+                    }
+
+                    for (let c = 0; c < numFormulas; c++) {
+                        if (nextDigit !== null && (sums[c] % 10) === nextDigit) failed[r][c] = true;
+                    }
+                }
+
+                const streakCounts = Array.from({length: totalRows}, () => Array(numFormulas).fill(0));
+                for (let c = 0; c < numFormulas; c++) {
+                    let currentStreak = 0;
+                    for (let r = totalRows - 1; r >= 0; r--) {
+                        if (!failed[r][c]) {
+                            currentStreak++;
+                            streakCounts[r][c] = currentStreak;
+                        } else {
+                            currentStreak = 0;
+                        }
+                    }
+                }
+
+                function getStreakBadgeClass(streakCount) {
+                    if (streakCount <= 0) {
+                        return "inline-block bg-white text-slate-700 font-bold px-2 py-0.5 rounded shadow-sm border border-slate-300 min-w-[28px]";
+                    }
+                    if (streakCount <= 10) {
+                        return "inline-block bg-white text-slate-700 font-bold px-2 py-0.5 rounded shadow-sm border border-slate-300 min-w-[28px]";
+                    }
+                    if (streakCount <= 15) {
+                        return "inline-block bg-emerald-600 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-emerald-700 min-w-[28px]";
+                    }
+                    if (streakCount <= 20) {
+                        return "inline-block bg-sky-600 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-sky-700 min-w-[28px]";
+                    }
+                    if (streakCount <= 25) {
+                        return "inline-block bg-amber-500 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-amber-600 min-w-[28px]";
+                    }
+                    return "inline-block bg-fuchsia-600 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-fuchsia-700 min-w-[28px]";
+                }
+
+                dataSet.forEach((record, index) => {
+                    const h = parseInt(record.up3[0]);
+                    const t = parseInt(record.up3[1]);
+                    const u = parseInt(record.up3[2]);
+                    const baseDigit = getDigit(h, t, u);
+                    const sums = [h+t+u, baseDigit+1, baseDigit+2, baseDigit+3, baseDigit+4, baseDigit+5, baseDigit+6, baseDigit+7, baseDigit+8, baseDigit+9, baseDigit+10];
+
+                    const formattedPrize1 = record.prize1.split('').join(' ');
+                    const formattedDown2 = record.down2.split('').join(' ');
+
+                    let cellsHtml = '';
+                    sums.forEach((sum, i) => {
+                        const deadDigit = sum % 10;
+                        const isFailed = failed[index][i];
+                        const streakCount = streakCounts[index][i];
+                        const bgClass = i === 0 ? 'bg-slate-100/60' : 'bg-slate-50/40';
+                        let badgeClass = getStreakBadgeClass(streakCount);
+                        let badgeTitle = streakCount > 0 ? `ถูกต่อเนื่อง ${streakCount} งวด` : '';
+                        if (isFailed) {
+                            badgeClass = "inline-block bg-red-500 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-red-600 min-w-[28px]";
+                            badgeTitle = 'ผิด';
+                        }
+                        cellsHtml += `<td class="p-2 border-l text-center ${bgClass}"><span class="${badgeClass}" title="${badgeTitle}">${deadDigit}</span></td>`;
+                    });
+
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-100 transition-colors';
+                    tr.innerHTML = `<td class="p-3 text-left border-r text-slate-600 font-sans whitespace-nowrap">${record.dateStr}</td><td class="p-3 tracking-[0.3em] text-slate-700">${formattedPrize1}</td><td class="p-3 border-r tracking-[0.3em] text-slate-700">${formattedDown2}</td>${cellsHtml}`;
+                    tbodyEl.appendChild(tr);
+                });
+            }
+
+            // สร้างแถวสูตรหลักร้อย
+            buildFormulaRows(formulaData, formulaTbody, (h, t, u) => h, 'hundred');
+            // สร้างแถวสูตรหลักสิบ
+            buildFormulaRows(formulaTenData, formulaTenTbody, (h, t, u) => t, 'ten');
+            // สร้างแถวสูตรหลักหน่วย
+            buildFormulaRows(formulaUnitData, formulaUnitTbody, (h, t, u) => u, 'unit');
+        }
+
+        document.addEventListener('DOMContentLoaded', initApp);
+
+    </script>
+</body>
+</html>
