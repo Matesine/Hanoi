@@ -504,14 +504,107 @@
             down2: new Set()
         };
 
+        const formulaSelectTargets = {
+            hundred: { tabId: 'formula', tbodyId: 'formula-table-body', inputId: 'exclude-hun' },
+            ten: { tabId: 'formula-ten', tbodyId: 'formula-ten-table-body', inputId: 'exclude-ten' },
+            unit: { tabId: 'formula-unit', tbodyId: 'formula-unit-table-body', inputId: 'exclude-unit' }
+        };
+
         function initApp() {
             renderTimeframeSelector();
             renderDaySelector();
             
             document.getElementById('top-n-select').addEventListener('change', updateCombinations);
             document.getElementById('sort-select').addEventListener('change', updateCombinations);
+            setupFormulaHeaderButtons();
 
             updateDashboard();
+        }
+
+        function setupFormulaHeaderButtons() {
+            Object.entries(formulaSelectTargets).forEach(([target, config]) => {
+                const table = document.querySelector(`#tab-content-${config.tabId} table`);
+                if (!table) return;
+
+                table.querySelectorAll('thead th').forEach((th, index) => {
+                    if (index < 3 || th.querySelector('.formula-header-button')) return;
+
+                    const columnIndex = index - 3;
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = getFormulaHeaderButtonClass(false);
+                    button.dataset.formulaTarget = target;
+                    button.dataset.formulaColumn = String(columnIndex);
+                    button.setAttribute('aria-pressed', 'false');
+                    button.title = 'เลือกเลขดับแถวล่าสุดไปยังช่องตัดหลัก';
+                    button.innerHTML = `<span class="whitespace-nowrap">เลือกสูตรนี้</span>`;
+                    button.addEventListener('click', () => toggleFormulaExcludeDigit(target, columnIndex, button));
+
+                    th.innerHTML = '';
+                    th.appendChild(button);
+                });
+            });
+
+            ['exclude-hun', 'exclude-ten', 'exclude-unit'].forEach(inputId => {
+                const input = document.getElementById(inputId);
+                if (input && !input.dataset.formulaSelectionListener) {
+                    input.addEventListener('input', updateFormulaHeaderSelectionStates);
+                    input.dataset.formulaSelectionListener = 'true';
+                }
+            });
+
+            updateFormulaHeaderSelectionStates();
+        }
+
+        function getFormulaHeaderButtonClass(isSelected) {
+            const baseClass = 'formula-header-button inline-flex min-h-9 w-full items-center justify-center gap-1 rounded-md border px-2 py-1 text-xs font-bold shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300';
+            return isSelected
+                ? `${baseClass} border-blue-600 bg-blue-600 text-white hover:bg-blue-700`
+                : `${baseClass} border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700`;
+        }
+
+        function getLatestFormulaDigit(target, columnIndex) {
+            const config = formulaSelectTargets[target];
+            const tbody = config ? document.getElementById(config.tbodyId) : null;
+            const firstRow = tbody ? tbody.querySelector('tr') : null;
+            if (!firstRow || firstRow.querySelector('td[colspan]')) return null;
+
+            const cell = firstRow.children[columnIndex + 3];
+            const badge = cell ? cell.querySelector('span') : null;
+            const digit = badge ? badge.textContent.trim() : '';
+            return /^[0-9]$/.test(digit) ? digit : null;
+        }
+
+        function toggleFormulaExcludeDigit(target, columnIndex, button) {
+            const config = formulaSelectTargets[target];
+            const input = config ? document.getElementById(config.inputId) : null;
+            const digit = getLatestFormulaDigit(target, columnIndex);
+            if (!input || digit === null) return;
+
+            const currentDigits = input.value.replace(/[^0-9]/g, '').split('');
+            const nextDigits = currentDigits.includes(digit)
+                ? currentDigits.filter(item => item !== digit)
+                : [...currentDigits, digit];
+            const maxLength = parseInt(input.getAttribute('maxlength') || '10', 10);
+            input.value = nextDigits.slice(0, maxLength).join('');
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            updateFormulaHeaderSelectionStates();
+
+            if (button) button.focus();
+        }
+
+        function updateFormulaHeaderSelectionStates() {
+            document.querySelectorAll('.formula-header-button').forEach(button => {
+                const target = button.dataset.formulaTarget;
+                const config = formulaSelectTargets[target];
+                const columnIndex = parseInt(button.dataset.formulaColumn || '-1', 10);
+                const digit = getLatestFormulaDigit(target, columnIndex);
+                const input = config ? document.getElementById(config.inputId) : null;
+                const selected = !!digit && !!input && input.value.includes(digit);
+
+                button.className = getFormulaHeaderButtonClass(selected);
+                button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+            });
         }
 
         function renderTimeframeSelector() {
@@ -803,6 +896,8 @@
             renderComboBadges('combo-3up-container', combos3Up, 'bg-amber-100 text-amber-800 border-amber-200');
             renderComboBadges('combo-2up-container', combos2Up, 'bg-teal-100 text-teal-800 border-teal-200');
             renderComboBadges('combo-2down-container', combos2Down, 'bg-rose-100 text-rose-800 border-rose-200');
+
+            updateFormulaHeaderSelectionStates();
 
             if (refreshHistory && document.getElementById('history-table-body')) {
                 updateHistoryTable();
@@ -1652,6 +1747,7 @@
             buildFormulaRows(formulaTenData, formulaTenTbody, (h, t, u) => t, 'ten');
             // สร้างแถวสูตรหลักหน่วย
             buildFormulaRows(formulaUnitData, formulaUnitTbody, (h, t, u) => u, 'unit');
+            updateFormulaHeaderSelectionStates();
         }
 
         document.addEventListener('DOMContentLoaded', initApp);
