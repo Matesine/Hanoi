@@ -443,7 +443,7 @@
                 <!-- Formula Hundreds View Mode Dropdown -->
                 <div class="flex items-center justify-end mb-3">
                     <label class="text-sm font-medium text-slate-600 mr-2">การแสดงผล:</label>
-                    <select id="formula-view-mode" onchange="updateHistoryTable()" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
+                    <select id="formula-view-mode" onchange="handleFormulaViewModeChange('hundred')" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
                         <option value="all" selected>แสดงทั้งหมด</option>
                         <option value="day">แสดงเป็นวัน</option>
                     </select>
@@ -489,7 +489,7 @@
                 <!-- Formula Tens View Mode Dropdown -->
                 <div class="flex items-center justify-end mb-3">
                     <label class="text-sm font-medium text-slate-600 mr-2">การแสดงผล:</label>
-                    <select id="formula-ten-view-mode" onchange="updateHistoryTable()" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
+                    <select id="formula-ten-view-mode" onchange="handleFormulaViewModeChange('ten')" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
                         <option value="all" selected>แสดงทั้งหมด</option>
                         <option value="day">แสดงเป็นวัน</option>
                     </select>
@@ -535,7 +535,7 @@
                 <!-- Formula Units View Mode Dropdown -->
                 <div class="flex items-center justify-end mb-3">
                     <label class="text-sm font-medium text-slate-600 mr-2">การแสดงผล:</label>
-                    <select id="formula-unit-view-mode" onchange="updateHistoryTable()" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
+                    <select id="formula-unit-view-mode" onchange="handleFormulaViewModeChange('unit')" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
                         <option value="all" selected>แสดงทั้งหมด</option>
                         <option value="day">แสดงเป็นวัน</option>
                     </select>
@@ -619,9 +619,14 @@
         };
 
         const formulaSelectTargets = {
-            hundred: { tabId: 'formula', tbodyId: 'formula-table-body', inputId: 'exclude-hun' },
-            ten: { tabId: 'formula-ten', tbodyId: 'formula-ten-table-body', inputId: 'exclude-ten' },
-            unit: { tabId: 'formula-unit', tbodyId: 'formula-unit-table-body', inputId: 'exclude-unit' }
+            hundred: { tabId: 'formula', tbodyId: 'formula-table-body', inputId: 'exclude-hun', selectId: 'formula-view-mode' },
+            ten: { tabId: 'formula-ten', tbodyId: 'formula-ten-table-body', inputId: 'exclude-ten', selectId: 'formula-ten-view-mode' },
+            unit: { tabId: 'formula-unit', tbodyId: 'formula-unit-table-body', inputId: 'exclude-unit', selectId: 'formula-unit-view-mode' }
+        };
+        const formulaSelections = {
+            hundred: {},
+            ten: {},
+            unit: {}
         };
 
         function initApp() {
@@ -689,32 +694,74 @@
             return /^[0-9]$/.test(digit) ? digit : null;
         }
 
+        function getFormulaViewMode(target) {
+            const config = formulaSelectTargets[target];
+            const select = config ? document.getElementById(config.selectId) : null;
+            return select ? select.value : 'all';
+        }
+
+        function getFormulaSelectionKey(target, columnIndex) {
+            return `${getFormulaViewMode(target)}:${columnIndex}`;
+        }
+
+        function syncFormulaSelectionsWithInputs() {
+            Object.entries(formulaSelectTargets).forEach(([target, config]) => {
+                const input = document.getElementById(config.inputId);
+                const inputValue = input ? input.value : '';
+                Object.keys(formulaSelections[target]).forEach(key => {
+                    if (!inputValue.includes(formulaSelections[target][key])) {
+                        delete formulaSelections[target][key];
+                    }
+                });
+            });
+        }
+
         function toggleFormulaExcludeDigit(target, columnIndex, button) {
             const config = formulaSelectTargets[target];
             const input = config ? document.getElementById(config.inputId) : null;
             const digit = getLatestFormulaDigit(target, columnIndex);
             if (!input || digit === null) return;
 
+            const selectionKey = getFormulaSelectionKey(target, columnIndex);
+            const selections = formulaSelections[target];
             const currentDigits = input.value.replace(/[^0-9]/g, '').split('');
-            const nextDigits = currentDigits.includes(digit)
-                ? currentDigits.filter(item => item !== digit)
-                : [...currentDigits, digit];
+            const isSelected = selections[selectionKey] === digit;
+            let nextDigits;
+
+            if (isSelected) {
+                delete selections[selectionKey];
+                const digitStillSelected = Object.values(selections).includes(digit);
+                nextDigits = digitStillSelected
+                    ? currentDigits
+                    : currentDigits.filter(item => item !== digit);
+            } else {
+                selections[selectionKey] = digit;
+                nextDigits = currentDigits.includes(digit)
+                    ? currentDigits
+                    : [...currentDigits, digit];
+            }
+
             const maxLength = parseInt(input.getAttribute('maxlength') || '10', 10);
             input.value = nextDigits.slice(0, maxLength).join('');
-            input.dispatchEvent(new Event('input', { bubbles: true }));
+            updateCombinations();
             updateFormulaHeaderSelectionStates();
 
             if (button) button.focus();
         }
 
+        function handleFormulaViewModeChange(target) {
+            updateHistoryTable();
+            updateFormulaHeaderSelectionStates();
+        }
+
         function updateFormulaHeaderSelectionStates() {
+            syncFormulaSelectionsWithInputs();
             document.querySelectorAll('.formula-header-button').forEach(button => {
                 const target = button.dataset.formulaTarget;
-                const config = formulaSelectTargets[target];
                 const columnIndex = parseInt(button.dataset.formulaColumn || '-1', 10);
                 const digit = getLatestFormulaDigit(target, columnIndex);
-                const input = config ? document.getElementById(config.inputId) : null;
-                const selected = !!digit && !!input && input.value.includes(digit);
+                const selectionKey = getFormulaSelectionKey(target, columnIndex);
+                const selected = !!digit && formulaSelections[target][selectionKey] === digit;
 
                 button.className = getFormulaHeaderButtonClass(selected);
                 button.setAttribute('aria-pressed', selected ? 'true' : 'false');
