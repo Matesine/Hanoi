@@ -458,10 +458,10 @@
                     <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-red-600 bg-red-500 shadow-sm"></span>ผิด</span>
                 </div>
                 <div class="overflow-x-auto border border-slate-200 rounded-xl">
-                    <table class="w-full text-center border-collapse min-w-[600px] font-mono">
+                    <table class="w-full table-fixed text-center border-collapse min-w-[1180px] font-mono">
                         <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
                             <tr>
-                                <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-left w-32">งวดวันที่</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-left w-48">งวดวันที่</th>
                                 <th class="p-3 text-sm font-bold text-slate-600 border-b text-center tracking-widest bg-emerald-50">รางวัลที่ 1</th>
                                 <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-center tracking-widest bg-emerald-50">2 ตัวล่าง</th>
                                 <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-100 whitespace-nowrap">ร้อย+สิบ+หน่วย</th>
@@ -504,10 +504,10 @@
                     <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-red-600 bg-red-500 shadow-sm"></span>ผิด</span>
                 </div>
                 <div class="overflow-x-auto border border-slate-200 rounded-xl">
-                    <table class="w-full text-center border-collapse min-w-[600px] font-mono">
+                    <table class="w-full table-fixed text-center border-collapse min-w-[1180px] font-mono">
                         <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
                             <tr>
-                                <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-left w-32">งวดวันที่</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-left w-48">งวดวันที่</th>
                                 <th class="p-3 text-sm font-bold text-slate-600 border-b text-center tracking-widest bg-emerald-50">รางวัลที่ 1</th>
                                 <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-center tracking-widest bg-emerald-50">2 ตัวล่าง</th>
                                 <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-100 whitespace-nowrap">ร้อย+สิบ+หน่วย</th>
@@ -550,10 +550,10 @@
                     <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-red-600 bg-red-500 shadow-sm"></span>ผิด</span>
                 </div>
                 <div class="overflow-x-auto border border-slate-200 rounded-xl">
-                    <table class="w-full text-center border-collapse min-w-[600px] font-mono">
+                    <table class="w-full table-fixed text-center border-collapse min-w-[1180px] font-mono">
                         <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
                             <tr>
-                                <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-left w-32">งวดวันที่</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-left w-48">งวดวันที่</th>
                                 <th class="p-3 text-sm font-bold text-slate-600 border-b text-center tracking-widest bg-emerald-50">รางวัลที่ 1</th>
                                 <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-center tracking-widest bg-emerald-50">2 ตัวล่าง</th>
                                 <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-100 whitespace-nowrap">ร้อย+สิบ+หน่วย</th>
@@ -655,8 +655,9 @@
                     button.dataset.formulaTarget = target;
                     button.dataset.formulaColumn = String(columnIndex);
                     button.setAttribute('aria-pressed', 'false');
+                    button.setAttribute('aria-label', 'เลือกสูตรนี้');
                     button.title = 'เลือกเลขดับแถวล่าสุดไปยังช่องตัดหลัก';
-                    button.innerHTML = `<span class="whitespace-nowrap">เลือกสูตรนี้</span>`;
+                    button.innerHTML = `<span aria-hidden="true">&#10003;</span>`;
                     button.addEventListener('click', () => toggleFormulaExcludeDigit(target, columnIndex, button));
 
                     th.innerHTML = '';
@@ -676,7 +677,7 @@
         }
 
         function getFormulaHeaderButtonClass(isSelected) {
-            const baseClass = 'formula-header-button inline-flex min-h-9 w-full items-center justify-center gap-1 rounded-md border px-2 py-1 text-xs font-bold shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300';
+            const baseClass = 'formula-header-button mx-auto inline-flex h-9 w-9 items-center justify-center rounded-md border text-base font-bold shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300';
             return isSelected
                 ? `${baseClass} border-blue-600 bg-blue-600 text-white hover:bg-blue-700`
                 : `${baseClass} border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700`;
@@ -1897,7 +1898,7 @@
 
                     const tr = document.createElement('tr');
                     tr.className = 'hover:bg-slate-100 transition-colors';
-                    tr.innerHTML = `<td class="p-3 text-left border-r text-slate-600 font-sans whitespace-nowrap">${record.dateStr}</td><td class="p-3 tracking-[0.3em] text-slate-700">${formattedPrize1}</td><td class="p-3 border-r tracking-[0.3em] text-slate-700">${formattedDown2}</td>${cellsHtml}`;
+                    tr.innerHTML = `<td class="p-3 text-left border-r text-slate-600 font-sans whitespace-normal leading-snug">${record.dateStr}</td><td class="p-3 tracking-[0.3em] text-slate-700">${formattedPrize1}</td><td class="p-3 border-r tracking-[0.3em] text-slate-700">${formattedDown2}</td>${cellsHtml}`;
                     tbodyEl.appendChild(tr);
                 });
             }
