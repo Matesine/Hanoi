@@ -275,6 +275,12 @@
                 <button id="tab-btn-formula-unit" class="pb-2 border-b-2 border-transparent text-slate-500 font-medium hover:text-slate-700 transition-colors whitespace-nowrap" onclick="switchTab('formula-unit')">
                     🧮 สูตรเลขดับหลักหน่วย
                 </button>
+                <button id="tab-btn-formula-ten-down" class="pb-2 border-b-2 border-transparent text-slate-500 font-medium hover:text-slate-700 transition-colors whitespace-nowrap" onclick="switchTab('formula-ten-down')">
+                    🧮 สูตรเลขดับหลักสิบล่าง
+                </button>
+                <button id="tab-btn-formula-unit-down" class="pb-2 border-b-2 border-transparent text-slate-500 font-medium hover:text-slate-700 transition-colors whitespace-nowrap" onclick="switchTab('formula-unit-down')">
+                    🧮 สูตรเลขดับหลักหน่วยล่าง
+                </button>
             </div>
 
             <!-- Tab 1: Historical Data -->
@@ -461,6 +467,96 @@
                     </table>
                 </div>
             </div>
+
+            <!-- Tab 5: Formula Dead Numbers (Lower Tens) -->
+            <div id="tab-content-formula-ten-down" class="hidden">
+                <div class="flex items-center justify-end mb-3">
+                    <label class="text-sm font-medium text-slate-600 mr-2">การแสดงผล:</label>
+                    <select id="formula-ten-down-view-mode" onchange="handleFormulaViewModeChange('tenDown')" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
+                        <option value="all" selected>แสดงทั้งหมด</option>
+                        <option value="day">แสดงเป็นวัน</option>
+                    </select>
+                </div>
+                <div class="flex flex-wrap items-center justify-end gap-2 mb-3 text-xs text-slate-600">
+                    <span class="font-semibold">ถูกต่อเนื่อง:</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border border-slate-300 bg-white shadow-sm"></span>1-10</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-emerald-700 bg-emerald-600 shadow-sm"></span>11-15</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-sky-700 bg-sky-600 shadow-sm"></span>16-20</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-amber-600 bg-amber-500 shadow-sm"></span>21-25</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-fuchsia-700 bg-fuchsia-600 shadow-sm"></span>26+</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-red-600 bg-red-500 shadow-sm"></span>ผิด</span>
+                </div>
+                <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                    <table class="w-full table-fixed text-center border-collapse min-w-[1180px] font-mono">
+                        <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
+                            <tr>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-left w-48">งวดวันที่</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b text-center tracking-widest bg-emerald-50">รางวัลที่ 1</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-center tracking-widest bg-emerald-50">2 ตัวล่าง</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-100 whitespace-nowrap">ร้อย+สิบ+หน่วย</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบล่าง+1</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบล่าง+2</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบล่าง+3</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบล่าง+4</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบล่าง+5</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบล่าง+6</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบล่าง+7</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบล่าง+8</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบล่าง+9</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">สิบล่าง+10</th>
+                            </tr>
+                        </thead>
+                        <tbody id="formula-ten-down-table-body" class="divide-y divide-slate-100 text-sm">
+                            <!-- Rows injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab 6: Formula Dead Numbers (Lower Units) -->
+            <div id="tab-content-formula-unit-down" class="hidden">
+                <div class="flex items-center justify-end mb-3">
+                    <label class="text-sm font-medium text-slate-600 mr-2">การแสดงผล:</label>
+                    <select id="formula-unit-down-view-mode" onchange="handleFormulaViewModeChange('unitDown')" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
+                        <option value="all" selected>แสดงทั้งหมด</option>
+                        <option value="day">แสดงเป็นวัน</option>
+                    </select>
+                </div>
+                <div class="flex flex-wrap items-center justify-end gap-2 mb-3 text-xs text-slate-600">
+                    <span class="font-semibold">ถูกต่อเนื่อง:</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border border-slate-300 bg-white shadow-sm"></span>1-10</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-emerald-700 bg-emerald-600 shadow-sm"></span>11-15</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-sky-700 bg-sky-600 shadow-sm"></span>16-20</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-amber-600 bg-amber-500 shadow-sm"></span>21-25</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-fuchsia-700 bg-fuchsia-600 shadow-sm"></span>26+</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-4 h-4 rounded border-2 border-red-600 bg-red-500 shadow-sm"></span>ผิด</span>
+                </div>
+                <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                    <table class="w-full table-fixed text-center border-collapse min-w-[1180px] font-mono">
+                        <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
+                            <tr>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-left w-48">งวดวันที่</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b text-center tracking-widest bg-emerald-50">รางวัลที่ 1</th>
+                                <th class="p-3 text-sm font-bold text-slate-600 border-b border-r text-center tracking-widest bg-emerald-50">2 ตัวล่าง</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-100 whitespace-nowrap">ร้อย+สิบ+หน่วย</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วยล่าง+1</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วยล่าง+2</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วยล่าง+3</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วยล่าง+4</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วยล่าง+5</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วยล่าง+6</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วยล่าง+7</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วยล่าง+8</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วยล่าง+9</th>
+                                <th class="p-2 text-xs font-bold text-slate-600 border-b border-l text-center bg-slate-50 whitespace-nowrap">หน่วยล่าง+10</th>
+                            </tr>
+                        </thead>
+                        <tbody id="formula-unit-down-table-body" class="divide-y divide-slate-100 text-sm">
+                            <!-- Rows injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </section>
 
     </div>
@@ -506,14 +602,38 @@
 
         const formulaSelectTargets = {
             hundred: { tabId: 'formula', tbodyId: 'formula-table-body', inputId: 'exclude-hun', selectId: 'formula-view-mode' },
-            ten: { tabId: 'formula-ten', tbodyId: 'formula-ten-table-body', inputId: 'exclude-ten', selectId: 'formula-ten-view-mode' },
-            unit: { tabId: 'formula-unit', tbodyId: 'formula-unit-table-body', inputId: 'exclude-unit', selectId: 'formula-unit-view-mode' }
+            ten: { tabId: 'formula-ten', tbodyId: 'formula-ten-table-body', inputId: 'exclude-ten', mirrorInputIds: ['exclude-2up-ten'], selectId: 'formula-ten-view-mode' },
+            unit: { tabId: 'formula-unit', tbodyId: 'formula-unit-table-body', inputId: 'exclude-unit', mirrorInputIds: ['exclude-2up-unit'], selectId: 'formula-unit-view-mode' },
+            tenDown: { tabId: 'formula-ten-down', tbodyId: 'formula-ten-down-table-body', inputId: 'exclude-2down-ten', selectId: 'formula-ten-down-view-mode' },
+            unitDown: { tabId: 'formula-unit-down', tbodyId: 'formula-unit-down-table-body', inputId: 'exclude-2down-unit', selectId: 'formula-unit-down-view-mode' }
         };
         const formulaSelections = {
             hundred: {},
             ten: {},
-            unit: {}
+            unit: {},
+            tenDown: {},
+            unitDown: {}
         };
+
+        function getFormulaTargetInputIds(config) {
+            return [...new Set([config.inputId, ...(config.mirrorInputIds || [])].filter(Boolean))];
+        }
+
+        function getFormulaTargetInputs(target) {
+            const config = formulaSelectTargets[target];
+            return config
+                ? getFormulaTargetInputIds(config).map(inputId => document.getElementById(inputId)).filter(Boolean)
+                : [];
+        }
+
+        function getInputDigits(input) {
+            return input.value.replace(/[^0-9]/g, '').split('');
+        }
+
+        function setInputDigits(input, digits) {
+            const maxLength = parseInt(input.getAttribute('maxlength') || '10', 10);
+            input.value = digits.slice(0, maxLength).join('');
+        }
 
         function initApp() {
             renderTimeframeSelector();
@@ -551,7 +671,7 @@
                 });
             });
 
-            ['exclude-hun', 'exclude-ten', 'exclude-unit'].forEach(inputId => {
+            Object.values(formulaSelectTargets).flatMap(getFormulaTargetInputIds).forEach(inputId => {
                 const input = document.getElementById(inputId);
                 if (input && !input.dataset.formulaSelectionListener) {
                     input.addEventListener('input', updateFormulaHeaderSelectionStates);
@@ -593,10 +713,10 @@
 
         function syncFormulaSelectionsWithInputs() {
             Object.entries(formulaSelectTargets).forEach(([target, config]) => {
-                const input = document.getElementById(config.inputId);
-                const inputValue = input ? input.value : '';
+                const inputs = getFormulaTargetInputs(target);
+                const inputValues = inputs.map(input => input.value || '');
                 Object.keys(formulaSelections[target]).forEach(key => {
-                    if (!inputValue.includes(formulaSelections[target][key])) {
+                    if (!inputs.length || inputValues.some(value => !value.includes(formulaSelections[target][key]))) {
                         delete formulaSelections[target][key];
                     }
                 });
@@ -605,31 +725,33 @@
 
         function toggleFormulaExcludeDigit(target, columnIndex, button) {
             const config = formulaSelectTargets[target];
-            const input = config ? document.getElementById(config.inputId) : null;
+            const inputs = config ? getFormulaTargetInputs(target) : [];
             const digit = getLatestFormulaDigit(target, columnIndex);
-            if (!input || digit === null) return;
+            if (!inputs.length || digit === null) return;
 
             const selectionKey = getFormulaSelectionKey(target, columnIndex);
             const selections = formulaSelections[target];
-            const currentDigits = input.value.replace(/[^0-9]/g, '').split('');
             const isSelected = selections[selectionKey] === digit;
-            let nextDigits;
 
             if (isSelected) {
                 delete selections[selectionKey];
                 const digitStillSelected = Object.values(selections).includes(digit);
-                nextDigits = digitStillSelected
-                    ? currentDigits
-                    : currentDigits.filter(item => item !== digit);
+                if (!digitStillSelected) {
+                    inputs.forEach(input => {
+                        setInputDigits(input, getInputDigits(input).filter(item => item !== digit));
+                    });
+                }
             } else {
                 selections[selectionKey] = digit;
-                nextDigits = currentDigits.includes(digit)
-                    ? currentDigits
-                    : [...currentDigits, digit];
+                inputs.forEach(input => {
+                    const currentDigits = getInputDigits(input);
+                    const nextDigits = currentDigits.includes(digit)
+                        ? currentDigits
+                        : [...currentDigits, digit];
+                    setInputDigits(input, nextDigits);
+                });
             }
 
-            const maxLength = parseInt(input.getAttribute('maxlength') || '10', 10);
-            input.value = nextDigits.slice(0, maxLength).join('');
             updateCombinations();
             updateFormulaHeaderSelectionStates();
 
@@ -1072,7 +1194,7 @@
         }
 
         function switchTab(tabId) {
-            const tabs = ['history', 'formula', 'formula-ten', 'formula-unit'];
+            const tabs = ['history', 'formula', 'formula-ten', 'formula-unit', 'formula-ten-down', 'formula-unit-down'];
 
             tabs.forEach(id => {
                 const btn = document.getElementById(`tab-btn-${id}`);
@@ -1640,6 +1762,8 @@
             const formulaViewMode = document.getElementById('formula-view-mode') ? document.getElementById('formula-view-mode').value : 'all';
             const formulaTenViewMode = document.getElementById('formula-ten-view-mode') ? document.getElementById('formula-ten-view-mode').value : 'all';
             const formulaUnitViewMode = document.getElementById('formula-unit-view-mode') ? document.getElementById('formula-unit-view-mode').value : 'all';
+            const formulaTenDownViewMode = document.getElementById('formula-ten-down-view-mode') ? document.getElementById('formula-ten-down-view-mode').value : 'all';
+            const formulaUnitDownViewMode = document.getElementById('formula-unit-down-view-mode') ? document.getElementById('formula-unit-down-view-mode').value : 'all';
 
             const allData = globalMockHistory;
             const dayData = currentDay === 'all'
@@ -1656,16 +1780,22 @@
             const formulaData = formulaViewMode === 'all' ? allData : dayData;
             const formulaTenData = formulaTenViewMode === 'all' ? allData : dayData;
             const formulaUnitData = formulaUnitViewMode === 'all' ? allData : dayData;
+            const formulaTenDownData = formulaTenDownViewMode === 'all' ? allData : dayData;
+            const formulaUnitDownData = formulaUnitDownViewMode === 'all' ? allData : dayData;
             
             const historyTbody = document.getElementById('history-table-body');
             const formulaTbody = document.getElementById('formula-table-body');
             const formulaTenTbody = document.getElementById('formula-ten-table-body');
             const formulaUnitTbody = document.getElementById('formula-unit-table-body');
+            const formulaTenDownTbody = document.getElementById('formula-ten-down-table-body');
+            const formulaUnitDownTbody = document.getElementById('formula-unit-down-table-body');
             
             historyTbody.innerHTML = '';
             formulaTbody.innerHTML = '';
             formulaTenTbody.innerHTML = '';
             formulaUnitTbody.innerHTML = '';
+            formulaTenDownTbody.innerHTML = '';
+            formulaUnitDownTbody.innerHTML = '';
             
             const filteredSuffix = historyData.length === baseHistoryData.length ? '' : ` / แสดง ${historyData.length} งวด`;
             document.getElementById('history-count').innerText = `รวม ${allData.length} งวด (ตรงกับ${dayCountLabel} ${dayData.length} งวด)${filteredSuffix}`;
@@ -1709,15 +1839,12 @@
                     const h = parseInt(record.up3[0]);
                     const t = parseInt(record.up3[1]);
                     const u = parseInt(record.up3[2]);
-                    const baseDigit = getDigit(h, t, u);
+                    const baseDigit = getDigit(record);
                     const sums = [h+t+u, baseDigit+1, baseDigit+2, baseDigit+3, baseDigit+4, baseDigit+5, baseDigit+6, baseDigit+7, baseDigit+8, baseDigit+9, baseDigit+10];
 
                     let nextDigit = null;
                     if (r - 1 >= 0) {
-                        const nh = parseInt(dataSet[r - 1].up3[0]);
-                        const nt = parseInt(dataSet[r - 1].up3[1]);
-                        const nu = parseInt(dataSet[r - 1].up3[2]);
-                        nextDigit = getDigit(nh, nt, nu);
+                        nextDigit = getDigit(dataSet[r - 1]);
                     }
 
                     for (let c = 0; c < numFormulas; c++) {
@@ -1761,7 +1888,7 @@
                     const h = parseInt(record.up3[0]);
                     const t = parseInt(record.up3[1]);
                     const u = parseInt(record.up3[2]);
-                    const baseDigit = getDigit(h, t, u);
+                    const baseDigit = getDigit(record);
                     const sums = [h+t+u, baseDigit+1, baseDigit+2, baseDigit+3, baseDigit+4, baseDigit+5, baseDigit+6, baseDigit+7, baseDigit+8, baseDigit+9, baseDigit+10];
 
                     const formattedPrize1 = record.prize1.split('').join(' ');
@@ -1790,11 +1917,13 @@
             }
 
             // สร้างแถวสูตรหลักร้อย
-            buildFormulaRows(formulaData, formulaTbody, (h, t, u) => h, 'hundred');
+            buildFormulaRows(formulaData, formulaTbody, record => parseInt(record.up3[0]), 'hundred');
             // สร้างแถวสูตรหลักสิบ
-            buildFormulaRows(formulaTenData, formulaTenTbody, (h, t, u) => t, 'ten');
+            buildFormulaRows(formulaTenData, formulaTenTbody, record => parseInt(record.up3[1]), 'ten');
             // สร้างแถวสูตรหลักหน่วย
-            buildFormulaRows(formulaUnitData, formulaUnitTbody, (h, t, u) => u, 'unit');
+            buildFormulaRows(formulaUnitData, formulaUnitTbody, record => parseInt(record.up3[2]), 'unit');
+            buildFormulaRows(formulaTenDownData, formulaTenDownTbody, record => parseInt(record.down2[0]), 'tenDown');
+            buildFormulaRows(formulaUnitDownData, formulaUnitDownTbody, record => parseInt(record.down2[1]), 'unitDown');
             updateFormulaHeaderSelectionStates();
         }
 
