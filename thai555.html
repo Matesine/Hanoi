@@ -116,8 +116,9 @@
                 <div class="bg-amber-50/50 rounded-xl border border-amber-100 flex flex-col">
                     <div class="bg-amber-100 px-4 py-2 rounded-t-xl border-b border-amber-200 flex justify-between items-center">
                         <h3 class="font-bold text-amber-800">ชุดจับคู่ 3 ตัวบน</h3>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
                             <span class="text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full" id="count-3up">0 ชุด</span>
+                            <button id="toggle-palindrome-3up" onclick="togglePalindrome('3up')" title="ตัดเปิ้ลหาม" class="text-xs px-2 py-0.5 rounded border transition-colors bg-white text-amber-700 border-amber-300 hover:bg-amber-100">🔄 เปิ้ล: ปิด</button>
                             <button onclick="copyCombinations('combo-3up-container', this)" class="text-xs bg-white text-amber-700 px-2 py-0.5 rounded border border-amber-300 hover:bg-amber-50 transition-colors">📋 คัดลอก</button>
                         </div>
                     </div>
@@ -165,8 +166,9 @@
                 <div class="bg-teal-50/50 rounded-xl border border-teal-100 flex flex-col">
                     <div class="bg-teal-100 px-4 py-2 rounded-t-xl border-b border-teal-200 flex justify-between items-center">
                         <h3 class="font-bold text-teal-800">ชุดจับคู่ 2 ตัวบน</h3>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
                             <span class="text-xs bg-teal-200 text-teal-800 px-2 py-0.5 rounded-full" id="count-2up">0 ชุด</span>
+                            <button id="toggle-palindrome-2up" onclick="togglePalindrome('2up')" title="ตัดเปิ้ลหาม" class="text-xs px-2 py-0.5 rounded border transition-colors bg-white text-teal-700 border-teal-300 hover:bg-teal-100">🔄 เปิ้ล: ปิด</button>
                             <button onclick="copyCombinations('combo-2up-container', this)" class="text-xs bg-white text-teal-700 px-2 py-0.5 rounded border border-teal-300 hover:bg-teal-50 transition-colors">📋 คัดลอก</button>
                         </div>
                     </div>
@@ -207,8 +209,9 @@
                 <div class="bg-rose-50/50 rounded-xl border border-rose-100 flex flex-col">
                     <div class="bg-rose-100 px-4 py-2 rounded-t-xl border-b border-rose-200 flex justify-between items-center">
                         <h3 class="font-bold text-rose-800">ชุดจับคู่ 2 ตัวล่าง</h3>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
                             <span class="text-xs bg-rose-200 text-rose-800 px-2 py-0.5 rounded-full" id="count-2down">0 ชุด</span>
+                            <button id="toggle-palindrome-2down" onclick="togglePalindrome('2down')" title="ตัดเปิ้ลหาม" class="text-xs px-2 py-0.5 rounded border transition-colors bg-white text-rose-700 border-rose-300 hover:bg-rose-100">🔄 เปิ้ล: ปิด</button>
                             <button onclick="copyCombinations('combo-2down-container', this)" class="text-xs bg-white text-rose-700 px-2 py-0.5 rounded border border-rose-300 hover:bg-rose-50 transition-colors">📋 คัดลอก</button>
                         </div>
                     </div>
@@ -953,6 +956,32 @@
             return mapped.filter((item, index) => index < n || item.freq === thresholdFreq);
         }
 
+        // === state: สถานะปุ่มตัดเปิ้ลของแต่ละกล่อง (ใช้ window เพื่อให้แน่ใจว่า global) ===
+        window.palindromeState = { '3up': false, '2up': false, '2down': false };
+        window.togglePalindrome = function(key) {
+            window.palindromeState[key] = !window.palindromeState[key];
+            const btn = document.getElementById('toggle-palindrome-' + key);
+            if (btn) {
+                const colorMap = {
+                    '3up':   { on: 'bg-amber-500 text-white border-amber-600', off: 'bg-white text-amber-700 border-amber-300 hover:bg-amber-100' },
+                    '2up':   { on: 'bg-teal-500 text-white border-teal-600',   off: 'bg-white text-teal-700 border-teal-300 hover:bg-teal-100' },
+                    '2down': { on: 'bg-rose-500 text-white border-rose-600',   off: 'bg-white text-rose-700 border-rose-300 hover:bg-rose-100' },
+                };
+                const cls = colorMap[key];
+                btn.className = 'text-xs px-2 py-0.5 rounded border transition-colors ' + (window.palindromeState[key] ? cls.on : cls.off);
+                btn.textContent = window.palindromeState[key] ? '🔄 เปิ้ล: เปิด' : '🔄 เปิ้ล: ปิด';
+            }
+            updateCombinations(false);
+        };
+
+        // กรองเปิ้ลหาม: ตัดเลขที่มีหลักซ้ำกันออก (เช่น 11, 22, 121, 112)
+        function filterPalindromePairs(list) {
+            return list.filter(item => {
+                const chars = item.num.split('');
+                const uniqueChars = new Set(chars);
+                return uniqueChars.size === chars.length;
+            });
+        }
         function updateCombinations(refreshHistory = true) {
             const data = currentCalculatedData;
             const topN = parseInt(document.getElementById('top-n-select').value);
@@ -1020,6 +1049,11 @@
             combos3Up.sort(sortFn);
             combos2Up.sort(sortFn);
             combos2Down.sort(sortFn);
+
+            // กรองเปิ้ลหามตาม state ของแต่ละกล่อง
+            if (window.palindromeState['3up'])   combos3Up   = filterPalindromePairs(combos3Up);
+            if (window.palindromeState['2up'])   combos2Up   = filterPalindromePairs(combos2Up);
+            if (window.palindromeState['2down']) combos2Down = filterPalindromePairs(combos2Down);
 
             currentRecommendedSets = {
                 up3: new Set(combos3Up.map(item => item.num)),

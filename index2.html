@@ -204,6 +204,49 @@
                 </div>
                 
                 <div class="flex flex-wrap gap-3">
+    </script>
+
+    <div class="thai-auth-content max-w-[1400px] mx-auto px-4 pt-8 pb-4">
+        <header class="mb-6 flex flex-col md:flex-row items-center gap-3 text-center md:text-left">
+            <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl shadow-sm border border-blue-200">
+                🕒
+            </div>
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-slate-800">สถิติการออกรางวัลแยกตามหลัก (0-9)</h1>
+                <p class="text-slate-500 text-sm mt-1" id="dynamic-subtitle">กำลังโหลดข้อมูล...</p>
+            </div>
+        </header>
+
+        <!-- Time & Day Selectors -->
+        <section class="mb-6 bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex flex-col md:flex-row gap-6">
+                <div>
+                    <p class="text-slate-500 mb-2 font-medium text-sm">เลือกช่วงเวลาย้อนหลัง:</p>
+                    <div class="flex flex-wrap gap-2" id="timeframe-selector"></div>
+                </div>
+                <div class="flex-1 md:border-l md:border-slate-100 md:pl-6">
+                    <p class="text-slate-500 mb-2 font-medium text-sm">เลือกวันออกรางวัล:</p>
+                    <div class="flex flex-wrap gap-2" id="day-selector"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stats 5 Columns Container -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6" id="stats-container">
+            <!-- Columns injected by JS -->
+        </section>
+
+        <!-- Combinations Generator Section -->
+        <section class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-5 gap-4 border-b border-slate-100 pb-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <span>🎯</span> ชุดตัวเลขจับคู่แนะนำ
+                    </h2>
+                    <p class="text-sm text-slate-500 mt-1">นำตัวเลขที่ออกบ่อยที่สุดในแต่ละหลักมาไขว้จับคู่กัน (คัดเลขตองออกอัตโนมัติ)</p>
+                </div>
+                
+                <div class="flex flex-wrap gap-3">
                     <div class="flex items-center gap-2">
                         <label class="text-sm font-medium text-slate-600">ดึงตัวเด่น:</label>
                         <select id="top-n-select" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer">
@@ -230,43 +273,30 @@
                 <div class="bg-amber-50/50 rounded-xl border border-amber-100 flex flex-col">
                     <div class="bg-amber-100 px-4 py-2 rounded-t-xl border-b border-amber-200 flex justify-between items-center">
                         <h3 class="font-bold text-amber-800">ชุดจับคู่ 3 ตัวบน</h3>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
                             <span class="text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full" id="count-3up">0 ชุด</span>
+                            <button id="toggle-palindrome-3up" onclick="togglePalindrome('3up')" title="ตัดเปิ้ลหาม" class="text-xs px-2 py-0.5 rounded border transition-colors bg-white text-amber-700 border-amber-300 hover:bg-amber-100">🔄 เปิ้ล: ปิด</button>
                             <button onclick="copyCombinations('combo-3up-container', this)" class="text-xs bg-white text-amber-700 px-2 py-0.5 rounded border border-amber-300 hover:bg-amber-50 transition-colors">📋 คัดลอก</button>
                         </div>
                     </div>
-                    <!-- แถบแสดงตัวเลขที่ใช้คำนวณ 3 ตัวบน -->
-                    <div class="px-3 pt-2 pb-1 bg-amber-50/80 border-b border-amber-100" id="digits-info-3up">
-                        <!-- JS จะ inject ข้อมูลที่นี่ -->
-                    </div>
-                    <!-- ช่องกรองเลขดับ 3 ตัวบน -->
+                    <div class="px-3 pt-2 pb-1 bg-amber-50/80 border-b border-amber-100" id="digits-info-3up"></div>
                     <div class="px-3 pt-3 pb-1 border-b border-amber-100 bg-amber-50">
                         <p class="text-xs font-semibold text-amber-700 mb-2">🚫 ตัดหลักที่ไม่ต้องการออก (พิมพ์ติดกัน เช่น 139)</p>
                         <div class="flex gap-2">
                             <div class="flex-1">
                                 <label class="text-[10px] text-amber-600 font-medium block mb-0.5 text-center">หลักร้อย</label>
-                                <input id="exclude-hun" type="text" maxlength="10" inputmode="numeric"
-                                    placeholder="เช่น 139"
-                                    oninput="this.value=this.value.replace(/[^0-9]/g,''); updateCombinations()"
-                                    class="w-full border border-amber-300 rounded-lg px-2 py-1 text-sm text-center tracking-widest bg-white focus:ring-2 focus:ring-amber-400 outline-none">
+                                <input id="exclude-hun" type="text" maxlength="10" inputmode="numeric" placeholder="เช่น 139" oninput="this.value=this.value.replace(/[^0-9]/g,''); updateCombinations()" class="w-full border border-amber-300 rounded-lg px-2 py-1 text-sm text-center tracking-widest bg-white focus:ring-2 focus:ring-amber-400 outline-none">
                             </div>
                             <div class="flex-1">
                                 <label class="text-[10px] text-amber-600 font-medium block mb-0.5 text-center">หลักสิบ</label>
-                                <input id="exclude-ten" type="text" maxlength="10" inputmode="numeric"
-                                    placeholder="เช่น 047"
-                                    oninput="this.value=this.value.replace(/[^0-9]/g,''); updateCombinations()"
-                                    class="w-full border border-amber-300 rounded-lg px-2 py-1 text-sm text-center tracking-widest bg-white focus:ring-2 focus:ring-amber-400 outline-none">
+                                <input id="exclude-ten" type="text" maxlength="10" inputmode="numeric" placeholder="เช่น 047" oninput="this.value=this.value.replace(/[^0-9]/g,''); updateCombinations()" class="w-full border border-amber-300 rounded-lg px-2 py-1 text-sm text-center tracking-widest bg-white focus:ring-2 focus:ring-amber-400 outline-none">
                             </div>
                             <div class="flex-1">
                                 <label class="text-[10px] text-amber-600 font-medium block mb-0.5 text-center">หลักหน่วย</label>
-                                <input id="exclude-unit" type="text" maxlength="10" inputmode="numeric"
-                                    placeholder="เช่น 256"
-                                    oninput="this.value=this.value.replace(/[^0-9]/g,''); updateCombinations()"
-                                    class="w-full border border-amber-300 rounded-lg px-2 py-1 text-sm text-center tracking-widest bg-white focus:ring-2 focus:ring-amber-400 outline-none">
+                                <input id="exclude-unit" type="text" maxlength="10" inputmode="numeric" placeholder="เช่น 256" oninput="this.value=this.value.replace(/[^0-9]/g,''); updateCombinations()" class="w-full border border-amber-300 rounded-lg px-2 py-1 text-sm text-center tracking-widest bg-white focus:ring-2 focus:ring-amber-400 outline-none">
                             </div>
                             <div class="flex items-end">
-                                <button onclick="document.getElementById('exclude-hun').value=''; document.getElementById('exclude-ten').value=''; document.getElementById('exclude-unit').value=''; updateCombinations();"
-                                    class="px-2 py-1 text-xs bg-amber-200 text-amber-800 rounded-lg hover:bg-amber-300 transition-colors whitespace-nowrap" title="ล้างทั้งหมด">🗑️ ล้าง</button>
+                                <button onclick="document.getElementById('exclude-hun').value=''; document.getElementById('exclude-ten').value=''; document.getElementById('exclude-unit').value=''; updateCombinations();" class="px-2 py-1 text-xs bg-amber-200 text-amber-800 rounded-lg hover:bg-amber-300 transition-colors whitespace-nowrap">🗑️ ล้าง</button>
                             </div>
                         </div>
                     </div>
@@ -279,36 +309,26 @@
                 <div class="bg-teal-50/50 rounded-xl border border-teal-100 flex flex-col">
                     <div class="bg-teal-100 px-4 py-2 rounded-t-xl border-b border-teal-200 flex justify-between items-center">
                         <h3 class="font-bold text-teal-800">ชุดจับคู่ 2 ตัวบน</h3>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
                             <span class="text-xs bg-teal-200 text-teal-800 px-2 py-0.5 rounded-full" id="count-2up">0 ชุด</span>
+                            <button id="toggle-palindrome-2up" onclick="togglePalindrome('2up')" title="ตัดเปิ้ลหาม" class="text-xs px-2 py-0.5 rounded border transition-colors bg-white text-teal-700 border-teal-300 hover:bg-teal-100">🔄 เปิ้ล: ปิด</button>
                             <button onclick="copyCombinations('combo-2up-container', this)" class="text-xs bg-white text-teal-700 px-2 py-0.5 rounded border border-teal-300 hover:bg-teal-50 transition-colors">📋 คัดลอก</button>
                         </div>
                     </div>
-                    <!-- แถบแสดงตัวเลขที่ใช้คำนวณ 2 ตัวบน -->
-                    <div class="px-3 pt-2 pb-1 bg-teal-50/80 border-b border-teal-100" id="digits-info-2up">
-                        <!-- JS จะ inject ข้อมูลที่นี่ -->
-                    </div>
-                    <!-- ช่องกรองเลขดับ 2 ตัวบน -->
+                    <div class="px-3 pt-2 pb-1 bg-teal-50/80 border-b border-teal-100" id="digits-info-2up"></div>
                     <div class="px-3 pt-3 pb-1 border-b border-teal-100 bg-teal-50">
                         <p class="text-xs font-semibold text-teal-700 mb-2">🚫 ตัดหลักที่ไม่ต้องการออก (พิมพ์ติดกัน เช่น 139)</p>
                         <div class="flex gap-2">
                             <div class="flex-1">
                                 <label class="text-[10px] text-teal-600 font-medium block mb-0.5 text-center">หลักสิบ</label>
-                                <input id="exclude-2up-ten" type="text" maxlength="10" inputmode="numeric"
-                                    placeholder="เช่น 047"
-                                    oninput="this.value=this.value.replace(/[^0-9]/g,''); updateCombinations()"
-                                    class="w-full border border-teal-300 rounded-lg px-2 py-1 text-sm text-center tracking-widest bg-white focus:ring-2 focus:ring-teal-400 outline-none">
+                                <input id="exclude-2up-ten" type="text" maxlength="10" inputmode="numeric" placeholder="เช่น 047" oninput="this.value=this.value.replace(/[^0-9]/g,''); updateCombinations()" class="w-full border border-teal-300 rounded-lg px-2 py-1 text-sm text-center tracking-widest bg-white focus:ring-2 focus:ring-teal-400 outline-none">
                             </div>
                             <div class="flex-1">
                                 <label class="text-[10px] text-teal-600 font-medium block mb-0.5 text-center">หลักหน่วย</label>
-                                <input id="exclude-2up-unit" type="text" maxlength="10" inputmode="numeric"
-                                    placeholder="เช่น 256"
-                                    oninput="this.value=this.value.replace(/[^0-9]/g,''); updateCombinations()"
-                                    class="w-full border border-teal-300 rounded-lg px-2 py-1 text-sm text-center tracking-widest bg-white focus:ring-2 focus:ring-teal-400 outline-none">
+                                <input id="exclude-2up-unit" type="text" maxlength="10" inputmode="numeric" placeholder="เช่น 256" oninput="this.value=this.value.replace(/[^0-9]/g,''); updateCombinations()" class="w-full border border-teal-300 rounded-lg px-2 py-1 text-sm text-center tracking-widest bg-white focus:ring-2 focus:ring-teal-400 outline-none">
                             </div>
                             <div class="flex items-end">
-                                <button onclick="document.getElementById('exclude-2up-ten').value=''; document.getElementById('exclude-2up-unit').value=''; updateCombinations();"
-                                    class="px-2 py-1 text-xs bg-teal-200 text-teal-800 rounded-lg hover:bg-teal-300 transition-colors whitespace-nowrap" title="ล้างทั้งหมด">🗑️ ล้าง</button>
+                                <button onclick="document.getElementById('exclude-2up-ten').value=''; document.getElementById('exclude-2up-unit').value=''; updateCombinations();" class="px-2 py-1 text-xs bg-teal-200 text-teal-800 rounded-lg hover:bg-teal-300 transition-colors whitespace-nowrap">🗑️ ล้าง</button>
                             </div>
                         </div>
                     </div>
@@ -321,36 +341,26 @@
                 <div class="bg-rose-50/50 rounded-xl border border-rose-100 flex flex-col">
                     <div class="bg-rose-100 px-4 py-2 rounded-t-xl border-b border-rose-200 flex justify-between items-center">
                         <h3 class="font-bold text-rose-800">ชุดจับคู่ 2 ตัวล่าง</h3>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
                             <span class="text-xs bg-rose-200 text-rose-800 px-2 py-0.5 rounded-full" id="count-2down">0 ชุด</span>
+                            <button id="toggle-palindrome-2down" onclick="togglePalindrome('2down')" title="ตัดเปิ้ลหาม" class="text-xs px-2 py-0.5 rounded border transition-colors bg-white text-rose-700 border-rose-300 hover:bg-rose-100">🔄 เปิ้ล: ปิด</button>
                             <button onclick="copyCombinations('combo-2down-container', this)" class="text-xs bg-white text-rose-700 px-2 py-0.5 rounded border border-rose-300 hover:bg-rose-50 transition-colors">📋 คัดลอก</button>
                         </div>
                     </div>
-                    <!-- แถบแสดงตัวเลขที่ใช้คำนวณ 2 ตัวล่าง -->
-                    <div class="px-3 pt-2 pb-1 bg-rose-50/80 border-b border-rose-100" id="digits-info-2down">
-                        <!-- JS จะ inject ข้อมูลที่นี่ -->
-                    </div>
-                    <!-- ช่องกรองเลขดับ 2 ตัวล่าง -->
+                    <div class="px-3 pt-2 pb-1 bg-rose-50/80 border-b border-rose-100" id="digits-info-2down"></div>
                     <div class="px-3 pt-3 pb-1 border-b border-rose-100 bg-rose-50">
                         <p class="text-xs font-semibold text-rose-700 mb-2">🚫 ตัดหลักที่ไม่ต้องการออก (พิมพ์ติดกัน เช่น 139)</p>
                         <div class="flex gap-2">
                             <div class="flex-1">
                                 <label class="text-[10px] text-rose-600 font-medium block mb-0.5 text-center">หลักสิบ</label>
-                                <input id="exclude-2down-ten" type="text" maxlength="10" inputmode="numeric"
-                                    placeholder="เช่น 047"
-                                    oninput="this.value=this.value.replace(/[^0-9]/g,''); updateCombinations()"
-                                    class="w-full border border-rose-300 rounded-lg px-2 py-1 text-sm text-center tracking-widest bg-white focus:ring-2 focus:ring-rose-400 outline-none">
+                                <input id="exclude-2down-ten" type="text" maxlength="10" inputmode="numeric" placeholder="เช่น 047" oninput="this.value=this.value.replace(/[^0-9]/g,''); updateCombinations()" class="w-full border border-rose-300 rounded-lg px-2 py-1 text-sm text-center tracking-widest bg-white focus:ring-2 focus:ring-rose-400 outline-none">
                             </div>
                             <div class="flex-1">
                                 <label class="text-[10px] text-rose-600 font-medium block mb-0.5 text-center">หลักหน่วย</label>
-                                <input id="exclude-2down-unit" type="text" maxlength="10" inputmode="numeric"
-                                    placeholder="เช่น 256"
-                                    oninput="this.value=this.value.replace(/[^0-9]/g,''); updateCombinations()"
-                                    class="w-full border border-rose-300 rounded-lg px-2 py-1 text-sm text-center tracking-widest bg-white focus:ring-2 focus:ring-rose-400 outline-none">
+                                <input id="exclude-2down-unit" type="text" maxlength="10" inputmode="numeric" placeholder="เช่น 256" oninput="this.value=this.value.replace(/[^0-9]/g,''); updateCombinations()" class="w-full border border-rose-300 rounded-lg px-2 py-1 text-sm text-center tracking-widest bg-white focus:ring-2 focus:ring-rose-400 outline-none">
                             </div>
                             <div class="flex items-end">
-                                <button onclick="document.getElementById('exclude-2down-ten').value=''; document.getElementById('exclude-2down-unit').value=''; updateCombinations();"
-                                    class="px-2 py-1 text-xs bg-rose-200 text-rose-800 rounded-lg hover:bg-rose-300 transition-colors whitespace-nowrap" title="ล้างทั้งหมด">🗑️ ล้าง</button>
+                                <button onclick="document.getElementById('exclude-2down-ten').value=''; document.getElementById('exclude-2down-unit').value=''; updateCombinations();" class="px-2 py-1 text-xs bg-rose-200 text-rose-800 rounded-lg hover:bg-rose-300 transition-colors whitespace-nowrap">🗑️ ล้าง</button>
                             </div>
                         </div>
                     </div>
@@ -1067,6 +1077,33 @@
             return mapped.filter((item, index) => index < n || item.freq === thresholdFreq);
         }
 
+        // === state: สถานะปุ่มตัดเปิ้ลของแต่ละกล่อง (ใช้ window เพื่อให้แน่ใจว่า global) ===
+        window.palindromeState = { '3up': false, '2up': false, '2down': false };
+        window.togglePalindrome = function(key) {
+            window.palindromeState[key] = !window.palindromeState[key];
+            const btn = document.getElementById('toggle-palindrome-' + key);
+            if (btn) {
+                const colorMap = {
+                    '3up':   { on: 'bg-amber-500 text-white border-amber-600', off: 'bg-white text-amber-700 border-amber-300 hover:bg-amber-100' },
+                    '2up':   { on: 'bg-teal-500 text-white border-teal-600',   off: 'bg-white text-teal-700 border-teal-300 hover:bg-teal-100' },
+                    '2down': { on: 'bg-rose-500 text-white border-rose-600',   off: 'bg-white text-rose-700 border-rose-300 hover:bg-rose-100' },
+                };
+                const cls = colorMap[key];
+                btn.className = 'text-xs px-2 py-0.5 rounded border transition-colors ' + (window.palindromeState[key] ? cls.on : cls.off);
+                btn.textContent = window.palindromeState[key] ? '🔄 เปิ้ล: เปิด' : '🔄 เปิ้ล: ปิด';
+            }
+            updateCombinations(false);
+        };
+
+        // กรองเปิ้ลหาม: ตัดเลขที่มีหลักซ้ำกันออก (เช่น 11, 22, 121, 112)
+        function filterPalindromePairs(list) {
+            return list.filter(item => {
+                const chars = item.num.split('');
+                const uniqueChars = new Set(chars);
+                return uniqueChars.size === chars.length;
+            });
+        }
+
         function updateCombinations(refreshHistory = true) {
             const data = currentCalculatedData;
             const topN = parseInt(document.getElementById('top-n-select').value);
@@ -1134,6 +1171,11 @@
             combos3Up.sort(sortFn);
             combos2Up.sort(sortFn);
             combos2Down.sort(sortFn);
+
+            // กรองเปิ้ลหามตาม state ของแต่ละกล่อง
+            if (window.palindromeState['3up'])   combos3Up   = filterPalindromePairs(combos3Up);
+            if (window.palindromeState['2up'])   combos2Up   = filterPalindromePairs(combos2Up);
+            if (window.palindromeState['2down']) combos2Down = filterPalindromePairs(combos2Down);
 
             currentRecommendedSets = {
                 up3: new Set(combos3Up.map(item => item.num)),
