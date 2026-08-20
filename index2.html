@@ -753,7 +753,7 @@
                     button.dataset.formulaColumn = String(columnIndex);
                     button.setAttribute('aria-pressed', 'false');
                     button.setAttribute('aria-label', formulaLabel ? `เลือกสูตรนี้ ${formulaLabel}` : 'เลือกสูตรนี้');
-                    button.title = formulaLabel ? `${formulaLabel} - เลือกเลขดับแถวล่าสุดไปยังช่องตัดหลัก` : 'เลือกเลขดับแถวล่าสุดไปยังช่องตัดหลัก';
+                    button.title = formulaLabel ? `${formulaLabel} - เลือกเลขคาดการณ์งวดถัดไปเพื่อตัดหลัก` : 'เลือกเลขคาดการณ์งวดถัดไปเพื่อตัดหลัก';
                     button.innerHTML = `<span aria-hidden="true">&#10003;</span>`;
                     button.addEventListener('click', () => toggleFormulaExcludeDigit(target, columnIndex, button));
 
@@ -1333,7 +1333,7 @@
             });
         }
 
-                                                                                                        const realHistoryData = [
+                                                                                                                const realHistoryData = [
             { date: "16-8-2569", prize1: "004615", down2: "53" },
             { date: "1-8-2569", prize1: "932479", down2: "69" },
             { date: "16-7-2569", prize1: "639214", down2: "71" },
@@ -1883,7 +1883,6 @@
                 lastMockTimeframe = currentTimeframe;
             }
 
-            // อ่าน View Mode ของแต่ละแท็บ
             const historyViewMode = document.getElementById('history-view-mode') ? document.getElementById('history-view-mode').value : 'day';
             const historyResultType = document.getElementById('history-result-type') ? document.getElementById('history-result-type').value : 'all';
             const historyHitFilter = document.getElementById('history-hit-filter') ? document.getElementById('history-hit-filter').value : 'all';
@@ -1928,7 +1927,6 @@
             const filteredSuffix = historyData.length === baseHistoryData.length ? '' : ` / แสดง ${historyData.length} งวด`;
             document.getElementById('history-count').innerText = `รวม ${allData.length} งวด (ตรงกับ${dayCountLabel} ${dayData.length} งวด)${filteredSuffix}`;
 
-            // --- ประวัติการออกรางวัล ---
             if (historyData.length === 0) {
                 historyTbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">ไม่มีข้อมูลย้อนหลัง</td></tr>`;
             } else {
@@ -1951,7 +1949,6 @@
                 });
             }
 
-            // --- ฟังก์ชันสร้างตารางสูตร (ใช้ร่วมกัน) ---
             function getDigitAt(value, index) {
                 const digit = parseInt(String(value || '').padStart(index + 1, '0')[index], 10);
                 return Number.isNaN(digit) ? 0 : digit;
@@ -2012,29 +2009,33 @@
                 const numFormulas = getFormulaColumnCount(labelType);
                 const failed = Array.from({length: totalRows}, () => Array(numFormulas).fill(false));
 
+                // ตรวจสอบผลสูตรของแต่ละงวดในประวัติ
+                // แต่ละงวด r (ตั้งแต่ 0 ถึง totalRows - 2) จะใช้สูตรที่คำนวณจากงวดก่อนหน้า (r + 1)
+                // และตรวจว่าเลขดับตรงกับเลขที่ออกจริงในงวด r หรือไม่
                 for (let r = 0; r < totalRows; r++) {
-                    const record = dataSet[r];
-                    const sums = getFormulaSums(record, getDigit, labelType);
-
-                    let nextDigit = null;
-                    if (r - 1 >= 0) {
-                        nextDigit = getDigit(dataSet[r - 1]);
-                    }
-
-                    for (let c = 0; c < sums.length; c++) {
-                        if (nextDigit !== null && (sums[c] % 10) === nextDigit) failed[r][c] = true;
+                    if (r + 1 < totalRows) {
+                        const prevRecord = dataSet[r + 1];
+                        const sums = getFormulaSums(prevRecord, getDigit, labelType);
+                        const actualDigit = getDigit(dataSet[r]);
+                        for (let c = 0; c < sums.length; c++) {
+                            if ((sums[c] % 10) === actualDigit) {
+                                failed[r][c] = true;
+                            }
+                        }
                     }
                 }
 
+                // คำนวณสถิติถูกต่อเนื่อง (Streak) จากงวดเก่าสุด (totalRows - 2) ขึ้นมาจนถึงงวดล่าสุด (0)
                 const streakCounts = Array.from({length: totalRows}, () => Array(numFormulas).fill(0));
                 for (let c = 0; c < numFormulas; c++) {
                     let currentStreak = 0;
-                    for (let r = totalRows - 1; r >= 0; r--) {
+                    for (let r = totalRows - 2; r >= 0; r--) {
                         if (!failed[r][c]) {
                             currentStreak++;
                             streakCounts[r][c] = currentStreak;
                         } else {
                             currentStreak = 0;
+                            streakCounts[r][c] = 0;
                         }
                     }
                 }
@@ -2058,27 +2059,68 @@
                     return "inline-block bg-fuchsia-600 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-fuchsia-700 min-w-[28px]";
                 }
 
-                dataSet.forEach((record, index) => {
-                    const sums = getFormulaSums(record, getDigit, labelType);
+                // 1. เพิ่มแถวบนสุด: เลขคาดการณ์งวดถัดไป
+                const latestRecord = dataSet[0];
+                const forecastSums = getFormulaSums(latestRecord, getDigit, labelType);
+                let forecastCellsHtml = '';
 
+                forecastSums.forEach((sum, i) => {
+                    const deadDigit = sum % 10;
+                    const streakCount = streakCounts[0] ? streakCounts[0][i] : 0;
+                    const isExtraFormula = i >= 11 && numFormulas > 11;
+                    const bgClass = i === 0 ? 'bg-amber-50/80' : (isExtraFormula ? 'bg-blue-50/80' : 'bg-amber-50/40');
+                    let badgeClass = getStreakBadgeClass(streakCount);
+                    let badgeTitle = streakCount > 0 ? `เลขคาดการณ์งวดถัดไป (ถูกต่อเนื่อง ${streakCount} งวด)` : 'เลขคาดการณ์งวดถัดไป';
+                    forecastCellsHtml += `<td class="p-2 border-l text-center ${bgClass}"><span class="${badgeClass}" title="${badgeTitle}">${deadDigit}</span></td>`;
+                });
+
+                const trForecast = document.createElement('tr');
+                trForecast.className = 'bg-amber-50/50 font-semibold border-b-2 border-amber-300 hover:bg-amber-100/50 transition-colors shadow-[0_1px_2px_rgba(0,0,0,0.04)]';
+                trForecast.innerHTML = `
+                    <td class="p-3 text-left border-r text-amber-900 font-bold font-sans whitespace-normal leading-snug">
+                        <span class="inline-flex items-center gap-1.5"><span class="text-base">🔮</span> เลขคาดการณ์งวดถัดไป</span>
+                    </td>
+                    <td class="p-3 tracking-widest text-slate-400 bg-amber-50/30 text-center font-normal">
+                        <span class="px-2.5 py-0.5 rounded-full bg-white border border-amber-200 text-amber-700 text-xs font-semibold shadow-xs">รอผล</span>
+                    </td>
+                    <td class="p-3 border-r tracking-widest text-slate-400 bg-amber-50/30 text-center font-normal">
+                        <span class="px-2.5 py-0.5 rounded-full bg-white border border-amber-200 text-amber-700 text-xs font-semibold shadow-xs">รอผล</span>
+                    </td>
+                    ${forecastCellsHtml}
+                `;
+                tbodyEl.appendChild(trForecast);
+
+                // 2. แถวประวัติย้อนหลัง
+                dataSet.forEach((record, index) => {
                     const formattedPrize1 = record.prize1.split('').join(' ');
                     const formattedDown2 = record.down2.split('').join(' ');
 
                     let cellsHtml = '';
-                    sums.forEach((sum, i) => {
-                        const deadDigit = sum % 10;
-                        const isFailed = failed[index][i];
-                        const streakCount = streakCounts[index][i];
-                        const isExtraFormula = i >= 11 && getFormulaColumnCount(labelType) > 11;
-                        const bgClass = i === 0 ? 'bg-slate-100/60' : (isExtraFormula ? 'bg-blue-50/50' : 'bg-slate-50/40');
-                        let badgeClass = getStreakBadgeClass(streakCount);
-                        let badgeTitle = streakCount > 0 ? `ถูกต่อเนื่อง ${streakCount} งวด` : '';
-                        if (isFailed) {
-                            badgeClass = "inline-block bg-red-500 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-red-600 min-w-[28px]";
-                            badgeTitle = 'ผิด';
+                    if (index + 1 < totalRows) {
+                        const prevRecord = dataSet[index + 1];
+                        const sums = getFormulaSums(prevRecord, getDigit, labelType);
+                        sums.forEach((sum, i) => {
+                            const deadDigit = sum % 10;
+                            const isFailed = failed[index][i];
+                            const streakCount = streakCounts[index][i];
+                            const isExtraFormula = i >= 11 && numFormulas > 11;
+                            const bgClass = i === 0 ? 'bg-slate-100/60' : (isExtraFormula ? 'bg-blue-50/50' : 'bg-slate-50/40');
+                            let badgeClass = getStreakBadgeClass(streakCount);
+                            let badgeTitle = streakCount > 0 ? `ถูกต่อเนื่อง ${streakCount} งวด` : '';
+                            if (isFailed) {
+                                badgeClass = "inline-block bg-red-500 text-white font-bold px-2 py-0.5 rounded shadow-sm border-2 border-red-600 min-w-[28px]";
+                                badgeTitle = 'ผิด (ออกตรงกับเลขดับ)';
+                            }
+                            cellsHtml += `<td class="p-2 border-l text-center ${bgClass}"><span class="${badgeClass}" title="${badgeTitle}">${deadDigit}</span></td>`;
+                        });
+                    } else {
+                        // งวดเก่าสุดที่ไม่มีงวดก่อนหน้าให้คำนวณ
+                        for (let i = 0; i < numFormulas; i++) {
+                            const isExtraFormula = i >= 11 && numFormulas > 11;
+                            const bgClass = i === 0 ? 'bg-slate-100/60' : (isExtraFormula ? 'bg-blue-50/50' : 'bg-slate-50/40');
+                            cellsHtml += `<td class="p-2 border-l text-center text-slate-300 ${bgClass}">-</td>`;
                         }
-                        cellsHtml += `<td class="p-2 border-l text-center ${bgClass}"><span class="${badgeClass}" title="${badgeTitle}">${deadDigit}</span></td>`;
-                    });
+                    }
 
                     const tr = document.createElement('tr');
                     tr.className = 'hover:bg-slate-100 transition-colors';
